@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "page",
+    "name": "Settings",
+    "children": [
+      { "role": "tablist", "name": "Settings sections", "children": [
+        { "role": "tab", "name": "Profile", "states": { "selected": false }, "children": [] },
+        { "role": "tab", "name": "Security", "states": { "selected": true }, "children": [] }
+      ] },
+      { "role": "tabpanel", "name": "Security", "children": [] }
+    ]
+  }
+}

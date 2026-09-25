@@ -1,0 +1,8 @@
+{
+  "nodes": [
+    { "nodeId": "1", "childIds": ["2", "3"], "role": { "value": "table" }, "name": { "value": "Active sessions" } },
+    { "nodeId": "2", "role": { "value": "columnheader" }, "name": { "value": "Device" } },
+    { "nodeId": "3", "role": { "value": "row" }, "childIds": ["4"], "name": { "value": "Current session" } },
+    { "nodeId": "4", "role": { "value": "cell" }, "name": { "value": "Laptop" } }
+  ]
+}

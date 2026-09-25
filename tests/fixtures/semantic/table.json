@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "table",
+    "name": "Active sessions",
+    "children": [
+      { "role": "columnheader", "name": "Device", "children": [] },
+      { "role": "row", "name": "Current session", "children": [{ "role": "cell", "name": "Laptop", "children": [] }] }
+    ]
+  }
+}

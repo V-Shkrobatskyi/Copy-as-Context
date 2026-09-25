@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "dialog",
+    "name": "Delete project",
+    "children": [
+      { "role": "heading", "name": "Delete project", "level": 2, "children": [] },
+      { "role": "paragraph", "name": "This action cannot be undone.", "children": [] },
+      { "role": "button", "name": "Cancel", "children": [] }
+    ]
+  }
+}

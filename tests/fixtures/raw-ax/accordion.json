@@ -1,0 +1,7 @@
+{
+  "nodes": [
+    { "nodeId": "1", "childIds": ["2", "3"], "role": { "value": "region" }, "name": { "value": "Billing help" } },
+    { "nodeId": "2", "role": { "value": "button" }, "name": { "value": "How do invoices work?" }, "properties": [{ "name": "expanded", "value": { "value": true } }] },
+    { "nodeId": "3", "role": { "value": "region" }, "name": { "value": "Invoice answer" } }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "nodes": [
+    { "nodeId": "1", "childIds": ["2", "3", "4"], "role": { "value": "dialog" }, "name": { "value": "Delete project" }, "properties": [{ "name": "modal", "value": { "value": true } }] },
+    { "nodeId": "2", "role": { "value": "heading" }, "name": { "value": "Delete project" }, "properties": [{ "name": "level", "value": { "value": 2 } }] },
+    { "nodeId": "3", "role": { "value": "paragraph" }, "name": { "value": "This action cannot be undone." } },
+    { "nodeId": "4", "role": { "value": "button" }, "name": { "value": "Cancel" } }
+  ]
+}

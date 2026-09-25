@@ -1,0 +1,10 @@
+{
+  "nodes": [
+    { "nodeId": "1", "childIds": ["2", "3"], "role": { "value": "RootWebArea" }, "name": { "value": "Example dashboard" } },
+    { "nodeId": "2", "childIds": ["4"], "role": { "value": "navigation" }, "name": { "value": "Primary" } },
+    { "nodeId": "3", "childIds": ["5", "6"], "role": { "value": "main" } },
+    { "nodeId": "4", "role": { "value": "link" }, "name": { "value": "Projects" }, "properties": [{ "name": "focusable", "value": { "value": true } }] },
+    { "nodeId": "5", "role": { "value": "heading" }, "name": { "value": "Overview" }, "properties": [{ "name": "level", "value": { "value": 1 } }] },
+    { "nodeId": "6", "role": { "value": "button" }, "name": { "value": "Create project" } }
+  ]
+}

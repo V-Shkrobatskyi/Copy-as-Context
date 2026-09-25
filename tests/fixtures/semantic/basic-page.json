@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "page",
+    "name": "Example dashboard",
+    "children": [
+      { "role": "navigation", "name": "Primary", "children": [{ "role": "link", "name": "Projects", "states": { "focusable": true }, "children": [] }] },
+      { "role": "main", "children": [{ "role": "heading", "name": "Overview", "level": 1, "children": [] }, { "role": "button", "name": "Create project", "children": [] }] }
+    ]
+  }
+}
