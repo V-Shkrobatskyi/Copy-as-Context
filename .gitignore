@@ -14,6 +14,14 @@ stats-*.json
 .wxt
 web-ext.config.ts
 
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Local Codex workspace instructions
+.agents/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -26,5 +34,3 @@ web-ext.config.ts
 *.sw?
 
 dev_notes/
-.agents/
-
