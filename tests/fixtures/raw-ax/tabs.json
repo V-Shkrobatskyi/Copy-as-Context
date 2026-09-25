@@ -1,0 +1,9 @@
+{
+  "nodes": [
+    { "nodeId": "1", "childIds": ["4", "6"], "role": { "value": "page" }, "name": { "value": "Settings" } },
+    { "nodeId": "4", "childIds": ["2", "5"], "role": { "value": "tablist" }, "name": { "value": "Settings sections" } },
+    { "nodeId": "2", "role": { "value": "tab" }, "name": { "value": "Profile" }, "properties": [{ "name": "selected", "value": { "value": false } }] },
+    { "nodeId": "5", "role": { "value": "tab" }, "name": { "value": "Security" }, "properties": [{ "name": "selected", "value": { "value": true } }] },
+    { "nodeId": "6", "role": { "value": "tabpanel" }, "name": { "value": "Security" } }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "form",
+    "name": "Profile",
+    "children": [
+      { "role": "textbox", "name": "Display name", "value": "Alex", "states": { "required": true }, "children": [] },
+      { "role": "checkbox", "name": "Receive updates", "states": { "checked": "mixed" }, "children": [] },
+      { "role": "switch", "name": "Public profile", "states": { "checked": false }, "children": [] },
+      { "role": "button", "name": "Save", "states": { "disabled": true }, "children": [] }
+    ]
+  }
+}

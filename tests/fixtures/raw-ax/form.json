@@ -1,0 +1,9 @@
+{
+  "nodes": [
+    { "nodeId": "1", "childIds": ["2", "3", "4", "5"], "role": { "value": "form" }, "name": { "value": "Profile" } },
+    { "nodeId": "2", "role": { "value": "textbox" }, "name": { "value": "Display name" }, "value": { "value": "Alex" }, "properties": [{ "name": "required", "value": { "value": true } }] },
+    { "nodeId": "3", "role": { "value": "checkbox" }, "name": { "value": "Receive updates" }, "properties": [{ "name": "checked", "value": { "value": "mixed" } }] },
+    { "nodeId": "4", "role": { "value": "switch" }, "name": { "value": "Public profile" }, "properties": [{ "name": "checked", "value": { "value": false } }] },
+    { "nodeId": "5", "role": { "value": "button" }, "name": { "value": "Save" }, "properties": [{ "name": "disabled", "value": { "value": true } }] }
+  ]
+}
