@@ -1,4 +1,17 @@
 import { defineConfig } from 'wxt';
 
-// See https://wxt.dev/api/config.html
-export default defineConfig({});
+export default defineConfig({
+  manifest: {
+    name: 'Copy as Context',
+    description:
+      'Copy a compact semantic representation of the current page for LLM chats.',
+    permissions: ['debugger'],
+    icons: {
+      16: 'icon/16.png',
+      32: 'icon/32.png',
+      48: 'icon/48.png',
+      96: 'icon/96.png',
+      128: 'icon/128.png',
+    },
+  },
+});
