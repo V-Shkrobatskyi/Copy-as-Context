@@ -15,6 +15,7 @@ Before opening a pull request, run:
 
 ```bash
 npm run compile
+npm test
 npm run build
 ```
 
