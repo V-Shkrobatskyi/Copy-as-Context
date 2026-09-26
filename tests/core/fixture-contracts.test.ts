@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import type { SemanticNode, SemanticTree } from '../../src/core';
+import type { SemanticNode, SemanticTree } from '@/src/core';
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 const fixtureDirectory = resolve(testDirectory, '..', 'fixtures');
