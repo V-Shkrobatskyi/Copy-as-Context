@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "page",
+    "name": "Example",
+    "children": [
+      {
+        "role": "button",
+        "name": "Save",
+        "states": { "focusable": true },
+        "children": []
+      }
+    ]
+  }
+}

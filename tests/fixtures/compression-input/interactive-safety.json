@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "page",
+    "children": [
+      {
+        "role": "form",
+        "name": "Account",
+        "children": [
+          {
+            "role": "checkbox",
+            "name": "Enable alerts",
+            "states": { "checked": "mixed", "required": true, "focusable": true },
+            "children": []
+          },
+          {
+            "role": "textbox",
+            "name": "Display name",
+            "value": "Ada",
+            "states": { "disabled": false, "required": true },
+            "children": []
+          }
+        ]
+      },
+      {
+        "role": "tablist",
+        "name": "Settings sections",
+        "children": [
+          { "role": "tab", "name": "Security", "states": { "selected": true }, "children": [] },
+          { "role": "tabpanel", "name": "Security", "states": { "expanded": false }, "children": [] }
+        ]
+      }
+    ]
+  }
+}
