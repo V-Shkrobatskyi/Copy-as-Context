@@ -4,11 +4,11 @@ import type { CaptureResult, SemanticNode } from '@/src/core';
 import { CAPTURE_ACTIVE_TAB_MESSAGE, type CaptureActiveTabRequest } from '@/src/capture-message';
 
 const ERROR_MESSAGES: Record<string, string> = {
-  'unsupported-page': 'Цю сторінку Chrome неможливо захопити. Відкрийте звичайну вебсторінку.',
-  'permission-denied': 'Chrome не надав доступ для захоплення цієї сторінки.',
-  'debugger-busy': 'Налагодження цієї вкладки вже використовується. Закрийте DevTools і повторіть.',
-  'invalid-tree': 'Chrome повернув некоректне accessibility-дерево. Спробуйте ще раз.',
-  'capture-failed': 'Не вдалося захопити accessibility-дерево. Спробуйте ще раз.',
+  'unsupported-page': 'This Chrome page cannot be captured. Open a regular web page and try again.',
+  'permission-denied': 'Chrome denied access to this page.',
+  'debugger-busy': 'Chrome debugging is already in use for this tab. Close DevTools and try again.',
+  'invalid-tree': 'Chrome returned an invalid accessibility tree. Try again.',
+  'capture-failed': 'Unable to capture the accessibility tree. Try again.',
 };
 
 function countNodes(node: SemanticNode): number {
@@ -22,7 +22,7 @@ function isCaptureResult(value: unknown): value is CaptureResult {
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <main class="popup" aria-labelledby="popup-title">
     <h1 id="popup-title">Copy as Context</h1>
-    <p>Захопіть семантичне accessibility-дерево активної вкладки Chrome.</p>
+    <p>Capture the semantic accessibility tree of the active Chrome tab.</p>
     <button class="capture-button" type="button">Capture page semantics</button>
     <p class="status" role="status" aria-live="polite"></p>
   </main>
@@ -33,24 +33,24 @@ const status = document.querySelector<HTMLParagraphElement>('.status')!;
 
 button.addEventListener('click', async () => {
   button.disabled = true;
-  status.textContent = 'Захоплення accessibility-дерева…';
+  status.textContent = 'Capturing accessibility tree…';
 
   try {
     const request: CaptureActiveTabRequest = { type: CAPTURE_ACTIVE_TAB_MESSAGE };
     const response = await chrome.runtime.sendMessage(request);
     if (!isCaptureResult(response)) {
-      status.textContent = ERROR_MESSAGES['capture-failed'] ?? 'Не вдалося захопити accessibility-дерево.';
+      status.textContent = ERROR_MESSAGES['capture-failed'] ?? 'Unable to capture the accessibility tree.';
     } else if (response.ok) {
       const rootName = response.tree.root.name ? ` «${response.tree.root.name}»` : '';
-      status.textContent = `Готово: ${countNodes(response.tree.root)} semantic nodes, root ${response.tree.root.role}${rootName}.`;
+      status.textContent = `Done: ${countNodes(response.tree.root)} semantic nodes. Root: ${response.tree.root.role}${rootName}.`;
     } else {
       status.textContent =
         ERROR_MESSAGES[response.error.code] ??
         ERROR_MESSAGES['capture-failed'] ??
-        'Не вдалося захопити accessibility-дерево.';
+        'Unable to capture the accessibility tree.';
     }
   } catch {
-    status.textContent = ERROR_MESSAGES['capture-failed'] ?? 'Не вдалося захопити accessibility-дерево.';
+    status.textContent = ERROR_MESSAGES['capture-failed'] ?? 'Unable to capture the accessibility tree.';
   } finally {
     button.disabled = false;
   }
