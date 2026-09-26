@@ -7,7 +7,8 @@ import {
   EXPORT_FORMATS,
   type CaptureResult,
   type NodeStates,
-} from '../../src/core';
+  type SerializedContext,
+} from '@/src/core';
 
 describe('semantic core contracts', () => {
   it('uses Compact as the default compression level', () => {
@@ -33,5 +34,15 @@ describe('semantic core contracts', () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe('unsupported-page');
+  });
+
+  it('defines metadata for serialized output without browser APIs', () => {
+    const serialized: SerializedContext = {
+      format: 'semantic-text',
+      content: 'page: Example',
+      characterCount: 13,
+    };
+
+    expect(serialized.characterCount).toBe(serialized.content.length);
   });
 });

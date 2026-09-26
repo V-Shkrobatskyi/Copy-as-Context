@@ -41,3 +41,9 @@ Commit focused changes, push the branch, and open a pull request into `main`. In
 ## Sensitive data
 
 Never commit API keys, tokens, personal data, or local configuration. Local environment files such as `.env` and `.env.local` are ignored. If configuration is needed, add a tracked `.env.example` containing variable names and safe placeholder values only.
+
+## Chrome accessibility fixtures
+
+Chrome-specific AX/CDP data belongs in `src/adapters/chrome/`; only its normalized result may enter `src/core/`. The capture adapter performs one `attach → Accessibility.getFullAXTree → detach` sequence per request and must detach in every outcome after a successful attach.
+
+When adding a raw AX fixture, use a small, hand-reviewed, de-identified sample. Never retain page URLs with query parameters, account names, personal data, or secrets. Pair it with the expected browser-agnostic semantic tree and add regression coverage. Live Chrome checks are manual smoke tests; unit tests must mock the debugger client and remain deterministic in CI.

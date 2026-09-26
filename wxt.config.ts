@@ -1,5 +1,6 @@
 import { defineConfig } from 'wxt';
 
+// noinspection JSUnusedGlobalSymbols
 export default defineConfig({
   manifest: {
     name: 'Copy as Context',

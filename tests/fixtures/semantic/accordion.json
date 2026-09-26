@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "root": {
-    "role": "section",
+    "role": "region",
     "name": "Billing help",
     "children": [
       { "role": "button", "name": "How do invoices work?", "states": { "expanded": true }, "children": [] },
