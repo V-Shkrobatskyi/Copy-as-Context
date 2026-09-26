@@ -4,7 +4,7 @@
  */
 export interface ChromeAxValue {
   type?: string;
-  value?: string | number | boolean;
+  value?: string | number | boolean | null;
 }
 
 export interface ChromeAxProperty {
@@ -15,6 +15,7 @@ export interface ChromeAxProperty {
 export interface ChromeAxNode {
   nodeId: string;
   childIds?: string[];
+  ignored?: boolean;
   role?: ChromeAxValue;
   name?: ChromeAxValue;
   value?: ChromeAxValue;
