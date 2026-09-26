@@ -31,7 +31,7 @@ function reportCaptureResult(result: CaptureActiveTabResponse): void {
     return;
   }
 
-  console.error('[Copy as Context] Capture failed', {
+  console.warn('[Copy as Context] Capture was not completed', {
     code: result.error.code,
     details: result.error.details,
   });
