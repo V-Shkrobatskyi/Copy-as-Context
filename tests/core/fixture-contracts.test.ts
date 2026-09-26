@@ -3,47 +3,16 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import type { SemanticNode, SemanticTree } from '@/src/core';
+import type { SemanticTree } from '@/src/core';
+import { assertSemanticNode } from '@/tests/helpers/assert-semantic-node';
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 const fixtureDirectory = resolve(testDirectory, '..', 'fixtures');
 const rawDirectory = resolve(fixtureDirectory, 'raw-ax');
 const semanticDirectory = resolve(fixtureDirectory, 'semantic');
 const scenarios = ['basic-page', 'form', 'tabs', 'accordion', 'table', 'dialog'] as const;
-const stateKeys = new Set([
-  'checked',
-  'disabled',
-  'expanded',
-  'selected',
-  'required',
-  'focusable',
-]);
-
 async function readJson(path: string): Promise<unknown> {
   return JSON.parse(await readFile(path, 'utf8'));
-}
-
-function assertSemanticNode(node: unknown): asserts node is SemanticNode {
-  expect(node).toEqual(expect.any(Object));
-  const candidate = node as Record<string, unknown>;
-  expect(candidate.role).toEqual(expect.any(String));
-  expect(Array.isArray(candidate.children)).toBe(true);
-
-  if (candidate.name !== undefined) expect(candidate.name).toEqual(expect.any(String));
-  if (candidate.value !== undefined) expect(candidate.value).toEqual(expect.any(String));
-  if (candidate.level !== undefined) expect(candidate.level).toEqual(expect.any(Number));
-  if (candidate.href !== undefined) expect(candidate.href).toEqual(expect.any(String));
-
-  if (candidate.states !== undefined) {
-    expect(candidate.states).toEqual(expect.any(Object));
-    for (const [key, value] of Object.entries(candidate.states as Record<string, unknown>)) {
-      expect(stateKeys.has(key)).toBe(true);
-      if (key === 'checked') expect([true, false, 'mixed']).toContain(value);
-      else expect(typeof value).toBe('boolean');
-    }
-  }
-
-  for (const child of candidate.children as unknown[]) assertSemanticNode(child);
 }
 
 describe('fixture corpus', () => {

@@ -1,0 +1,2 @@
+page "Example"
+  button "Save" [focusable=true]

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "page",
+    "children": [
+      {
+        "role": "button",
+        "name": "Search",
+        "children": [{ "role": "image", "name": "Search icon", "children": [] }]
+      },
+      { "role": "custom-widget", "name": "Results", "children": [] }
+    ]
+  }
+}

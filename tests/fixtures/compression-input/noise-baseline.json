@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "page",
+    "name": "Example",
+    "children": [
+      {
+        "role": "generic",
+        "children": [
+          {
+            "role": "button",
+            "name": "Save",
+            "states": { "focusable": true },
+            "children": [
+              { "role": "StaticText", "name": "Save", "children": [] },
+              { "role": "InlineTextBox", "name": "Save", "children": [] }
+            ]
+          },
+          { "role": "image", "children": [] }
+        ]
+      }
+    ]
+  }
+}

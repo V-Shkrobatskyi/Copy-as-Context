@@ -1,2 +1,1 @@
-// Semantic text, Markdown, and JSON serializers are implemented in stage 3.
-export {};
+export { serializeSemanticText } from './semantic-text';

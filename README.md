@@ -4,7 +4,7 @@ Chrome Desktop extension that will copy a compact, semantic representation of th
 
 > Work in progress.
 
-The extension can currently capture a normalized accessibility-tree snapshot from an ordinary active Chrome web page. Compression, copying, and file export are not implemented yet; Firefox is not supported.
+The extension can currently capture a normalized accessibility-tree snapshot from an ordinary active Chrome web page. The browser-independent core can also produce Detailed or Compact semantic text, but that output is not connected to the popup yet. Copying and file export are not implemented; Firefox is not supported.
 
 ## Chrome capture
 
@@ -40,6 +40,11 @@ npm run check
 ## Architecture
 
 `src/core/` contains the normalized semantic model and must not depend on Chrome, WXT entrypoints, browser globals, or DOM APIs. Browser-specific code belongs in `src/adapters/`; UI belongs in `entrypoints/`. The Chrome adapter owns CDP payloads and the attach → command → detach lifecycle, and returns only a browser-agnostic semantic tree. This separation allows a future DOM/ARIA adapter to produce the same semantic tree.
+
+The pure core pipeline is `SemanticTree → compression profile → Semantic Text`.
+`detailed` is lossless, while `compact` removes only tested structural and
+duplicate accessibility noise. Privacy redaction and export UX are deliberately
+separate follow-up work.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow.
 

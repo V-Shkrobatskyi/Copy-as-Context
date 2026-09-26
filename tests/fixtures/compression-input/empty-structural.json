@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "page",
+    "children": [{ "role": "group", "children": [] }]
+  }
+}
