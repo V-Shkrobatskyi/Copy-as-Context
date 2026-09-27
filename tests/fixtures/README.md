@@ -13,3 +13,9 @@ from the pure compression → serializer pipeline.
 `privacy/redaction-cases.json` contains synthetic positive and negative inputs
 for the local credential-redaction heuristic. The values resemble secrets only
 for regression coverage; they are not valid credentials.
+
+`quality/chrome-mvp-representative.json` is a browser-independent, synthetic
+end-to-end quality corpus for the Chrome MVP. It covers dashboard, settings
+form, tabs, collapsed content, table, dialog, menu, article, and privacy
+boundaries. `tests/manual/chrome-mvp-quality.html` is its local browser smoke
+test companion. Neither fixture may contain real page captures or credentials.
