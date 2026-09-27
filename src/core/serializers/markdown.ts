@@ -1,7 +1,7 @@
 import type { NodeStates, SemanticNode, SemanticTree, SerializedContext } from '..';
 
 const STATE_ORDER: readonly (keyof NodeStates)[] = [
-  'checked', 'selected', 'expanded', 'disabled', 'required', 'focusable',
+  'checked', 'selected', 'expanded', 'disabled', 'required', 'focusable', 'readOnly', 'focused',
 ];
 
 /** Serializes an already-transformed semantic tree into stable, escaped Markdown. */
@@ -30,7 +30,7 @@ function renderNode(node: SemanticNode, depth: number, lines: string[]): void {
   if (node.value !== undefined) attributes.push(`value=${code(node.value)}`);
   for (const state of STATE_ORDER) {
     const value = node.states?.[state];
-    if (value !== undefined) attributes.push(`${state}=${value}`);
+    if (value !== undefined) attributes.push(`${state === 'readOnly' ? 'readonly' : state}=${value}`);
   }
   if (node.level !== undefined) attributes.push(`level=${node.level}`);
   if (node.href !== undefined) attributes.push(`href=${code(node.href)}`);

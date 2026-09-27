@@ -28,6 +28,10 @@ export function canFlattenPresentationWrapper(node: SemanticNode): boolean {
   return FLATTENABLE_PRESENTATION_WRAPPER_ROLES.has(node.role) && !hasSemanticAttributes(node);
 }
 
+export function canFlattenDetailedWrapper(node: SemanticNode): boolean {
+  return node.role === 'none' && !hasSemanticAttributes(node);
+}
+
 export function canRemoveEmptyStructuralLeaf(node: SemanticNode): boolean {
   return (
     EMPTY_LEAF_STRUCTURAL_ROLES.has(node.role) &&

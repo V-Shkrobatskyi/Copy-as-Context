@@ -6,6 +6,8 @@ export interface NodeStates {
   selected?: boolean;
   required?: boolean;
   focusable?: boolean;
+  readOnly?: boolean;
+  focused?: boolean;
 }
 
 /** A normalized semantic node. It intentionally contains no browser/CDP details. */

@@ -1,11 +1,5 @@
 import type { NodeStates, SemanticNode, SemanticTree, SerializedContext } from '..';
 
-const ROLE_ALIASES: Readonly<Record<string, string>> = {
-  StaticText: 'text',
-  textbox: 'input',
-  searchbox: 'input',
-};
-
 const STATE_ORDER: readonly (keyof NodeStates)[] = [
   'checked',
   'selected',
@@ -13,6 +7,8 @@ const STATE_ORDER: readonly (keyof NodeStates)[] = [
   'disabled',
   'required',
   'focusable',
+  'readOnly',
+  'focused',
 ];
 
 const SAFE_ROLE = /^\p{L}[\p{L}\p{N}_-]*$/u;
@@ -56,8 +52,7 @@ function renderNode(node: SemanticNode, depth: number, lines: string[]): void {
 }
 
 function renderRole(role: string): string {
-  const alias = ROLE_ALIASES[role] ?? role;
-  return SAFE_ROLE.test(alias) ? alias : `role=${quote(alias)}`;
+  return SAFE_ROLE.test(role) ? role : `role=${quote(role)}`;
 }
 
 function renderAttributes(node: SemanticNode): string[] {
@@ -66,12 +61,16 @@ function renderAttributes(node: SemanticNode): string[] {
   if (node.value !== undefined) attributes.push(`value=${quote(node.value)}`);
   for (const state of STATE_ORDER) {
     const value = node.states?.[state];
-    if (value !== undefined) attributes.push(`${state}=${value}`);
+    if (value !== undefined) attributes.push(`${renderStateName(state)}=${value}`);
   }
   if (node.level !== undefined) attributes.push(`level=${node.level}`);
   if (node.href !== undefined) attributes.push(`href=${quote(node.href)}`);
 
   return attributes;
+}
+
+function renderStateName(state: keyof NodeStates): string {
+  return state === 'readOnly' ? 'readonly' : state;
 }
 
 function quote(value: string): string {
