@@ -14,15 +14,19 @@ export interface PreparedExport {
   redactionCount: number;
 }
 
-/** Runs the only supported export order: compression, redaction, then serialization. */
+/** Runs export in the order compression, optional redaction, then serialization. */
 export function prepareExport(
   tree: SemanticTree,
   compressionLevel: CompressionLevel,
   format: SupportedExportFormat,
+  redactSensitiveData = true,
 ): PreparedExport {
-  const redaction = redactSemanticTree(compressSemanticTree(tree, compressionLevel));
+  const redaction = redactForExport(compressSemanticTree(tree, compressionLevel), redactSensitiveData);
   const selected = serialize(redaction.tree, format);
-  const detailed = serialize(redactSemanticTree(compressSemanticTree(tree, 'detailed')).tree, format);
+  const detailed = serialize(
+    redactForExport(compressSemanticTree(tree, 'detailed'), redactSensitiveData).tree,
+    format,
+  );
   const characterCount = selected.characterCount;
   const rawRatio = detailed.characterCount === 0
     ? null
@@ -35,6 +39,10 @@ export function prepareExport(
     reductionRatio: rawRatio === null ? null : Math.max(0, rawRatio),
     redactionCount: redaction.redactionCount,
   };
+}
+
+function redactForExport(tree: SemanticTree, redactSensitiveData: boolean) {
+  return redactSensitiveData ? redactSemanticTree(tree) : { tree, redactionCount: 0 };
 }
 
 function serialize(tree: SemanticTree, format: SupportedExportFormat): SerializedContext {

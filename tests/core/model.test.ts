@@ -12,7 +12,7 @@ import {
 
 describe('semantic core contracts', () => {
   it('uses Compact as the default compression level', () => {
-    expect(COMPRESSION_LEVELS).toEqual(['detailed', 'compact', 'maximum']);
+    expect(COMPRESSION_LEVELS).toEqual(['without', 'detailed', 'compact', 'maximum']);
     expect(DEFAULT_COMPRESSION_LEVEL).toBe('compact');
   });
 

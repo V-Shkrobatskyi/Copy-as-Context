@@ -41,6 +41,11 @@ describe('semantic tree compression boundary', () => {
     }
   });
 
+  it('keeps Without as a lossless export profile', async () => {
+    const input = await inputTree('noise-baseline');
+    expect(compressSemanticTree(input, 'without')).toEqual(input);
+  });
+
   it('matches every compact regression target', async () => {
     for (const scenario of await compressionScenarios()) {
       const input = await inputTree(scenario);

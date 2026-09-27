@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Copy as Context — simple icon concept</title>
+  <g transform="translate(-23.72 -6.74) scale(1.29 1.08)">
+    <path fill="#3C65E8" d="M36 12h42c2 0 4 1 6 3l22 22c2 2 3 4 3 6v67c0 5-4 9-9 9H36c-5 0-9-4-9-9V21c0-5 4-9 9-9Z"/>
+    <path fill="#BED0FF" d="M81 16v20c0 3 2 5 5 5h19L81 16Z"/>
+    <path fill="#E5F7EF" transform="translate(0 12)" d="M47 57c0-2 2-4 4-4h18V44c0-2 2-3 4-1l22 19c2 2 2 4 0 6L73 87c-2 2-4 1-4-1v-9H51c-2 0-4-2-4-4V57Z"/>
+  </g>
+</svg>

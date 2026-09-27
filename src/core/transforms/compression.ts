@@ -9,14 +9,14 @@ import {
 /**
  * Returns an independent tree for the requested compression profile.
  *
- * Detailed is lossless. Compact removes only explicitly tested structural and
+ * Without and Detailed are lossless. Compact removes only explicitly tested structural and
  * duplicate noise; maximum currently shares Compact's conservative policy.
  */
 export function compressSemanticTree(
   tree: SemanticTree,
   level: CompressionLevel,
 ): SemanticTree {
-  if (level === 'detailed') {
+  if (level === 'without' || level === 'detailed') {
     const result: SemanticTree = {
       schemaVersion: tree.schemaVersion,
       root: cloneNode(tree.root),
