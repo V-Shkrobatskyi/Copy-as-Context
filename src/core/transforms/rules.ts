@@ -1,6 +1,7 @@
 import type { SemanticNode } from '../model';
 
 const EMPTY_LEAF_STRUCTURAL_ROLES = new Set(['group', 'log', 'sectionheader']);
+const FLATTENABLE_PRESENTATION_WRAPPER_ROLES = new Set(['generic', 'none']);
 
 export function normalizedLabel(label: string | undefined): string | undefined {
   if (label === undefined) return undefined;
@@ -23,8 +24,8 @@ export function hasSemanticAttributes(node: SemanticNode): boolean {
   );
 }
 
-export function canFlattenGeneric(node: SemanticNode): boolean {
-  return node.role === 'generic' && !hasSemanticAttributes(node);
+export function canFlattenPresentationWrapper(node: SemanticNode): boolean {
+  return FLATTENABLE_PRESENTATION_WRAPPER_ROLES.has(node.role) && !hasSemanticAttributes(node);
 }
 
 export function canRemoveEmptyStructuralLeaf(node: SemanticNode): boolean {

@@ -1,6 +1,6 @@
 import type { CompressionLevel, SemanticNode, SemanticTree } from '..';
 import {
-  canFlattenGeneric,
+  canFlattenPresentationWrapper,
   canRemoveEmptyStructuralLeaf,
   labelIsCovered,
   normalizedLabel,
@@ -17,16 +17,20 @@ export function compressSemanticTree(
   level: CompressionLevel,
 ): SemanticTree {
   if (level === 'detailed') {
-    return {
+    const result: SemanticTree = {
       schemaVersion: tree.schemaVersion,
       root: cloneNode(tree.root),
     };
+    if (tree.title !== undefined) result.title = tree.title;
+    return result;
   }
 
-  return {
+  const result: SemanticTree = {
     schemaVersion: tree.schemaVersion,
     root: compactRoot(tree.root),
   };
+  if (tree.title !== undefined) result.title = tree.title;
+  return result;
 }
 
 function compactRoot(root: SemanticNode): SemanticNode {
@@ -64,7 +68,7 @@ function compactNode(node: SemanticNode, ancestorLabels: readonly string[]): Sem
   );
   const compacted = cloneNode(node, children);
 
-  if (canFlattenGeneric(compacted)) return children;
+  if (canFlattenPresentationWrapper(compacted)) return children;
   if (canRemoveEmptyStructuralLeaf(compacted)) return [];
   return [compacted];
 }
