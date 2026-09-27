@@ -111,6 +111,53 @@ describe('normalizeChromeAxTree', () => {
     });
   });
 
+  it('keeps root-document descendants when Chrome omits their frame IDs', () => {
+    const result = normalizeChromeAxTree({
+      nodes: [
+        {
+          nodeId: 'root',
+          frameId: 'main-frame',
+          childIds: ['main'],
+          role: { value: 'RootWebArea' },
+        },
+        {
+          nodeId: 'main',
+          childIds: ['heading', 'button'],
+          role: { value: 'main' },
+        },
+        {
+          nodeId: 'heading',
+          role: { value: 'heading' },
+          name: { value: 'Overview' },
+        },
+        {
+          nodeId: 'button',
+          role: { value: 'button' },
+          name: { value: 'Create task' },
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      tree: {
+        schemaVersion: 1,
+        root: {
+          role: 'page',
+          children: [
+            {
+              role: 'main',
+              children: [
+                { role: 'heading', name: 'Overview', children: [] },
+                { role: 'button', name: 'Create task', children: [] },
+              ],
+            },
+          ],
+        },
+      },
+    });
+  });
+
   it.each([
     ['empty nodes', { nodes: [] }],
     ['missing child', { nodes: [{ nodeId: 'root', childIds: ['missing'], role: { value: 'page' } }] }],
