@@ -34,6 +34,9 @@ interface ChromeApi {
   tabs: {
     query(queryInfo: { active: boolean; lastFocusedWindow: boolean }): Promise<ChromeTab[]>;
   };
+  downloads: {
+    download(options: { url: string; filename: string; saveAs: boolean }): Promise<number>;
+  };
 }
 
 declare const chrome: ChromeApi;
