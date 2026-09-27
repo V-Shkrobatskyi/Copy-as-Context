@@ -7,6 +7,7 @@
   --accent-dark: #263e89;
   --selected: #e4ecff;
   --border: #cbd5e1;
+  --compression-progress: 66.667%;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background: var(--background);
@@ -27,7 +28,9 @@ h1 { margin: 0; font-size: 1rem; line-height: 1.25; letter-spacing: -.01em; }
 .settings-panel .field:first-child { padding-top: 0; border-top: 0; }
 legend { padding: 0; color: var(--text); font-size: .78rem; font-weight: 700; }
 .range-control { padding: 3px 3px 0; }
-input[type="range"] { width: 100%; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+input[type="range"] { width: 100%; height: 18px; margin: 0; appearance: none; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(to right, var(--accent) 0 var(--compression-progress), var(--border) var(--compression-progress) 100%); }
+input[type="range"]::-webkit-slider-thumb { width: 14px; height: 14px; margin-top: -4px; appearance: none; border: 0; border-radius: 50%; background: var(--accent); box-shadow: 0 1px 2px #263e8940; }
 .range-labels { position: relative; height: 1.2em; margin-top: 3px; color: var(--muted); font-size: .66rem; line-height: 1.2; }
 .range-labels span { position: absolute; white-space: nowrap; }
 .range-labels span:first-child { left: 0; }

@@ -150,6 +150,13 @@ function updateCompressionDescription(): void {
     compact: 'Removes repeated accessibility noise while retaining meaningful controls.',
     maximum: 'Uses the strongest currently safe reduction; it matches Compact today.',
   };
+  const minimum = Number.parseFloat(compression.min);
+  const maximum = Number.parseFloat(compression.max);
+  const current = Number.parseFloat(compression.value);
+  const progress = maximum > minimum
+    ? ((current - minimum) / (maximum - minimum)) * 100
+    : 0;
+  compression.style.setProperty('--compression-progress', `${progress}%`);
   const description = document.querySelector<HTMLParagraphElement>('#compression-description')!;
   description.textContent = descriptions[selectedRangeCompression(compression.value)];
 }
@@ -256,4 +263,5 @@ copyButton.addEventListener('click', () => void exportPageContext('copy'));
 saveButton.addEventListener('click', () => void exportPageContext('save'));
 compression.addEventListener('input', updateCompressionDescription);
 saveSettingsButton.addEventListener('click', () => void saveSettings());
+updateCompressionDescription();
 void loadSettings();
