@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "title": "Synthetic workspace token=ghp_abcdefghijklmnopqrstuvwxyz123456",
+  "root": {
+    "role": "page",
+    "children": [
+      {
+        "role": "main",
+        "name": "Workspace overview",
+        "children": [
+          {
+            "role": "heading",
+            "name": "Overview",
+            "level": 1,
+            "children": [
+              { "role": "InlineTextBox", "name": "Overview", "children": [] }
+            ]
+          },
+          {
+            "role": "region",
+            "name": "Weekly activity",
+            "children": [
+              { "role": "text", "name": "Open tasks: 12", "children": [] },
+              { "role": "button", "name": "Create task", "children": [] }
+            ]
+          },
+          {
+            "role": "form",
+            "name": "Workspace settings",
+            "children": [
+              {
+                "role": "textbox",
+                "name": "Display name",
+                "value": "Synthetic workspace",
+                "states": { "required": true },
+                "children": []
+              },
+              {
+                "role": "textbox",
+                "name": "Password",
+                "value": "synthetic-password-value",
+                "states": { "required": true },
+                "children": []
+              },
+              {
+                "role": "checkbox",
+                "name": "Send weekly summary",
+                "states": { "checked": true },
+                "children": []
+              },
+              {
+                "role": "button",
+                "name": "Save settings",
+                "states": { "disabled": false },
+                "children": []
+              }
+            ]
+          },
+          {
+            "role": "tablist",
+            "name": "Workspace views",
+            "children": [
+              { "role": "tab", "name": "Activity", "states": { "selected": true }, "children": [] },
+              { "role": "tab", "name": "Members", "states": { "selected": false }, "children": [] },
+              {
+                "role": "tabpanel",
+                "name": "Activity",
+                "children": [
+                  { "role": "text", "name": "Recent updates", "children": [] }
+                ]
+              }
+            ]
+          },
+          {
+            "role": "button",
+            "name": "Advanced options",
+            "states": { "expanded": false },
+            "children": []
+          },
+          {
+            "role": "region",
+            "name": "Advanced options",
+            "children": [
+              { "role": "text", "name": "Collapsed content remains available", "children": [] }
+            ]
+          },
+          {
+            "role": "table",
+            "name": "Recent tasks",
+            "children": [
+              {
+                "role": "row",
+                "children": [
+                  { "role": "columnheader", "name": "Task", "children": [] },
+                  { "role": "columnheader", "name": "Status", "children": [] }
+                ]
+              },
+              {
+                "role": "row",
+                "children": [
+                  { "role": "cell", "name": "Prepare release notes", "children": [] },
+                  { "role": "cell", "name": "In progress", "children": [] },
+                  { "role": "button", "name": "Open task", "children": [] }
+                ]
+              }
+            ]
+          },
+          {
+            "role": "dialog",
+            "name": "Archive workspace",
+            "children": [
+              { "role": "text", "name": "This cannot be undone.", "children": [] },
+              { "role": "button", "name": "Cancel", "children": [] },
+              { "role": "button", "name": "Archive", "children": [] }
+            ]
+          },
+          {
+            "role": "menu",
+            "name": "Task actions",
+            "children": [
+              { "role": "menuitem", "name": "Duplicate", "children": [] },
+              { "role": "menuitem", "name": "Delete", "children": [] }
+            ]
+          },
+          {
+            "role": "article",
+            "name": "Release guide",
+            "children": [
+              { "role": "heading", "name": "Prepare the release", "level": 2, "children": [] },
+              { "role": "text", "name": "Review the exported context before sharing it.", "children": [] },
+              {
+                "role": "link",
+                "name": "Read the guide",
+                "href": "https://example.test/guide?api_key=sk-proj_abcdefghijklmnopqrstuvwxyz",
+                "children": []
+              },
+              { "role": "image", "name": "Synthetic release checklist", "children": [] }
+            ]
+          },
+          { "role": "generic", "children": [{ "role": "StaticText", "name": "Decorative wrapper text", "children": [] }] },
+          { "role": "none", "children": [] }
+        ]
+      }
+    ]
+  }
+}
