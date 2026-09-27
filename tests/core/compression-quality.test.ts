@@ -28,9 +28,23 @@ async function readTree(path: string): Promise<SemanticTree> {
 function importantSignatures(node: SemanticNode, path: readonly string[] = []): string[] {
   const nextPath = [...path, node.role];
   const own = IMPORTANT_ROLES.has(node.role) || node.value !== undefined || node.states !== undefined
-    ? [JSON.stringify({ path: nextPath, role: node.role, name: node.name, value: node.value, states: node.states })]
+    ? [JSON.stringify({
+      path: nextPath,
+      role: node.role,
+      name: node.name,
+      value: node.value,
+      states: meaningfulStates(node.states),
+    })]
     : [];
   return [...own, ...node.children.flatMap((child) => importantSignatures(child, nextPath))];
+}
+
+function meaningfulStates(states: SemanticNode['states']): SemanticNode['states'] {
+  if (states === undefined) return undefined;
+  const result = { ...states };
+  delete result.focusable;
+  if (result.required === false) delete result.required;
+  return Object.keys(result).length === 0 ? undefined : result;
 }
 
 describe('compression quality gates', () => {

@@ -43,6 +43,8 @@ describe('normalizeChromeAxTree', () => {
           properties: [
             { name: 'url', value: { value: 'https://example.test/docs' } },
             { name: 'focusable', value: { value: true } },
+            { name: 'readonly', value: { value: true } },
+            { name: 'focused', value: { value: true } },
           ],
         },
       ],
@@ -60,7 +62,7 @@ describe('normalizeChromeAxTree', () => {
               name: 'Docs',
               value: 'read me',
               href: 'https://example.test/docs',
-              states: { focusable: true },
+              states: { focusable: true, readOnly: true, focused: true },
               children: [],
             },
           ],

@@ -10,7 +10,7 @@
           {
             "role": "checkbox",
             "name": "Enable alerts",
-            "states": { "checked": "mixed", "required": true, "focusable": true },
+            "states": { "checked": "mixed", "required": true },
             "children": []
           },
           {

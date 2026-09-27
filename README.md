@@ -14,7 +14,7 @@ Chrome may show a debugger-access warning. Capture cannot run on Chrome internal
 
 ## Export and privacy
 
-The popup supports **Semantic Text** (default) and **Markdown**. `Compact` is the default compression level; `Maximum` currently uses the same conservative policy as Compact. The popup shows the exact JavaScript character count, a rough token estimate (`ceil(characters / 4)`), and reduction relative to a redacted Detailed output in the same format. The estimate is not model-specific tokenization.
+The popup supports **Semantic Text** (default) and **Markdown**. `Compact` is the default compression level; `Maximum` currently uses the same conservative policy as Compact. The popup shows the exact JavaScript character count, a rough token estimate (`ceil(characters / 4)`), and reduction relative to a redacted Without output in the same format. The estimate is not model-specific tokenization.
 
 Before every export, the extension applies a local heuristic redaction pass to the normalized context. It replaces password field values and common credential-shaped text (for example Bearer/Basic authorization values, JWTs, GitHub tokens, AWS access-key IDs, OpenAI-style keys, and selected `token`/`api_key` URL parameters) with `[REDACTED]`. This is a safeguard against obvious accidental disclosure, **not** a general DLP or PII detector: review exported context before sharing it, especially when it contains personal or business-sensitive data.
 
@@ -50,7 +50,8 @@ npm run check
 `src/core/` contains the normalized semantic model and must not depend on Chrome, WXT entrypoints, browser globals, or DOM APIs. Browser-specific code belongs in `src/adapters/`; UI belongs in `entrypoints/`. The Chrome adapter owns CDP payloads and the attach → command → detach lifecycle, and returns only a browser-agnostic semantic tree. This separation allows a future DOM/ARIA adapter to produce the same semantic tree.
 
 The pure core pipeline is `SemanticTree → compression profile → privacy redaction
-→ serializer`. `detailed` is lossless, while `compact` removes only tested
+→ serializer`. `without` is the unpruned normalized tree; `detailed` removes
+only empty presentation wrappers, while `compact` removes only tested
 structural and duplicate accessibility noise. Browser APIs for clipboard and
 downloads remain in the popup layer.
 

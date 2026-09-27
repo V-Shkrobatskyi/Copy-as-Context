@@ -2,13 +2,15 @@ import type { CaptureResult, NodeStates, SemanticNode, SemanticTree } from '../.
 
 import type { ChromeAxNode, ChromeAxProperty, ChromeAxTreeResponse, ChromeAxValue } from './types';
 
-const STATE_PROPERTIES = new Set<keyof NodeStates>([
-  'checked',
-  'disabled',
-  'expanded',
-  'selected',
-  'required',
-  'focusable',
+const STATE_PROPERTIES: ReadonlyMap<string, keyof NodeStates> = new Map([
+  ['checked', 'checked'],
+  ['disabled', 'disabled'],
+  ['expanded', 'expanded'],
+  ['selected', 'selected'],
+  ['required', 'required'],
+  ['focusable', 'focusable'],
+  ['readonly', 'readOnly'],
+  ['focused', 'focused'],
 ]);
 
 function invalidTree(details: string): CaptureResult {
@@ -37,15 +39,15 @@ function propertiesByName(properties: ChromeAxProperty[] | undefined): Map<strin
 function statesFrom(properties: Map<string, ChromeAxValue | undefined>): NodeStates | undefined {
   const states: NodeStates = {};
 
-  for (const property of STATE_PROPERTIES) {
-    const value = properties.get(property);
-    if (property === 'checked' && value?.value === 'mixed') {
+  for (const [propertyName, stateName] of STATE_PROPERTIES) {
+    const value = properties.get(propertyName);
+    if (stateName === 'checked' && value?.value === 'mixed') {
       states.checked = 'mixed';
       continue;
     }
 
     const boolean = booleanValue(value);
-    if (boolean !== undefined) states[property] = boolean;
+    if (boolean !== undefined) states[stateName] = boolean;
   }
 
   return Object.keys(states).length > 0 ? states : undefined;

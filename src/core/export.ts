@@ -23,14 +23,14 @@ export function prepareExport(
 ): PreparedExport {
   const redaction = redactForExport(compressSemanticTree(tree, compressionLevel), redactSensitiveData);
   const selected = serialize(redaction.tree, format);
-  const detailed = serialize(
-    redactForExport(compressSemanticTree(tree, 'detailed'), redactSensitiveData).tree,
+  const without = serialize(
+    redactForExport(compressSemanticTree(tree, 'without'), redactSensitiveData).tree,
     format,
   );
   const characterCount = selected.characterCount;
-  const rawRatio = detailed.characterCount === 0
+  const rawRatio = without.characterCount === 0
     ? null
-    : 1 - characterCount / detailed.characterCount;
+    : 1 - characterCount / without.characterCount;
 
   return {
     serialized: selected,

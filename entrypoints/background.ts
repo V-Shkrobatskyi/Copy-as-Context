@@ -1,4 +1,5 @@
 import { captureChromeAccessibilityTree } from '../src/adapters/chrome/capture';
+import { addChromeDocumentMetadata } from '../src/adapters/chrome/document-metadata';
 import { CAPTURE_ACTIVE_TAB_MESSAGE, type CaptureActiveTabResponse } from '../src/capture-message';
 import type { SemanticNode } from '@/src/core';
 
@@ -23,10 +24,6 @@ function countNodes(node: SemanticNode): number {
 function formatCaptureTime(date: Date): string {
   const pad = (value: number): string => value.toString().padStart(2, '0');
   return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-}
-
-function pageTitle(title: string | undefined): string {
-  return title?.trim() || 'Untitled page';
 }
 
 function reportCaptureResult(result: CaptureActiveTabResponse): void {
@@ -74,12 +71,7 @@ export default defineBackground(() => {
       const result: CaptureActiveTabResponse = capture.ok
         ? {
           ok: true,
-          tree: {
-            ...capture.tree,
-            title: pageTitle(tab.title),
-            sourceUrl: tab.url ?? capture.tree.root.href,
-            capturedAt: formatCaptureTime(new Date()),
-          },
+          tree: addChromeDocumentMetadata(capture.tree, tab, formatCaptureTime(new Date())),
         }
         : capture;
       reportCaptureResult(result);

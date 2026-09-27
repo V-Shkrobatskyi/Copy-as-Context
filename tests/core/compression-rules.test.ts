@@ -85,4 +85,23 @@ describe('compact compression rules', () => {
       },
     });
   });
+
+  it('removes readonly=false but retains readonly=true in Compact', () => {
+    const tree: SemanticTree = {
+      schemaVersion: 1,
+      root: {
+        role: 'page',
+        children: [
+          { role: 'textbox', name: 'Editable', states: { readOnly: false }, children: [] },
+          { role: 'textbox', name: 'Locked', states: { readOnly: true }, children: [] },
+        ],
+      },
+    };
+
+    expect(compressSemanticTree(tree, 'compact').root.children).toEqual([
+      { role: 'textbox', name: 'Editable', children: [] },
+      { role: 'textbox', name: 'Locked', states: { readOnly: true }, children: [] },
+    ]);
+    expect(compressSemanticTree(tree, 'detailed').root.children[0]?.states).toEqual({ readOnly: false });
+  });
 });
