@@ -15,6 +15,7 @@ export interface ChromeAxProperty {
 export interface ChromeAxNode {
   nodeId: string;
   childIds?: string[];
+  frameId?: string;
   ignored?: boolean;
   role?: ChromeAxValue;
   name?: ChromeAxValue;

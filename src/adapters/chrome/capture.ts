@@ -70,8 +70,8 @@ export function chromeDebuggerClient(): ChromeDebuggerClient {
 }
 
 /**
- * Creates a one-snapshot capturer. It owns no raw page data and always detaches
- * from Chrome after a successful attach.
+ * Creates a one-snapshot capturer. It owns no raw page data and always disables
+ * the AX domain and detaches from Chrome after a successful attach.
  */
 export function createChromeAccessibilityCapturer(client: ChromeDebuggerClient) {
   const inFlightTabs = new Set<number>();
@@ -87,6 +87,7 @@ export function createChromeAccessibilityCapturer(client: ChromeDebuggerClient) 
     inFlightTabs.add(tabId);
     const target = { tabId };
     let attached = false;
+    let accessibilityEnabled = false;
     let result: CaptureResult | undefined;
 
     try {
@@ -98,6 +99,16 @@ export function createChromeAccessibilityCapturer(client: ChromeDebuggerClient) 
         return failure(code, userMessage(code), attachError);
       }
       attached = true;
+
+      const enableError = await new Promise<string | undefined>((resolve) => {
+        client.sendCommand(target, 'Accessibility.enable', (_response, error) => resolve(error));
+      });
+      if (enableError) {
+        const code = errorCode(enableError);
+        result = failure(code, userMessage(code), enableError);
+        return result;
+      }
+      accessibilityEnabled = true;
 
       const command = await new Promise<{ response: unknown; error?: string }>((resolve) => {
         client.sendCommand(target, 'Accessibility.getFullAXTree', (response, error) => resolve({ response, error }));
@@ -115,6 +126,19 @@ export function createChromeAccessibilityCapturer(client: ChromeDebuggerClient) 
       const code = errorCode(details);
       result = failure(code, userMessage(code), details);
     } finally {
+      if (accessibilityEnabled) {
+        let disableError: string | undefined;
+        try {
+          disableError = await new Promise<string | undefined>((resolve) => {
+            client.sendCommand(target, 'Accessibility.disable', (_response, error) => resolve(error));
+          });
+        } catch (error) {
+          disableError = error instanceof Error ? error.message : String(error);
+        }
+        if (disableError && !result) {
+          result = failure('capture-failed', 'Unable to finish page capture.', disableError);
+        }
+      }
       if (attached) {
         let detachError: string | undefined;
         try {

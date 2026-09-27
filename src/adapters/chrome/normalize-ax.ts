@@ -60,14 +60,34 @@ function rootNode(nodes: ChromeAxNode[], nodeIds: Set<string>): ChromeAxNode | u
   return candidate && nodeIds.has(candidate.nodeId) ? candidate : undefined;
 }
 
+/**
+ * AX node IDs are only unique within one web frame. A full-tree response can
+ * include embedded-frame nodes, so normalize the root document separately and
+ * omit cross-frame child references rather than joining ambiguous IDs.
+ */
+function rootFrameNodes(nodes: ChromeAxNode[]): ChromeAxNode[] {
+  const rootFrameId = nodes.find((node) =>
+    node.frameId !== undefined && stringValue(node.role) === 'RootWebArea',
+  )?.frameId;
+  if (rootFrameId === undefined) return nodes;
+
+  const rootNodes = nodes.filter((node) => node.frameId === rootFrameId);
+  const rootNodeIds = new Set(rootNodes.map((node) => node.nodeId));
+  return rootNodes.map((node) => ({
+    ...node,
+    childIds: node.childIds?.filter((childId) => rootNodeIds.has(childId)),
+  }));
+}
+
 /** Converts a complete Chrome CDP accessibility response into the browser-neutral core model. */
 export function normalizeChromeAxTree(response: ChromeAxTreeResponse): CaptureResult {
   if (!Array.isArray(response.nodes) || response.nodes.length === 0) {
     return invalidTree('The response contains no AX nodes.');
   }
 
+  const nodes = rootFrameNodes(response.nodes);
   const nodesById = new Map<string, ChromeAxNode>();
-  for (const node of response.nodes) {
+  for (const node of nodes) {
     if (!node.nodeId || nodesById.has(node.nodeId)) {
       return invalidTree('AX node IDs must be present and unique.');
     }
@@ -75,7 +95,7 @@ export function normalizeChromeAxTree(response: ChromeAxTreeResponse): CaptureRe
   }
 
   const childReferences = new Set<string>();
-  for (const node of response.nodes) {
+  for (const node of nodes) {
     for (const childId of node.childIds ?? []) {
       if (!nodesById.has(childId)) {
         return invalidTree(`AX node ${node.nodeId} references a missing child.`);
@@ -87,7 +107,7 @@ export function normalizeChromeAxTree(response: ChromeAxTreeResponse): CaptureRe
     }
   }
 
-  const root = rootNode(response.nodes, new Set(nodesById.keys()));
+  const root = rootNode(nodes, new Set(nodesById.keys()));
   if (!root) return invalidTree('The response must have exactly one root AX node.');
 
   const visiting = new Set<string>();
@@ -130,7 +150,7 @@ export function normalizeChromeAxTree(response: ChromeAxTreeResponse): CaptureRe
   };
 
   const normalizedRoot = normalizeNode(root);
-  if (!normalizedRoot || visited.size !== response.nodes.length) {
+  if (!normalizedRoot || visited.size !== nodes.length) {
     return invalidTree('The AX node graph is cyclic, disconnected, or has a node without a role.');
   }
 
