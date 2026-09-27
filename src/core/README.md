@@ -7,8 +7,9 @@ Adapters convert browser-specific data to this contract. UI and browser entrypoi
 ## Compression boundary
 
 `compressSemanticTree(tree, level)` is the pure entry point for compression
-profiles. It returns a new tree and never mutates its input. `without` and
-`detailed` are lossless clones. `compact` removes only regression-tested noise: `InlineTextBox`,
+profiles. It returns a new tree and never mutates its input. `without` is an
+unpruned normalized clone; `detailed` additionally removes only empty `none`
+presentation wrappers. `compact` removes only regression-tested noise: `InlineTextBox`,
 empty or ancestor-duplicated `StaticText`/`image`, attribute-free `generic` or
 `none` presentation wrappers, and selected empty structural leaves. `maximum` currently aliases
 the conservative `compact` policy until it has its own safety corpus.
@@ -45,6 +46,6 @@ compress → redact → serialize
 
 It currently supports `semantic-text` and `markdown`, and returns exact
 character count, `ceil(characters / 4)` approximate token count, a reduction
-ratio against the redacted Detailed output in the same format, and a redaction
+ratio against the redacted Without output in the same format, and a redaction
 count. It contains no browser APIs. Clipboard and file-download code belongs in
 the popup and must consume only the already prepared serialized content.

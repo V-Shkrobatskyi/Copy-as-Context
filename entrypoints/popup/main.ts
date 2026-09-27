@@ -47,7 +47,7 @@ function formatMetrics(
   reductionRatio: number | null,
   redactionCount: number,
 ): string {
-  const reduction = reductionRatio === null ? 'reduction unavailable' : `${Math.round(reductionRatio * 100)}% smaller than Detailed`;
+  const reduction = reductionRatio === null ? 'reduction unavailable' : `${Math.round(reductionRatio * 100)}% smaller than Without`;
   const redactions = `${redactionCount} redaction${redactionCount === 1 ? '' : 's'}`;
   return `${characterCount} characters · ~${approximateTokenCount} tokens · ${reduction} · ${redactions}.`;
 }
@@ -146,7 +146,7 @@ function selectedRangeCompression(value: string): CompressionLevel {
 function updateCompressionDescription(): void {
   const descriptions: Record<CompressionLevel, string> = {
     without: 'Keeps every captured semantic node. Sensitive values are still redacted.',
-    detailed: 'Preserves the full semantic structure for inspection.',
+    detailed: 'Removes only empty presentation wrappers for readable inspection.',
     compact: 'Removes repeated accessibility noise while retaining meaningful controls.',
     maximum: 'Uses the strongest currently safe reduction; it matches Compact today.',
   };
