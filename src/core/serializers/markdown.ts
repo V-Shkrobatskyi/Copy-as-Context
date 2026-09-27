@@ -1,0 +1,42 @@
+import type { NodeStates, SemanticNode, SemanticTree, SerializedContext } from '..';
+
+const STATE_ORDER: readonly (keyof NodeStates)[] = [
+  'checked', 'selected', 'expanded', 'disabled', 'required', 'focusable',
+];
+
+/** Serializes an already-transformed semantic tree into stable, escaped Markdown. */
+export function serializeMarkdown(tree: SemanticTree): SerializedContext {
+  const lines: string[] = [];
+  if (tree.title !== undefined) lines.push(`# ${escapeText(tree.title)}`, '');
+  renderNode(tree.root, 0, lines);
+  const content = `${lines.join('\n')}\n`;
+  return { format: 'markdown', content, characterCount: content.length };
+}
+
+function renderNode(node: SemanticNode, depth: number, lines: string[]): void {
+  const attributes: string[] = [];
+  if (node.value !== undefined) attributes.push(`value=${code(node.value)}`);
+  for (const state of STATE_ORDER) {
+    const value = node.states?.[state];
+    if (value !== undefined) attributes.push(`${state}=${value}`);
+  }
+  if (node.level !== undefined) attributes.push(`level=${node.level}`);
+  if (node.href !== undefined) attributes.push(`href=${code(node.href)}`);
+
+  const label = node.name === undefined ? '' : ` — ${escapeText(node.name)}`;
+  const detail = attributes.length === 0 ? '' : ` (${attributes.join(', ')})`;
+  lines.push(`${'  '.repeat(depth)}- **${escapeRole(node.role)}**${label}${detail}`);
+  for (const child of node.children) renderNode(child, depth + 1, lines);
+}
+
+function escapeRole(value: string): string {
+  return escapeText(value);
+}
+
+function escapeText(value: string): string {
+  return value.replace(/[\\`*_{}\[\]()<>#+\-.!|]/gu, '\\$&').replace(/\r?\n/gu, ' ');
+}
+
+function code(value: string): string {
+  return `\`${value.replace(/`/gu, '\\`').replace(/\r?\n/gu, ' ')}\``;
+}

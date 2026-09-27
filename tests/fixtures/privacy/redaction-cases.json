@@ -1,0 +1,28 @@
+{
+  "positive": {
+    "schemaVersion": 1,
+    "title": "Settings token=synthetic-secret-value-12345",
+    "root": {
+      "role": "page",
+      "href": "https://example.test/?api_key=sk-proj_abcdefghijklmnopqrstuvwxyz",
+      "children": [
+        { "role": "textbox", "name": "Password", "value": "synthetic-password-value", "children": [] },
+        { "role": "text", "name": "Authorization: Bearer abcdefghijklmnopqrstuvwxyz.12345678", "children": [] },
+        { "role": "text", "value": "jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.signaturevalue", "children": [] },
+        { "role": "link", "href": "https://example.test/?token=ghp_abcdefghijklmnopqrstuvwxyz123456", "children": [] }
+      ]
+    }
+  },
+  "negative": {
+    "schemaVersion": 1,
+    "root": {
+      "role": "page",
+      "children": [
+        { "role": "heading", "name": "API key management", "children": [] },
+        { "role": "text", "name": "Token count: 42", "children": [] },
+        { "role": "link", "href": "https://example.test/docs/token-guide", "children": [] },
+        { "role": "text", "value": "eyJ.short.invalid", "children": [] }
+      ]
+    }
+  }
+}
