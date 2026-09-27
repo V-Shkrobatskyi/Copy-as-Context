@@ -21,7 +21,7 @@ export function compressSemanticTree(
       schemaVersion: tree.schemaVersion,
       root: cloneNode(tree.root),
     };
-    if (tree.title !== undefined) result.title = tree.title;
+    copyDocumentMetadata(tree, result);
     return result;
   }
 
@@ -29,8 +29,14 @@ export function compressSemanticTree(
     schemaVersion: tree.schemaVersion,
     root: compactRoot(tree.root),
   };
-  if (tree.title !== undefined) result.title = tree.title;
+  copyDocumentMetadata(tree, result);
   return result;
+}
+
+function copyDocumentMetadata(source: SemanticTree, target: SemanticTree): void {
+  if (source.title !== undefined) target.title = source.title;
+  if (source.sourceUrl !== undefined) target.sourceUrl = source.sourceUrl;
+  if (source.capturedAt !== undefined) target.capturedAt = source.capturedAt;
 }
 
 function compactRoot(root: SemanticNode): SemanticNode {

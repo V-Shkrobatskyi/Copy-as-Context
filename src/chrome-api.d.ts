@@ -5,6 +5,7 @@
  */
 interface ChromeTab {
   id?: number;
+  title?: string;
   url?: string;
 }
 

@@ -25,5 +25,9 @@ export interface SemanticTree {
   schemaVersion: 1;
   /** Optional document title supplied by a browser adapter when it is safe to expose. */
   title?: string;
+  /** Optional URL of the captured document. */
+  sourceUrl?: string;
+  /** Local capture time, formatted as YYYY.MM.DD HH:mm:ss. */
+  capturedAt?: string;
   root: SemanticNode;
 }

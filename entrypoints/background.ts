@@ -20,6 +20,15 @@ function countNodes(node: SemanticNode): number {
   return 1 + node.children.reduce((count, child) => count + countNodes(child), 0);
 }
 
+function formatCaptureTime(date: Date): string {
+  const pad = (value: number): string => value.toString().padStart(2, '0');
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function pageTitle(title: string | undefined): string {
+  return title?.trim() || 'Untitled page';
+}
+
 function reportCaptureResult(result: CaptureActiveTabResponse): void {
   // Keep raw CDP data and page text out of diagnostics, but make the local
   // service-worker console sufficient to confirm each capture lifecycle.
@@ -61,7 +70,18 @@ export default defineBackground(() => {
         sendResponse(result);
         return;
       }
-      const result = await captureChromeAccessibilityTree(tab.id);
+      const capture = await captureChromeAccessibilityTree(tab.id);
+      const result: CaptureActiveTabResponse = capture.ok
+        ? {
+          ok: true,
+          tree: {
+            ...capture.tree,
+            title: pageTitle(tab.title),
+            sourceUrl: tab.url ?? capture.tree.root.href,
+            capturedAt: formatCaptureTime(new Date()),
+          },
+        }
+        : capture;
       reportCaptureResult(result);
       sendResponse(result);
     })().catch((error) => {
