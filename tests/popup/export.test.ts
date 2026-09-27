@@ -4,10 +4,13 @@ import type { CaptureResult, SemanticTree } from '@/src/core';
 
 class FakeElement {
   value = '';
+  min = '0';
+  max = '3';
   disabled = false;
   checked = false;
   textContent = '';
   innerHTML = '';
+  readonly style = { setProperty: vi.fn() };
   private readonly listeners = new Map<string, () => void>();
 
   // noinspection JSUnusedGlobalSymbols
