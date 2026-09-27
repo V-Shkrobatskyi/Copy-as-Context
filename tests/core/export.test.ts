@@ -39,4 +39,12 @@ describe('safe export pipeline', () => {
     expect(result.reductionRatio).toBeGreaterThanOrEqual(0);
     expect(result.redactionCount).toBe(1);
   });
+
+  it('can export without redaction only when explicitly requested', () => {
+    const result = prepareExport(tree, 'compact', 'semantic-text', false);
+
+    expect(result.serialized.content).toContain('not-for-export');
+    expect(result.serialized.content).not.toContain('[REDACTED]');
+    expect(result.redactionCount).toBe(0);
+  });
 });

@@ -21,6 +21,7 @@ interface ChromeApi {
       ): void;
     };
     sendMessage(message: unknown): Promise<unknown>;
+    getURL(path: string): string;
   };
   debugger: {
     attach(target: { tabId: number }, requiredVersion: string, callback: () => void): void;
@@ -36,6 +37,12 @@ interface ChromeApi {
   };
   downloads: {
     download(options: { url: string; filename: string; saveAs: boolean }): Promise<number>;
+  };
+  storage: {
+    local: {
+      get(keys: string): Promise<Record<string, unknown>>;
+      set(items: Record<string, unknown>): Promise<void>;
+    };
   };
 }
 

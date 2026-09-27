@@ -69,6 +69,48 @@ describe('normalizeChromeAxTree', () => {
     });
   });
 
+  it('normalizes the root frame when embedded frames reuse AX node IDs', () => {
+    const result = normalizeChromeAxTree({
+      nodes: [
+        {
+          nodeId: '1',
+          frameId: 'main-frame',
+          childIds: ['2'],
+          role: { value: 'RootWebArea' },
+        },
+        {
+          nodeId: '2',
+          frameId: 'main-frame',
+          role: { value: 'button' },
+          name: { value: 'Continue' },
+        },
+        {
+          nodeId: '1',
+          frameId: 'embedded-frame',
+          childIds: ['2'],
+          role: { value: 'RootWebArea' },
+        },
+        {
+          nodeId: '2',
+          frameId: 'embedded-frame',
+          role: { value: 'link' },
+          name: { value: 'Embedded content' },
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      tree: {
+        schemaVersion: 1,
+        root: {
+          role: 'page',
+          children: [{ role: 'button', name: 'Continue', children: [] }],
+        },
+      },
+    });
+  });
+
   it.each([
     ['empty nodes', { nodes: [] }],
     ['missing child', { nodes: [{ nodeId: 'root', childIds: ['missing'], role: { value: 'page' } }] }],

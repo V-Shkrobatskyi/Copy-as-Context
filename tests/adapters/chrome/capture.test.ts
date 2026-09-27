@@ -18,7 +18,7 @@ function fakeClient(options: { attachError?: string; commandError?: string; deta
         {
           nodes: [{ nodeId: 'root', role: { value: 'RootWebArea' } }],
         },
-        options.commandError,
+        method === 'Accessibility.getFullAXTree' ? options.commandError : undefined,
       );
     },
     detach(_target, callback) {
@@ -38,7 +38,9 @@ describe('Chrome accessibility capture', () => {
       ok: true,
       tree: { schemaVersion: 1, root: { role: 'page', children: [] } },
     });
-    expect(calls).toEqual(['attach', 'Accessibility.getFullAXTree', 'detach']);
+    expect(calls).toEqual([
+      'attach', 'Accessibility.enable', 'Accessibility.getFullAXTree', 'Accessibility.disable', 'detach',
+    ]);
   });
 
   it('detaches after a CDP command failure and maps debugger conflicts', async () => {
@@ -49,7 +51,9 @@ describe('Chrome accessibility capture', () => {
       ok: false,
       error: { code: 'debugger-busy' },
     });
-    expect(calls).toEqual(['attach', 'Accessibility.getFullAXTree', 'detach']);
+    expect(calls).toEqual([
+      'attach', 'Accessibility.enable', 'Accessibility.getFullAXTree', 'Accessibility.disable', 'detach',
+    ]);
   });
 
   it('does not detach if attaching fails', async () => {

@@ -1,6 +1,6 @@
 import type { SemanticTree } from './model';
 
-export const COMPRESSION_LEVELS = ['detailed', 'compact', 'maximum'] as const;
+export const COMPRESSION_LEVELS = ['without', 'detailed', 'compact', 'maximum'] as const;
 export type CompressionLevel = (typeof COMPRESSION_LEVELS)[number];
 export const DEFAULT_COMPRESSION_LEVEL: CompressionLevel = 'compact';
 

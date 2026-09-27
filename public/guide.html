@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Copy as Context — User guide</title>
+    <style>
+      :root { --background: #e9eef5; --surface: #f7f9fc; --text: #1b2942; --muted: #52617a; --accent: #365ed7; --accent-dark: #263e89; --selected: #e4ecff; --border: #cbd5e1; color: var(--text); background: var(--background); font-family: Inter, ui-sans-serif, system-ui, sans-serif; line-height: 1.55; }
+      * { box-sizing: border-box; } body { margin: 0; } main { width: min(100% - 32px, 760px); margin: 0 auto; padding: 46px 0 72px; } .eyebrow { margin: 0 0 10px; color: var(--accent); font-size: .74rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; } h1 { max-width: 620px; margin: 0; font-size: clamp(2rem, 7vw, 3.1rem); letter-spacing: -.045em; line-height: 1.03; } .lede { max-width: 590px; margin: 18px 0 0; color: var(--muted); font-size: 1.05rem; } .start { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; padding: 8px 12px; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent-dark); background: var(--selected); font-size: .82rem; font-weight: 700; } .start::before { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); content: ""; } section { margin-top: 42px; } h2 { margin: 0 0 12px; font-size: 1.18rem; letter-spacing: -.015em; } h3 { margin: 0; font-size: .9rem; } p { color: var(--muted); } .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; } .step { min-height: 138px; padding: 16px; border-radius: 12px; background: var(--surface); } .step-number { display: grid; width: 24px; height: 24px; margin-bottom: 22px; place-items: center; border-radius: 50%; color: #fff; background: var(--accent); font-size: .72rem; font-weight: 800; } .step p { margin: 6px 0 0; font-size: .84rem; line-height: 1.45; } .settings { border-top: 1px solid var(--border); } .setting { display: grid; grid-template-columns: 135px 1fr; gap: 20px; padding: 15px 0; border-bottom: 1px solid var(--border); } .setting p { margin: 0; font-size: .9rem; } .note { display: grid; grid-template-columns: 4px 1fr; gap: 12px; margin-top: 14px; padding: 14px 16px 14px 0; background: var(--surface); } .note::before { border-radius: 4px; background: var(--accent); content: ""; } .note p { margin: 0; font-size: .88rem; } .troubleshooting { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } .trouble { padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--background); } .trouble p { margin: 5px 0 0; font-size: .84rem; } code { padding: 2px 5px; border-radius: 4px; background: var(--selected); color: var(--accent-dark); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86em; } strong { color: var(--text); } footer { margin-top: 42px; color: var(--muted); font-size: .78rem; } @media (max-width: 560px) { main { padding-top: 32px; } .steps, .troubleshooting { grid-template-columns: 1fr; } .step { min-height: auto; } .step-number { margin-bottom: 14px; } .setting { grid-template-columns: 1fr; gap: 4px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Copy as Context</p>
+      <h1>Turn the open page into useful context.</h1>
+      <p class="lede">Create a focused semantic export for an AI conversation without manually selecting, cleaning, or restructuring page content.</p>
+      <p class="start">Everything is processed locally in your browser</p>
+
+      <section aria-labelledby="start-heading">
+        <h2 id="start-heading">A quick export in three steps</h2>
+        <div class="steps">
+          <article class="step"><span class="step-number">1</span><h3>Open a page</h3><p>Use the tab whose content you want to provide as context.</p></article>
+          <article class="step"><span class="step-number">2</span><h3>Choose the shape</h3><p>Select a compression level and either Semantic Text or Markdown.</p></article>
+          <article class="step"><span class="step-number">3</span><h3>Take it with you</h3><p>Copy directly into a prompt or save the result as a file.</p></article>
+        </div>
+      </section>
+
+      <section aria-labelledby="settings-heading">
+        <h2 id="settings-heading">Choose the right amount of context</h2>
+        <div class="settings">
+          <div class="setting"><h3>Without</h3><p>Keeps every captured semantic node. Use it when completeness matters more than length.</p></div>
+          <div class="setting"><h3>Detailed</h3><p>Preserves the full semantic structure for careful review.</p></div>
+          <div class="setting"><h3>Compact</h3><p>Removes repeated accessibility noise while retaining meaningful controls. This is the default.</p></div>
+          <div class="setting"><h3>Maximum</h3><p>Uses the strongest currently safe reduction. It currently matches Compact.</p></div>
+          <div class="setting"><h3>Export format</h3><p>Choose Semantic Text for a concise outline or Markdown when you want formatting in your notes or AI chat.</p></div>
+        </div>
+        <aside class="note"><p><strong>Save preferences</strong> stores your compression, format, and privacy choice for the next time you open the popup.</p></aside>
+      </section>
+
+      <section aria-labelledby="privacy-heading">
+        <h2 id="privacy-heading">Privacy is in your control</h2>
+        <p><strong>Redact sensitive data</strong> is on by default. It replaces detected credentials with <code>[REDACTED]</code> before the export reaches your clipboard or a saved file. Disable it only when you intentionally need original values.</p>
+      </section>
+
+      <section aria-labelledby="help-heading">
+        <h2 id="help-heading">If something does not work</h2>
+        <div class="troubleshooting">
+          <article class="trouble"><h3>This page cannot be captured</h3><p>Chrome pages, the Web Store, and other extensions are restricted by the browser.</p></article>
+          <article class="trouble"><h3>Capture is busy or fails</h3><p>Close DevTools for the active tab and try again. Chrome only allows one debugger connection at a time.</p></article>
+        </div>
+      </section>
+      <footer>Copy as Context works with the page’s accessibility structure, not by uploading the page to a service.</footer>
+    </main>
+  </body>
+</html>
