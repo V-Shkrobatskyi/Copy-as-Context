@@ -23,5 +23,7 @@ export interface SemanticNode {
 /** The versioned document-level representation consumed by transformations and serializers. */
 export interface SemanticTree {
   schemaVersion: 1;
+  /** Optional document title supplied by a browser adapter when it is safe to expose. */
+  title?: string;
   root: SemanticNode;
 }

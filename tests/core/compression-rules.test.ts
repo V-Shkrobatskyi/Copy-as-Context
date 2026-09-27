@@ -38,6 +38,23 @@ describe('compact compression rules', () => {
     ]);
   });
 
+  it('flattens attribute-free presentation wrappers but preserves meaningful ones', () => {
+    const tree = treeWith({
+      role: 'none',
+      children: [{
+        role: 'none',
+        name: 'Status region',
+        children: [{ role: 'button', name: 'Continue', children: [] }],
+      }],
+    });
+
+    expect(compressSemanticTree(tree, 'compact').root.children).toEqual([{
+      role: 'none',
+      name: 'Status region',
+      children: [{ role: 'button', name: 'Continue', children: [] }],
+    }]);
+  });
+
   it('is idempotent after structural noise has been removed', () => {
     const tree = treeWith({
       role: 'generic',

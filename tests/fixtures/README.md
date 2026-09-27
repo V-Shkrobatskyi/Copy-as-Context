@@ -9,3 +9,7 @@ Fixtures are synthetic and must remain free of personal data, real credentials, 
 `compression-expected/compact/` records the intentional removals and
 preservation guarantees for Compact. `semantic-text/` contains golden output
 from the pure compression → serializer pipeline.
+
+`privacy/redaction-cases.json` contains synthetic positive and negative inputs
+for the local credential-redaction heuristic. The values resemble secrets only
+for regression coverage; they are not valid credentials.

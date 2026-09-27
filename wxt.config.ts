@@ -6,7 +6,7 @@ export default defineConfig({
     name: 'Copy as Context',
     description:
       'Copy a compact semantic representation of the current page for LLM chats.',
-    permissions: ['debugger'],
+    permissions: ['debugger', 'clipboardWrite', 'downloads'],
     icons: {
       16: 'icon/16.png',
       32: 'icon/32.png',
