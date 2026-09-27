@@ -71,7 +71,10 @@ function rootFrameNodes(nodes: ChromeAxNode[]): ChromeAxNode[] {
   )?.frameId;
   if (rootFrameId === undefined) return nodes;
 
-  const rootNodes = nodes.filter((node) => node.frameId === rootFrameId);
+  // Chrome may include frameId only on document-root nodes. Descendants without
+  // an explicit frameId belong to the root document unless they are reached
+  // through a separately identified embedded-frame root.
+  const rootNodes = nodes.filter((node) => node.frameId === undefined || node.frameId === rootFrameId);
   const rootNodeIds = new Set(rootNodes.map((node) => node.nodeId));
   return rootNodes.map((node) => ({
     ...node,
