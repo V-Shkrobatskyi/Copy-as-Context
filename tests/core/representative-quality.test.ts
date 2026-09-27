@@ -73,7 +73,9 @@ describe('representative Chrome MVP quality gates', () => {
       expect(compact.characterCount).toBe(compact.serialized.content.length);
       expect(compact.approximateTokenCount).toBe(Math.ceil(compact.characterCount / 4));
       expect(compact.reductionRatio).toBeGreaterThanOrEqual(0);
-      expect(compact.redactionCount).toBeGreaterThanOrEqual(3);
+      // Compact omits the unique named guide link, so its token-like URL no
+      // longer reaches redaction; title and password-shaped value still must.
+      expect(compact.redactionCount).toBeGreaterThanOrEqual(2);
       expect(compact.characterCount).toBeLessThan(detailed.characterCount);
     }
   });

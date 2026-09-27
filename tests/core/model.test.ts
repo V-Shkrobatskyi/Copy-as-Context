@@ -22,8 +22,8 @@ describe('semantic core contracts', () => {
   });
 
   it('supports a mixed checked state without requiring unrelated states', () => {
-    const states: NodeStates = { checked: 'mixed' };
-    expect(states).toEqual({ checked: 'mixed' });
+    const states: NodeStates = { checked: 'mixed', readOnly: true, focused: true };
+    expect(states).toEqual({ checked: 'mixed', readOnly: true, focused: true });
   });
 
   it('represents capture failure as a domain result', () => {

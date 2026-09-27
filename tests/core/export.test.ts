@@ -48,6 +48,22 @@ describe('safe export pipeline', () => {
     expect(result.redactionCount).toBe(0);
   });
 
+  it('measures compression against the redacted Without profile', () => {
+    const result = prepareExport({
+      schemaVersion: 1,
+      root: {
+        role: 'page',
+        children: [{
+          role: 'none',
+          children: [{ role: 'button', name: 'Continue', children: [] }],
+        }],
+      },
+    }, 'detailed', 'semantic-text');
+
+    expect(result.reductionRatio).toBeGreaterThan(0);
+    expect(result.reductionRatio).toBeLessThan(1);
+  });
+
   it('includes redacted capture metadata in the export header', () => {
     const result = prepareExport({
       ...tree,

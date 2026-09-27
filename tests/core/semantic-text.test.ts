@@ -35,7 +35,7 @@ describe('semantic text serializer', () => {
     });
   });
 
-  it('uses aliases, fixed attribute order, and explicit false states', () => {
+  it('uses canonical roles, fixed attribute order, and explicit states', () => {
     const tree: SemanticTree = {
       schemaVersion: 1,
       root: {
@@ -53,6 +53,8 @@ describe('semantic text serializer', () => {
             disabled: false,
             required: true,
             focusable: true,
+            readOnly: true,
+            focused: true,
           },
           children: [],
         }],
@@ -61,7 +63,7 @@ describe('semantic text serializer', () => {
 
     expect(serializeSemanticText(tree).content).toBe(
       'page\n' +
-      '  input "Display name" [value="Ada", checked=false, selected=false, expanded=false, disabled=false, required=true, focusable=true, level=2, href="https://example.test/settings"]\n',
+      '  textbox "Display name" [value="Ada", checked=false, selected=false, expanded=false, disabled=false, required=true, focusable=true, readonly=true, focused=true, level=2, href="https://example.test/settings"]\n',
     );
   });
 

@@ -7,7 +7,6 @@
       {
         "role": "button",
         "name": "Save",
-        "states": { "focusable": true },
         "children": []
       }
     ]
