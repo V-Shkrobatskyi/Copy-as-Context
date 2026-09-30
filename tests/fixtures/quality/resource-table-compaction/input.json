@@ -1,0 +1,517 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "page",
+    "children": [
+      {
+        "role": "none",
+        "children": [
+          {
+            "role": "button",
+            "name": "Demo Organization",
+            "children": [
+              {
+                "role": "generic",
+                "children": [
+                  {
+                    "role": "StaticText",
+                    "name": "Demo",
+                    "children": []
+                  },
+                  {
+                    "role": "StaticText",
+                    "name": "Organization",
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "role": "link",
+            "name": "Sample Project Project",
+            "children": [
+              {
+                "role": "generic",
+                "children": [
+                  {
+                    "role": "StaticText",
+                    "name": "Sample Project",
+                    "children": []
+                  },
+                  {
+                    "role": "StaticText",
+                    "name": "Project",
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "role": "navigation",
+            "name": "breadcrumb",
+            "children": [
+              {
+                "role": "list",
+                "children": [
+                  {
+                    "role": "listitem",
+                    "level": 1,
+                    "children": [
+                      {
+                        "role": "link",
+                        "name": "Root folder",
+                        "children": [
+                          {
+                            "role": "StaticText",
+                            "name": "/",
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "role": "main",
+            "children": [
+              {
+                "role": "heading",
+                "name": "Sample Project",
+                "level": 1,
+                "children": []
+              },
+              {
+                "role": "button",
+                "name": "Development",
+                "children": [
+                  {
+                    "role": "combobox",
+                    "value": "Development",
+                    "states": {
+                      "expanded": false
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "role": "table",
+                "children": [
+                  {
+                    "role": "rowgroup",
+                    "children": [
+                      {
+                        "role": "row",
+                        "children": [
+                          {
+                            "role": "columnheader",
+                            "children": [
+                              {
+                                "role": "checkbox",
+                                "states": {
+                                  "checked": false
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "role": "columnheader",
+                            "name": "Sort resources. Name (A to Z)",
+                            "children": [
+                              {
+                                "role": "button",
+                                "name": "Sort resources. Name (A to Z)",
+                                "states": {
+                                  "expanded": false
+                                },
+                                "children": [
+                                  {
+                                    "role": "StaticText",
+                                    "name": "Name",
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "role": "columnheader",
+                            "name": "Value Reveal All",
+                            "children": [
+                              {
+                                "role": "StaticText",
+                                "name": "Value",
+                                "children": []
+                              },
+                              {
+                                "role": "button",
+                                "name": "Reveal All",
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "role": "row",
+                    "children": [
+                      {
+                        "role": "cell",
+                        "children": []
+                      },
+                      {
+                        "role": "cell",
+                        "name": "SAMPLE_KEY_1",
+                        "children": [
+                          {
+                            "role": "textbox",
+                            "name": "Resource name",
+                            "value": "SAMPLE_KEY_1",
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "role": "cell",
+                        "children": [
+                          {
+                            "role": "textbox",
+                            "name": "Secret value",
+                            "value": "••••••••",
+                            "states": {
+                              "readOnly": true
+                            },
+                            "children": [
+                              {
+                                "role": "generic",
+                                "children": [
+                                  {
+                                    "role": "StaticText",
+                                    "name": "••••••••",
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "role": "button",
+                            "name": "Copy value",
+                            "children": []
+                          },
+                          {
+                            "role": "button",
+                            "name": "More actions",
+                            "states": {
+                              "expanded": false
+                            },
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "role": "row",
+                    "children": [
+                      {
+                        "role": "cell",
+                        "children": []
+                      },
+                      {
+                        "role": "cell",
+                        "name": "SAMPLE_KEY_2",
+                        "children": [
+                          {
+                            "role": "textbox",
+                            "name": "Resource name",
+                            "value": "SAMPLE_KEY_2",
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "role": "cell",
+                        "children": [
+                          {
+                            "role": "textbox",
+                            "name": "Secret value",
+                            "value": "••••••••",
+                            "states": {
+                              "readOnly": true
+                            },
+                            "children": [
+                              {
+                                "role": "generic",
+                                "children": [
+                                  {
+                                    "role": "StaticText",
+                                    "name": "••••••••",
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "role": "button",
+                            "name": "Copy value",
+                            "children": []
+                          },
+                          {
+                            "role": "button",
+                            "name": "More actions",
+                            "states": {
+                              "expanded": false
+                            },
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "role": "row",
+                    "children": [
+                      {
+                        "role": "cell",
+                        "children": []
+                      },
+                      {
+                        "role": "cell",
+                        "name": "SAMPLE_KEY_3",
+                        "children": [
+                          {
+                            "role": "textbox",
+                            "name": "Resource name",
+                            "value": "SAMPLE_KEY_3",
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "role": "cell",
+                        "children": [
+                          {
+                            "role": "textbox",
+                            "name": "Secret value",
+                            "value": "••••••••",
+                            "states": {
+                              "readOnly": true
+                            },
+                            "children": [
+                              {
+                                "role": "generic",
+                                "children": [
+                                  {
+                                    "role": "StaticText",
+                                    "name": "••••••••",
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "role": "button",
+                            "name": "Copy value",
+                            "children": []
+                          },
+                          {
+                            "role": "button",
+                            "name": "More actions",
+                            "states": {
+                              "expanded": false
+                            },
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "role": "row",
+                    "children": [
+                      {
+                        "role": "cell",
+                        "children": []
+                      },
+                      {
+                        "role": "cell",
+                        "name": "SAMPLE_KEY_4",
+                        "children": [
+                          {
+                            "role": "textbox",
+                            "name": "Resource name",
+                            "value": "SAMPLE_KEY_4",
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "role": "cell",
+                        "children": [
+                          {
+                            "role": "textbox",
+                            "name": "Secret value",
+                            "value": "••••••••",
+                            "states": {
+                              "readOnly": true
+                            },
+                            "children": [
+                              {
+                                "role": "generic",
+                                "children": [
+                                  {
+                                    "role": "StaticText",
+                                    "name": "••••••••",
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "role": "button",
+                            "name": "Copy value",
+                            "children": []
+                          },
+                          {
+                            "role": "button",
+                            "name": "More actions",
+                            "states": {
+                              "expanded": false
+                            },
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "role": "row",
+                    "children": [
+                      {
+                        "role": "cell",
+                        "children": []
+                      },
+                      {
+                        "role": "cell",
+                        "name": "SAMPLE_KEY_5",
+                        "children": [
+                          {
+                            "role": "textbox",
+                            "name": "Resource name",
+                            "value": "SAMPLE_KEY_5",
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "role": "cell",
+                        "children": [
+                          {
+                            "role": "textbox",
+                            "name": "Secret value",
+                            "value": "••••••••",
+                            "states": {
+                              "readOnly": true
+                            },
+                            "children": [
+                              {
+                                "role": "generic",
+                                "children": [
+                                  {
+                                    "role": "StaticText",
+                                    "name": "••••••••",
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "role": "button",
+                            "name": "Copy value",
+                            "children": []
+                          },
+                          {
+                            "role": "button",
+                            "name": "More actions",
+                            "states": {
+                              "expanded": false
+                            },
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "role": "row",
+                    "children": [
+                      {
+                        "role": "cell",
+                        "children": [
+                          {
+                            "role": "button",
+                            "name": "Add resource",
+                            "states": {
+                              "expanded": false
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "role": "cell",
+                        "children": [
+                          {
+                            "role": "form",
+                            "children": [
+                              {
+                                "role": "textbox",
+                                "name": "New resource name",
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "role": "cell",
+                        "children": [
+                          {
+                            "role": "textbox",
+                            "name": "New resource value",
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "role": "button",
+                "name": "Go to next page",
+                "states": {
+                  "disabled": true
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -21,7 +21,7 @@ function named(node: SemanticNode, role: string, name: string): SemanticNode | u
   return nodes(node).find((candidate) => candidate.role === role && candidate.name === name);
 }
 
-describe('stage 8 profile contracts', () => {
+describe('compression profile contracts', () => {
   it('keeps Without unpruned while Detailed removes only empty none wrappers', async () => {
     const tree = await profileTree();
     const without = compressSemanticTree(tree, 'without');

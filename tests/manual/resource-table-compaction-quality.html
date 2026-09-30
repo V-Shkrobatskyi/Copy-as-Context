@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Resource table compaction quality check</title>
+  <style>
+    body { font: 16px system-ui; max-width: 1000px; margin: 32px auto; padding: 16px; }
+    button, input { font: inherit; margin: 4px; padding: 6px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #bbb; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>Resource table compaction quality check</h1>
+  <p>Synthetic local page. Compare Detailed and Compact with privacy enabled and disabled.</p>
+  <button aria-label="Demo Organization"><span>Demo</span> <span>Organization</span></button>
+  <a href="#resources" aria-label="Sample Project Project"><span>Sample Project</span> <span>Project</span></a>
+  <main>
+    <h2 id="resources">Resources</h2>
+    <label>Environment <select><option>Development</option><option>Production</option></select></label>
+    <button aria-label="Save as">Save</button>
+    <table>
+      <thead><tr>
+        <th><input type="checkbox" aria-label="Select all resources"></th>
+        <th><button aria-label="Sort resources. Name (A to Z)" aria-expanded="false">Name</button></th>
+        <th>Value <button>Reveal All</button></th>
+      </tr></thead>
+      <tbody>
+        <tr><td><input type="checkbox" aria-label="Select resource A"></td><td>SAMPLE_KEY_A</td><td><input aria-label="Secret value" value="••••••••" readonly><button>Copy value</button><button aria-expanded="false">More actions</button></td></tr>
+        <tr><td><input type="checkbox" aria-label="Select resource B" checked></td><td>SAMPLE_KEY_B</td><td><input aria-label="Secret value" value="••••••••" readonly><button>Copy value</button><button aria-expanded="false">More actions</button></td></tr>
+      </tbody>
+    </table>
+    <form>
+      <label>New resource name <input value="SAMPLE_KEY_C"></label>
+      <label>New secret value <input value="synthetic-test-value"></label>
+    </form>
+    <button disabled>Go to next page</button>
+  </main>
+</body>
+</html>

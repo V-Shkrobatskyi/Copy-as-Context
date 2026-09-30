@@ -4,6 +4,7 @@ import {
   canFlattenPresentationWrapper,
   canRemoveEmptyStructuralLeaf,
   labelIsCovered,
+  localDuplicateTextNodes,
   normalizedLabel,
 } from './rules';
 
@@ -93,10 +94,25 @@ function compactNode(node: SemanticNode, ancestorLabels: readonly string[]): Sem
     compactNode(child, childAncestorLabels),
   );
   const compacted = cloneNode(node, children, { compact: true });
+  // Match the whole remaining sequence before deleting any of its fragments.
+  // Doing this after ordinary cleanup also keeps the transform idempotent.
+  const duplicates = localDuplicateTextNodes(compacted);
+  if (duplicates.size > 0) compacted.children = removeCoveredTextNodes(children, duplicates);
 
   if (canFlattenPresentationWrapper(compacted)) return children;
   if (canRemoveEmptyStructuralLeaf(compacted)) return [];
   return [compacted];
+}
+
+function removeCoveredTextNodes(
+  children: readonly SemanticNode[],
+  duplicates: ReadonlySet<SemanticNode>,
+): SemanticNode[] {
+  return children.flatMap((child) => {
+    if (duplicates.has(child)) return [];
+    if (!canFlattenPresentationWrapper(child)) return [child];
+    return removeCoveredTextNodes(child.children, duplicates);
+  });
 }
 
 function cloneNode(
