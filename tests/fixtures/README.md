@@ -19,3 +19,13 @@ end-to-end quality corpus for the Chrome MVP. It covers dashboard, settings
 form, tabs, collapsed content, table, dialog, menu, article, and privacy
 boundaries. `tests/manual/chrome-mvp-quality.html` is its local browser smoke
 test companion. Neither fixture may contain real page captures or credentials.
+
+`quality/resource-table-compaction/` contains a synthetic resource table with five masked
+values, split control labels, visible column labels, closed menus and creation
+fields. Its Detailed and Compact JSON/text goldens specify the reviewed output;
+`repeated-text-baseline.json` isolates the nine newly removed text duplicates.
+
+`raw-ax/checked-tristate.json` and its semantic counterpart cover synthetic CDP
+`checked` tokens. They are protocol examples, not a live capture. Chromium's
+[accessibility helper](https://chromium.googlesource.com/chromium/src/+/main/third_party/blink/renderer/modules/accessibility/inspector_type_builder_helper.cc)
+emits `true`, `false` and `mixed` as tristate strings.
