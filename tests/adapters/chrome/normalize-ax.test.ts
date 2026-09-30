@@ -5,17 +5,42 @@ import { describe, expect, it } from 'vitest';
 
 import { normalizeChromeAxTree } from '@/src/adapters/chrome/normalize-ax';
 import type { ChromeAxTreeResponse } from '@/src/adapters/chrome/types';
-import type { SemanticTree } from '@/src/core';
+import { compressSemanticTree, serializeSemanticText, type SemanticTree } from '@/src/core';
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 const fixtureDirectory = resolve(testDirectory, '..', '..', 'fixtures');
-const scenarios = ['basic-page', 'form', 'tabs', 'accordion', 'table', 'dialog'] as const;
+const scenarios = ['basic-page', 'form', 'tabs', 'accordion', 'table', 'dialog', 'checked-tristate'] as const;
 
 async function fixture<T>(directory: string, scenario: string): Promise<T> {
   return JSON.parse(await readFile(resolve(fixtureDirectory, directory, `${scenario}.json`), 'utf8')) as T;
 }
 
 describe('normalizeChromeAxTree', () => {
+  it('preserves CDP tristate checked tokens through every compression profile', async () => {
+    const raw = await fixture<ChromeAxTreeResponse>('raw-ax', 'checked-tristate');
+    const result = normalizeChromeAxTree(raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error.message);
+    for (const level of ['without', 'detailed', 'compact', 'maximum'] as const) {
+      const tree = compressSemanticTree(result.tree, level);
+      expect(tree.root.children.map((node) => node.states?.checked)).toEqual([false, true, 'mixed']);
+      const content = serializeSemanticText(tree).content;
+      expect(content).toContain('checked=false');
+      expect(content).toContain('checked=true');
+      expect(content).toContain('checked=mixed');
+    }
+  });
+
+  it.each(['unknown', '', 0, 1, null])('ignores unsupported checked values without coercion: %s', (value) => {
+    const result = normalizeChromeAxTree({ nodes: [{
+      nodeId: 'root', role: { value: 'checkbox' }, properties: [
+        { name: 'checked', value: { type: 'tristate', value } },
+        { name: 'expanded', value: { value: 'false' } },
+      ],
+    }] });
+    expect(result).toEqual({ ok: true, tree: { schemaVersion: 1, root: { role: 'checkbox', children: [] } } });
+  });
+
   for (const scenario of scenarios) {
     it(`normalizes the ${scenario} fixture`, async () => {
       const [raw, expected] = await Promise.all([

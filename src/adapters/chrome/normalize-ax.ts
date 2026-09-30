@@ -45,6 +45,11 @@ function statesFrom(properties: Map<string, ChromeAxValue | undefined>): NodeSta
       states.checked = 'mixed';
       continue;
     }
+    // CDP exposes checked as a tristate token, unlike boolean states.
+    if (stateName === 'checked' && (value?.value === 'true' || value?.value === 'false')) {
+      states.checked = value.value === 'true';
+      continue;
+    }
 
     const boolean = booleanValue(value);
     if (boolean !== undefined) states[stateName] = boolean;
