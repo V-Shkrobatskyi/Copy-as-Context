@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "root": {
+    "role": "page",
+    "children": [
+      {
+        "role": "checkbox",
+        "name": "Synthetic false checkbox",
+        "states": {
+          "checked": false
+        },
+        "children": []
+      },
+      {
+        "role": "checkbox",
+        "name": "Synthetic true checkbox",
+        "states": {
+          "checked": true
+        },
+        "children": []
+      },
+      {
+        "role": "checkbox",
+        "name": "Synthetic mixed checkbox",
+        "states": {
+          "checked": "mixed"
+        },
+        "children": []
+      }
+    ]
+  }
+}

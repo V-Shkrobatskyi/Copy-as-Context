@@ -10,7 +10,7 @@ const testDirectory = dirname(fileURLToPath(import.meta.url));
 const fixtureDirectory = resolve(testDirectory, '..', 'fixtures');
 const rawDirectory = resolve(fixtureDirectory, 'raw-ax');
 const semanticDirectory = resolve(fixtureDirectory, 'semantic');
-const scenarios = ['basic-page', 'form', 'tabs', 'accordion', 'table', 'dialog'] as const;
+const scenarios = ['basic-page', 'form', 'tabs', 'accordion', 'table', 'dialog', 'checked-tristate'] as const;
 async function readJson(path: string): Promise<unknown> {
   return JSON.parse(await readFile(path, 'utf8'));
 }

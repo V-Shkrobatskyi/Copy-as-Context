@@ -14,6 +14,14 @@ empty or ancestor-duplicated `StaticText`/`image`, attribute-free `generic` or
 `none` presentation wrappers, and selected empty structural leaves. `maximum` currently aliases
 the conservative `compact` policy until it has its own safety corpus.
 
+Compact also removes a complete ordered sequence of plain text fragments when
+it exactly reconstructs a button or link name. Partial labels, visible column
+labels and semantic boundaries remain intact. A textbox's plain text duplicate
+of its own nonempty value is removed before redaction; value matching is case
+sensitive and never uses `[REDACTED]` as a duplicate key. These local rules cross
+only attribute-free presentation wrappers and retain controls and their states.
+Heading and list levels remain explicit.
+
 Compression receives normalized semantic data only. Chrome/CDP capture and
 clipboard/download APIs remain outside this boundary.
 

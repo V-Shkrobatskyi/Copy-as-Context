@@ -1,0 +1,76 @@
+{
+  "nodes": [
+    {
+      "nodeId": "root",
+      "childIds": [
+        "check-false",
+        "check-true",
+        "check-mixed"
+      ],
+      "role": {
+        "type": "internalRole",
+        "value": "RootWebArea"
+      }
+    },
+    {
+      "nodeId": "check-false",
+      "role": {
+        "type": "role",
+        "value": "checkbox"
+      },
+      "name": {
+        "type": "computedString",
+        "value": "Synthetic false checkbox"
+      },
+      "properties": [
+        {
+          "name": "checked",
+          "value": {
+            "type": "tristate",
+            "value": "false"
+          }
+        }
+      ]
+    },
+    {
+      "nodeId": "check-true",
+      "role": {
+        "type": "role",
+        "value": "checkbox"
+      },
+      "name": {
+        "type": "computedString",
+        "value": "Synthetic true checkbox"
+      },
+      "properties": [
+        {
+          "name": "checked",
+          "value": {
+            "type": "tristate",
+            "value": "true"
+          }
+        }
+      ]
+    },
+    {
+      "nodeId": "check-mixed",
+      "role": {
+        "type": "role",
+        "value": "checkbox"
+      },
+      "name": {
+        "type": "computedString",
+        "value": "Synthetic mixed checkbox"
+      },
+      "properties": [
+        {
+          "name": "checked",
+          "value": {
+            "type": "tristate",
+            "value": "mixed"
+          }
+        }
+      ]
+    }
+  ]
+}

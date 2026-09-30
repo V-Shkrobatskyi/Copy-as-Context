@@ -1,0 +1,88 @@
+page
+  button "Demo Organization"
+    generic
+      StaticText "Demo"
+      StaticText "Organization"
+  link "Sample Project Project"
+    generic
+      StaticText "Sample Project"
+      StaticText "Project"
+  navigation "breadcrumb"
+    list
+      listitem [level=1]
+        link "Root folder"
+          StaticText "/"
+  main
+    heading "Sample Project" [level=1]
+    button "Development"
+      combobox [value="Development", expanded=false]
+    table
+      rowgroup
+        row
+          columnheader
+            checkbox [checked=false]
+          columnheader "Sort resources. Name (A to Z)"
+            button "Sort resources. Name (A to Z)" [expanded=false]
+              StaticText "Name"
+          columnheader "Value Reveal All"
+            StaticText "Value"
+            button "Reveal All"
+      row
+        cell
+        cell "SAMPLE_KEY_1"
+          textbox "Resource name" [value="SAMPLE_KEY_1"]
+        cell
+          textbox "Secret value" [value="••••••••", readonly=true]
+            generic
+              StaticText "••••••••"
+          button "Copy value"
+          button "More actions" [expanded=false]
+      row
+        cell
+        cell "SAMPLE_KEY_2"
+          textbox "Resource name" [value="SAMPLE_KEY_2"]
+        cell
+          textbox "Secret value" [value="••••••••", readonly=true]
+            generic
+              StaticText "••••••••"
+          button "Copy value"
+          button "More actions" [expanded=false]
+      row
+        cell
+        cell "SAMPLE_KEY_3"
+          textbox "Resource name" [value="SAMPLE_KEY_3"]
+        cell
+          textbox "Secret value" [value="••••••••", readonly=true]
+            generic
+              StaticText "••••••••"
+          button "Copy value"
+          button "More actions" [expanded=false]
+      row
+        cell
+        cell "SAMPLE_KEY_4"
+          textbox "Resource name" [value="SAMPLE_KEY_4"]
+        cell
+          textbox "Secret value" [value="••••••••", readonly=true]
+            generic
+              StaticText "••••••••"
+          button "Copy value"
+          button "More actions" [expanded=false]
+      row
+        cell
+        cell "SAMPLE_KEY_5"
+          textbox "Resource name" [value="SAMPLE_KEY_5"]
+        cell
+          textbox "Secret value" [value="••••••••", readonly=true]
+            generic
+              StaticText "••••••••"
+          button "Copy value"
+          button "More actions" [expanded=false]
+      row
+        cell
+          button "Add resource" [expanded=false]
+        cell
+          form
+            textbox "New resource name"
+        cell
+          textbox "New resource value"
+    button "Go to next page" [disabled=true]
