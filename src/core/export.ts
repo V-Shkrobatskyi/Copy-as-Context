@@ -1,7 +1,9 @@
+import { renderExportAttribution } from './serializers/attribution';
 import type { CompressionLevel, ExportFormat, SerializedContext } from './contracts';
 import type { SemanticTree } from './model';
 import { redactSemanticTree } from './privacy';
 import { serializeMarkdown, serializeSemanticText } from './serializers';
+import { serializeMaximum } from './serializers/maximum';
 import { countMarkdownCharacters } from './serializers/markdown';
 import { countSemanticTextCharacters } from './serializers/semantic-text';
 import { compressSemanticTree } from './transforms';
@@ -26,10 +28,12 @@ export function prepareExport(
   // Without is already normalized; serializers and redaction do not mutate it.
   const selectedTree = compressionLevel === 'without' ? tree : compressSemanticTree(tree, compressionLevel);
   const redaction = redactForExport(selectedTree, redactSensitiveData);
-  const selected = serialize(redaction.tree, format);
+  const attribution = renderExportAttribution(compressionLevel, redactSensitiveData);
+  const selected = compressionLevel === 'maximum'
+    ? serializeMaximum(redaction.tree, format, attribution) : serialize(redaction.tree, format, attribution);
   const baseline = compressionLevel === 'without'
     ? selected.characterCount
-    : countCharacters(redactForExport(tree, redactSensitiveData).tree, format);
+    : countCharacters(redactForExport(tree, redactSensitiveData).tree, format, renderExportAttribution('without', redactSensitiveData));
   const characterCount = selected.characterCount;
   const rawRatio = baseline === 0
     ? null
@@ -48,10 +52,10 @@ function redactForExport(tree: SemanticTree, redactSensitiveData: boolean) {
   return redactSensitiveData ? redactSemanticTree(tree) : { tree, redactionCount: 0 };
 }
 
-function serialize(tree: SemanticTree, format: SupportedExportFormat): SerializedContext {
-  return format === 'semantic-text' ? serializeSemanticText(tree) : serializeMarkdown(tree);
+function serialize(tree: SemanticTree, format: SupportedExportFormat, attribution: string): SerializedContext {
+  return format === 'semantic-text' ? serializeSemanticText(tree, attribution) : serializeMarkdown(tree, attribution);
 }
 
-function countCharacters(tree: SemanticTree, format: SupportedExportFormat): number {
-  return format === 'semantic-text' ? countSemanticTextCharacters(tree) : countMarkdownCharacters(tree);
+function countCharacters(tree: SemanticTree, format: SupportedExportFormat, attribution: string): number {
+  return format === 'semantic-text' ? countSemanticTextCharacters(tree, attribution) : countMarkdownCharacters(tree, attribution);
 }
