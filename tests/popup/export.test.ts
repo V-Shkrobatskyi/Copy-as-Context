@@ -139,6 +139,41 @@ afterEach(() => {
 });
 
 describe('popup export flow', () => {
+  it.each(['semantic-text', 'markdown'] as const)('wraps Copy and preserves Save across all profiles and privacy settings in %s', async (format) => {
+    const capture = successfulCapture();
+    if (!capture.ok) throw new Error('Expected successful fixture');
+    for (const [index, compression] of (['without', 'detailed', 'compact', 'maximum'] as const).entries()) {
+      for (const privacy of [true, false]) {
+        vi.resetModules();
+        const popup = await loadPopup(capture);
+        await settle();
+        popup.compression.value = String(index);
+        popup.markdown.checked = format === 'markdown';
+        popup.redactSensitiveData.checked = privacy;
+        const result = prepareExport(capture.tree, compression, format, privacy);
+        const opening = compression === 'maximum' ? '**' : '<web_page>';
+        const closing = compression === 'maximum' ? '**' : '</web_page>';
+        const expected = `${opening}\n${result.serialized.content}${closing}\n`;
+
+        popup.copy.click();
+        await settle();
+        expect(popup.clipboardWrite).toHaveBeenCalledExactlyOnceWith(expected);
+        expect(popup.metrics.textContent).toContain(`${expected.length} characters copied`);
+        expect(popup.metrics.textContent).toContain(`~${Math.ceil(expected.length / 4)} tokens`);
+        expect(popup.metrics.textContent).toContain(`context ${Math.round(result.reductionRatio! * 100)}% smaller than Without`);
+        expect(popup.download).not.toHaveBeenCalled();
+
+        vi.mocked(URL.createObjectURL).mockClear();
+        popup.save.click();
+        await settle();
+        const blob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
+        expect(await blob.text()).toBe(result.serialized.content);
+        expect(popup.metrics.textContent).toContain(`${result.characterCount} characters ·`);
+        expect(popup.clipboardWrite).toHaveBeenCalledOnce();
+      }
+    }
+  });
+
   it('renders Compact Semantic Text defaults and accessible export controls', async () => {
     const popup = await loadPopup(successfulCapture());
 
