@@ -1,0 +1,57 @@
+import { describe, expect, it } from 'vitest';
+import { compressSemanticTree, prepareExport, redactSemanticTree, serializeMarkdown, serializeSemanticText, type SemanticTree } from '@/src/core';
+import { countMarkdownCharacters } from '@/src/core/serializers/markdown';
+import { countSemanticTextCharacters } from '@/src/core/serializers/semantic-text';
+
+const tree: SemanticTree = {
+  schemaVersion: 1, title: '🙂 *Title*\nSecond line', sourceUrl: 'https://example.test/?token=synthetic-secret',
+  capturedAt: 'Synthetic\nTime', root: { role: 'page', children: [
+    { role: 'none', children: [{ role: 'button', name: 'Save resource', children: [
+      { role: 'StaticText', name: 'Save', children: [] }, { role: 'StaticText', name: 'resource', children: [] },
+    ] }] },
+    { role: 'textbox', name: 'Password', value: 'synthetic-secret', states: { checked: 'mixed', expanded: false }, children: [] },
+    { role: 'unusual role', name: '\t"\\\n\u2028\u2029`<[]>', href: 'https://example.test/?a=`', children: [] },
+  ] },
+};
+
+describe('allocation-saving export paths', () => {
+  for (const format of ['semantic-text', 'markdown'] as const) {
+    const serialize = format === 'semantic-text' ? serializeSemanticText : serializeMarkdown;
+    const count = format === 'semantic-text' ? countSemanticTextCharacters : countMarkdownCharacters;
+    it(`${format} count-only rendering matches escaping, metadata and final newlines`, () => {
+      for (const input of [tree, { schemaVersion: 1 as const, title: 'Title', root: { role: 'page', children: [] } }]) {
+        expect(count(input)).toBe(serialize(input).content.length);
+      }
+    });
+    for (const level of ['without', 'detailed', 'compact', 'maximum'] as const) {
+      for (const privacy of [true, false]) {
+        it(`${format}/${level}/${privacy} preserves original pipeline output and exact metrics`, () => {
+          const snapshot = structuredClone(tree);
+          const selected = compressSemanticTree(tree, level);
+          const redaction = privacy ? redactSemanticTree(selected) : { tree: selected, redactionCount: 0 };
+          const baseline = serialize(privacy ? redactSemanticTree(tree).tree : tree).characterCount;
+          const serialized = serialize(redaction.tree);
+          expect(prepareExport(tree, level, format, privacy)).toEqual({ serialized,
+            characterCount: serialized.characterCount, approximateTokenCount: Math.ceil(serialized.characterCount / 4),
+            reductionRatio: Math.max(0, 1 - serialized.characterCount / baseline), redactionCount: redaction.redactionCount });
+          expect(tree).toEqual(snapshot);
+        });
+      }
+    }
+  }
+
+  it('restores repeated ancestor labels and keeps sibling labels outside their scope', () => {
+    const input: SemanticTree = { schemaVersion: 1, root: { role: 'page', name: 'Root', children: [
+      { role: 'group', name: 'Root', children: [{ role: 'StaticText', name: 'Root', children: [] }] },
+      { role: 'StaticText', name: 'Root', children: [] },
+      { role: 'group', name: 'Local', children: [{ role: 'StaticText', name: 'Local', children: [] }] },
+      { role: 'StaticText', name: 'Local', children: [] },
+    ] } };
+    const result = compressSemanticTree(input, 'compact');
+    expect(result.root.children.map((child) => [child.role, child.name])).toEqual([
+      ['group', 'Root'], ['group', 'Local'], ['StaticText', 'Local'],
+    ]);
+    result.root.children[0]!.name = 'Changed';
+    expect(input.root.children[0]!.name).toBe('Root');
+  });
+});

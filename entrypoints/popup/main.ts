@@ -2,12 +2,10 @@ import './style.css';
 
 import {
   DEFAULT_COMPRESSION_LEVEL,
-  prepareExport,
-  type CaptureResult,
   type CompressionLevel,
   type SupportedExportFormat,
 } from '@/src/core';
-import { CAPTURE_ACTIVE_TAB_MESSAGE, type CaptureActiveTabRequest } from '@/src/capture-message';
+import { CAPTURE_ACTIVE_TAB_MESSAGE, isCaptureActiveTabResponse, type CaptureActiveTabRequest } from '@/src/capture-message';
 
 type ExportAction = 'copy' | 'save';
 type StoredPopupSettings = {
@@ -32,10 +30,6 @@ const FORMAT_LABELS: Record<SupportedExportFormat, string> = {
   'semantic-text': 'Semantic Text',
   markdown: 'Markdown',
 };
-
-function isCaptureResult(value: unknown): value is CaptureResult {
-  return typeof value === 'object' && value !== null && 'ok' in value && typeof value.ok === 'boolean';
-}
 
 function selectedFormat(value: string): SupportedExportFormat {
   return value === 'markdown' ? 'markdown' : 'semantic-text';
@@ -218,9 +212,15 @@ async function exportPageContext(action: ExportAction): Promise<void> {
   setPending(true, action);
   let destinationStarted = false;
   try {
-    const request: CaptureActiveTabRequest = { type: CAPTURE_ACTIVE_TAB_MESSAGE };
+    const exportFormat = selectedFormat(markdownFormat.checked ? 'markdown' : 'semantic-text');
+    const request: CaptureActiveTabRequest = {
+      type: CAPTURE_ACTIVE_TAB_MESSAGE,
+      compression: selectedRangeCompression(compression.value),
+      format: exportFormat,
+      redactSensitiveData: redactSensitiveData.checked,
+    };
     const response = await chrome.runtime.sendMessage(request);
-    if (!isCaptureResult(response)) {
+    if (!isCaptureActiveTabResponse(response)) {
       showFeedback(ERROR_MESSAGES['capture-failed']!);
       return;
     }
@@ -229,13 +229,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       return;
     }
 
-    const exportFormat = selectedFormat(markdownFormat.checked ? 'markdown' : 'semantic-text');
-    const result = prepareExport(
-      response.tree,
-      selectedRangeCompression(compression.value),
-      exportFormat,
-      redactSensitiveData.checked,
-    );
+    const result = response.export;
     destinationStarted = true;
     if (action === 'copy') {
       await navigator.clipboard.writeText(result.serialized.content);

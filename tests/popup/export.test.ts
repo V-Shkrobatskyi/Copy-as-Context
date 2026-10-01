@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { CaptureResult, SemanticTree } from '@/src/core';
+import { prepareExport, type CaptureResult, type SemanticTree } from '@/src/core';
+import type { CaptureActiveTabRequest } from '@/src/capture-message';
 
 class FakeElement {
   value = '';
@@ -37,6 +38,7 @@ interface PopupHarness {
   clipboardWrite: ReturnType<typeof vi.fn>;
   download: ReturnType<typeof vi.fn>;
   storageSet: ReturnType<typeof vi.fn>;
+  sendMessage: ReturnType<typeof vi.fn>;
 }
 
 const SECRET = 'synthetic-popup-password-value';
@@ -91,6 +93,12 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
     return 1;
   });
   const storageSet = vi.fn().mockResolvedValue(undefined);
+  const sendMessage = vi.fn().mockImplementation(async (request: CaptureActiveTabRequest) => {
+    if (typeof response === 'object' && response !== null && 'ok' in response && response.ok === true && 'tree' in response) {
+      return { ok: true, export: prepareExport(response.tree as SemanticTree, request.compression, request.format, request.redactSensitiveData) };
+    }
+    return response;
+  });
 
   vi.stubGlobal('document', {
     querySelector: <T extends Element>(selector: string): T | null =>
@@ -99,7 +107,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   vi.stubGlobal('navigator', { clipboard: { writeText: clipboardWrite } });
   vi.stubGlobal('chrome', {
     runtime: {
-      sendMessage: vi.fn().mockResolvedValue(response),
+      sendMessage,
       getURL: (path: string) => `chrome-extension://test/${path}`,
     },
     downloads: { download },
@@ -116,7 +124,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   await import('@/entrypoints/popup/main');
   return {
     app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings,
-    copy, save, status, metrics, clipboardWrite, download, storageSet,
+    copy, save, status, metrics, clipboardWrite, download, storageSet, sendMessage,
   };
 }
 
@@ -153,6 +161,7 @@ describe('popup export flow', () => {
     expect(popup.save.disabled).toBe(true);
     await settle();
 
+    expect(popup.sendMessage).toHaveBeenCalledWith({ type: 'capture-active-tab', compression: 'compact', format: 'semantic-text', redactSensitiveData: true });
     expect(popup.clipboardWrite).toHaveBeenCalledOnce();
     const copied = popup.clipboardWrite.mock.calls[0]?.[0] as string;
     expect(copied).toContain('[REDACTED]');
@@ -233,6 +242,15 @@ describe('popup export flow', () => {
     expect(popup.compression.value).toBe('3');
     expect(popup.markdown.checked).toBe(true);
     expect(popup.redactSensitiveData.checked).toBe(false);
+  });
+
+  it('rejects malformed prepared exports without copying content', async () => {
+    const popup = await loadPopup({ ok: true, export: { serialized: { content: 'invalid' } } });
+    popup.copy.click();
+    await settle();
+    expect(popup.clipboardWrite).not.toHaveBeenCalled();
+    expect(popup.status.textContent).toContain('Unable to capture');
+    expect(popup.copy.disabled).toBe(false);
   });
 
 });

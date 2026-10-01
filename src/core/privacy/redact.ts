@@ -14,6 +14,8 @@ const AWS_ACCESS_KEY = /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/gu;
 const OPENAI_STYLE_KEY = /\bsk-(?:proj-)?[A-Za-z0-9_-]{16,}\b/gu;
 const ASSIGNED_SECRET = /\b((?:api[ _-]?key|token|secret|password)\s*[:=]\s*)((?!\[REDACTED\])[^\s&"',;]{8,})/giu;
 const SECRET_QUERY_VALUE = /([?&](?:api[ _-]?key|token|secret|password)=)((?!\[REDACTED\])[^&#\s]+)/giu;
+// Every supported credential pattern contains one of these markers. Most labels do not.
+const CREDENTIAL_MARKER = /Bearer|Basic|eyJ|gh[pousr]_|github_pat_|AKIA|ASIA|sk-|api[ _-]?key|token|secret|password/iu;
 
 /**
  * Returns an independent semantic tree with common credential-shaped text redacted.
@@ -25,6 +27,7 @@ export function redactSemanticTree(tree: SemanticTree): RedactionResult {
   let redactionCount = 0;
 
   const redactText = (value: string): string => {
+    if (!CREDENTIAL_MARKER.test(value)) return value;
     let redacted = value;
     const replace = (pattern: RegExp, replacement: string | ((...args: any[]) => string)) => {
       redacted = redacted.replace(pattern, (...args: any[]) => {

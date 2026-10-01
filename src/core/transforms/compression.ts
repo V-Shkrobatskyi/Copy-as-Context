@@ -3,7 +3,6 @@ import {
   canFlattenDetailedWrapper,
   canFlattenPresentationWrapper,
   canRemoveEmptyStructuralLeaf,
-  labelIsCovered,
   localDuplicateTextNodes,
   normalizedLabel,
 } from './rules';
@@ -46,12 +45,20 @@ export function compressSemanticTree(
 }
 
 function detailedRoot(root: SemanticNode): SemanticNode {
-  return cloneNode(root, root.children.flatMap((child) => detailedNode(child)));
+  const children: SemanticNode[] = [];
+  for (const child of root.children) appendDetailedNode(child, children);
+  return cloneNode(root, children);
 }
 
-function detailedNode(node: SemanticNode): SemanticNode[] {
-  const detailed = cloneNode(node, node.children.flatMap((child) => detailedNode(child)));
-  return canFlattenDetailedWrapper(detailed) ? detailed.children : [detailed];
+function appendDetailedNode(node: SemanticNode, destination: SemanticNode[]): void {
+  const children: SemanticNode[] = [];
+  for (const child of node.children) appendDetailedNode(child, children);
+  const detailed = cloneNode(node, children);
+  if (canFlattenDetailedWrapper(detailed)) {
+    for (const child of children) destination.push(child);
+  } else {
+    destination.push(detailed);
+  }
 }
 
 function copyDocumentMetadata(source: SemanticTree, target: SemanticTree): void {
@@ -64,35 +71,27 @@ function compactRoot(root: SemanticNode): SemanticNode {
   // SemanticTree must retain one root even if its role would otherwise be
   // removable. Its descendants still receive the normal Compact traversal.
   const rootLabel = normalizedLabel(root.name);
-  const ancestorLabels = rootLabel === undefined ? [] : [rootLabel];
+  const ancestorLabels = new Map<string, number>();
+  if (rootLabel !== undefined) ancestorLabels.set(rootLabel, 1);
   const children = root.children.flatMap((child) => compactNode(child, ancestorLabels));
   return removeUniqueNamedLinkHrefs(cloneNode(root, children, { compact: true }));
 }
 
-function compactNode(node: SemanticNode, ancestorLabels: readonly string[]): SemanticNode[] {
+function compactNode(node: SemanticNode, ancestorLabels: Map<string, number>): SemanticNode[] {
   if (node.role === 'InlineTextBox') return [];
 
-  if (
-    node.role === 'StaticText' &&
-    (normalizedLabel(node.name) === undefined || labelIsCovered(node.name, ancestorLabels))
-  ) {
-    return [];
-  }
-
-  if (
-    node.role === 'image' &&
-    (normalizedLabel(node.name) === undefined || labelIsCovered(node.name, ancestorLabels))
-  ) {
-    return [];
-  }
-
   const ownLabel = normalizedLabel(node.name);
-  const childAncestorLabels = ownLabel === undefined
-    ? ancestorLabels
-    : [...ancestorLabels, ownLabel];
+  if ((node.role === 'StaticText' || node.role === 'image') &&
+      (ownLabel === undefined || ancestorLabels.has(ownLabel))) return [];
+  if (ownLabel !== undefined) ancestorLabels.set(ownLabel, (ancestorLabels.get(ownLabel) ?? 0) + 1);
   const children: SemanticNode[] = node.children.flatMap((child) =>
-    compactNode(child, childAncestorLabels),
+    compactNode(child, ancestorLabels),
   );
+  if (ownLabel !== undefined) {
+    const count = ancestorLabels.get(ownLabel)! - 1;
+    if (count === 0) ancestorLabels.delete(ownLabel);
+    else ancestorLabels.set(ownLabel, count);
+  }
   const compacted = cloneNode(node, children, { compact: true });
   // Match the whole remaining sequence before deleting any of its fragments.
   // Doing this after ordinary cleanup also keeps the transform idempotent.
@@ -165,13 +164,13 @@ function filterLinkHrefs(
   const linkCounts = LINK_SCOPE_ROLES.has(node.role)
     ? linkNameCounts(node)
     : inheritedLinkCounts;
-  const children = node.children.map((child) => filterLinkHrefs(child, linkCounts));
-  const result = cloneNode(node, children);
+  // This traversal owns the compact clone; no source nodes or states are shared.
+  for (const child of node.children) filterLinkHrefs(child, linkCounts);
 
   if (node.role === 'link' && node.name !== undefined && linkCounts?.get(normalizedLabel(node.name) ?? '') === 1) {
-    delete result.href;
+    delete node.href;
   }
-  return result;
+  return node;
 }
 
 function linkNameCounts(container: SemanticNode): ReadonlyMap<string, number> {

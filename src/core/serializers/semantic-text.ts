@@ -16,15 +16,21 @@ const SAFE_ROLE = /^\p{L}[\p{L}\p{N}_-]*$/u;
 /** Serializes an already-transformed semantic tree without changing its structure. */
 export function serializeSemanticText(tree: SemanticTree): SerializedContext {
   const lines: string[] = [];
-  renderCaptureHeader(tree, lines);
-  renderNode(tree.root, 0, lines);
+  render(tree, lines);
   const content = `${lines.join('\n')}\n`;
+  return { format: 'semantic-text', content, characterCount: content.length };
+}
 
-  return {
-    format: 'semantic-text',
-    content,
-    characterCount: content.length,
-  };
+/** Measures the exact same output without accumulating tree lines or a full string. */
+export function countSemanticTextCharacters(tree: SemanticTree): number {
+  return render(tree);
+}
+
+function render(tree: SemanticTree, lines?: string[]): number {
+  const headers = lines ?? [];
+  renderCaptureHeader(tree, headers);
+  const headerCount = headers.reduce((count, line) => count + line.length + 1, 0);
+  return headerCount + renderNode(tree.root, 0, lines);
 }
 
 function renderCaptureHeader(tree: SemanticTree, lines: string[]): void {
@@ -40,15 +46,18 @@ function headerValue(value: string | undefined, fallback: string): string {
   return (value ?? fallback).replace(/\r?\n/gu, ' ');
 }
 
-function renderNode(node: SemanticNode, depth: number, lines: string[]): void {
+function renderNode(node: SemanticNode, depth: number, lines?: string[]): number {
   const fields = [renderRole(node.role)];
   if (node.name !== undefined) fields.push(quote(node.name));
 
   const attributes = renderAttributes(node);
   if (attributes.length > 0) fields.push(`[${attributes.join(', ')}]`);
 
-  lines.push(`${'  '.repeat(depth)}${fields.join(' ')}`);
-  for (const child of node.children) renderNode(child, depth + 1, lines);
+  const line = `${'  '.repeat(depth)}${fields.join(' ')}`;
+  lines?.push(line);
+  let characterCount = line.length + 1;
+  for (const child of node.children) characterCount += renderNode(child, depth + 1, lines);
+  return characterCount;
 }
 
 function renderRole(role: string): string {

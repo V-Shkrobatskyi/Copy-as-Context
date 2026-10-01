@@ -2,6 +2,8 @@ import type { CompressionLevel, ExportFormat, SerializedContext } from './contra
 import type { SemanticTree } from './model';
 import { redactSemanticTree } from './privacy';
 import { serializeMarkdown, serializeSemanticText } from './serializers';
+import { countMarkdownCharacters } from './serializers/markdown';
+import { countSemanticTextCharacters } from './serializers/semantic-text';
 import { compressSemanticTree } from './transforms';
 
 export type SupportedExportFormat = Extract<ExportFormat, 'semantic-text' | 'markdown'>;
@@ -21,16 +23,17 @@ export function prepareExport(
   format: SupportedExportFormat,
   redactSensitiveData = true,
 ): PreparedExport {
-  const redaction = redactForExport(compressSemanticTree(tree, compressionLevel), redactSensitiveData);
+  // Without is already normalized; serializers and redaction do not mutate it.
+  const selectedTree = compressionLevel === 'without' ? tree : compressSemanticTree(tree, compressionLevel);
+  const redaction = redactForExport(selectedTree, redactSensitiveData);
   const selected = serialize(redaction.tree, format);
-  const without = serialize(
-    redactForExport(compressSemanticTree(tree, 'without'), redactSensitiveData).tree,
-    format,
-  );
+  const baseline = compressionLevel === 'without'
+    ? selected.characterCount
+    : countCharacters(redactForExport(tree, redactSensitiveData).tree, format);
   const characterCount = selected.characterCount;
-  const rawRatio = without.characterCount === 0
+  const rawRatio = baseline === 0
     ? null
-    : 1 - characterCount / without.characterCount;
+    : 1 - characterCount / baseline;
 
   return {
     serialized: selected,
@@ -47,4 +50,8 @@ function redactForExport(tree: SemanticTree, redactSensitiveData: boolean) {
 
 function serialize(tree: SemanticTree, format: SupportedExportFormat): SerializedContext {
   return format === 'semantic-text' ? serializeSemanticText(tree) : serializeMarkdown(tree);
+}
+
+function countCharacters(tree: SemanticTree, format: SupportedExportFormat): number {
+  return format === 'semantic-text' ? countSemanticTextCharacters(tree) : countMarkdownCharacters(tree);
 }
