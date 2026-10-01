@@ -14,7 +14,9 @@ Chrome may show a debugger-access warning. Capture cannot run on Chrome internal
 
 ## Export and privacy
 
-The popup supports **Semantic Text** (default) and **Markdown**. `Compact` is the default compression level; `Maximum` currently uses the same conservative policy as Compact. The popup shows the exact JavaScript character count, a rough token estimate (`ceil(characters / 4)`), and reduction relative to a redacted Without output in the same format. The estimate is not model-specific tokenization.
+The popup supports **Semantic Text** (default) and **Markdown**. `Compact` is the default compression level; `Maximum` currently uses the same conservative policy as Compact. Copy surrounds the entire page context with `<web_page>` and `</web_page>` on separate lines, or `**` on both sides for Maximum, without extra blank lines around the context and with a single newline after the closing boundary. Your instructions can go before or after the block. Save to file exports the original context without these boundaries.
+
+The popup shows the exact JavaScript character count (including boundaries for Copy), a rough token estimate (`ceil(characters / 4)`), and context reduction relative to Without output with the same format and privacy setting. Boundaries are excluded from the reduction ratio. The estimate is not model-specific tokenization.
 
 Before every export, the extension applies a local heuristic redaction pass to the normalized context. It replaces password field values and common credential-shaped text (for example Bearer/Basic authorization values, JWTs, GitHub tokens, AWS access-key IDs, OpenAI-style keys, and selected `token`/`api_key` URL parameters) with `[REDACTED]`. This is a safeguard against obvious accidental disclosure, **not** a general DLP or PII detector: review exported context before sharing it, especially when it contains personal or business-sensitive data.
 
