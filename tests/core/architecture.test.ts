@@ -21,7 +21,7 @@ async function sourceFiles(directory: string): Promise<string[]> {
 describe('core architecture boundary', () => {
   it('does not depend on browser globals, adapters, UI, or entrypoints', async () => {
     const files = await sourceFiles(coreDirectory);
-    const forbidden = /\b(?:chrome|browser)\s*\.|from\s+['"][^'"]*(?:adapters|entrypoints|ui)[^'"]*['"]/;
+    const forbidden = /\b(?:chrome|browser|document|window|navigator)\s*\.\s*[A-Za-z_$]|\bnew\s+(?:Worker|Blob)\b|from\s+['"][^'"]*(?:adapters|entrypoints|ui|wxt)[^'"]*['"]/;
 
     for (const file of files) {
       expect(await readFile(file, 'utf8'), file).not.toMatch(forbidden);

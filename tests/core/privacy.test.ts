@@ -21,6 +21,24 @@ async function privacyFixture(): Promise<{ positive: SemanticTree; negative: Sem
 }
 
 describe('semantic privacy redaction', () => {
+  it.each([
+    'Bearer abcdefghijklmnop', 'Basic abcdefghijklmnop',
+    'eyJabcdef.abcdefgh.abcdefgh',
+    ...['p', 'o', 'u', 's', 'r'].map((kind) => `gh${kind}_abcdefghijklmnopqrstuvwxyz`),
+    'github_pat_abcdefghijklmnopqrstuvwxyz',
+    'AKIA0123456789ABCDEF', 'ASIA0123456789ABCDEF',
+    'sk-abcdefghijklmnop', 'sk-proj-abcdefghijklmnop',
+    'API_KEY=abcdefghijklmnop', 'api-key: abcdefghijklmnop',
+    'token=abcdefghijklmnop', 'secret: abcdefghijklmnop', 'password: abcdefghijklmnop',
+    'https://example.test/?API_KEY=synthetic&password=synthetic',
+  ])('keeps the fast marker check compatible with credential pattern %s', (text) => {
+    const result = redactSemanticTree({ schemaVersion: 1, title: text, root: { role: 'StaticText', name: text, children: [] } });
+    expect(result.tree.title).toContain('[REDACTED]');
+    expect(result.tree.root.name).toContain('[REDACTED]');
+    expect(result.redactionCount).toBeGreaterThanOrEqual(2);
+    expect(redactSemanticTree(result.tree).tree).toEqual(result.tree);
+  });
+
   it('redacts credential-shaped text across the whole normalized tree without mutation', async () => {
     const tree = (await privacyFixture()).positive;
     const before = structuredClone(tree);
