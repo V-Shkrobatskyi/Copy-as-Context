@@ -12,7 +12,7 @@ import {
  *
  * Without is an unpruned normalized clone. Detailed removes only empty presentation wrappers.
  * Compact removes explicitly tested structural and duplicate noise; maximum currently shares
- * Compact's conservative policy.
+ * Compact's conservative structural policy. Maximum encoding is applied after redaction.
  */
 export function compressSemanticTree(
   tree: SemanticTree,

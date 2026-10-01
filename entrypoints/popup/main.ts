@@ -146,7 +146,7 @@ function updateCompressionDescription(): void {
     without: 'Keeps every captured semantic node. Sensitive values are still redacted.',
     detailed: 'Removes only empty presentation wrappers for readable inspection.',
     compact: 'Removes repeated accessibility noise while retaining meaningful controls.',
-    maximum: 'Uses the strongest currently safe reduction; it matches Compact today.',
+    maximum: 'Packs Compact context with selective abbreviations and repeated text or structures; falls back when overhead is too high.',
   };
   const minimum = Number.parseFloat(compression.min);
   const maximum = Number.parseFloat(compression.max);
