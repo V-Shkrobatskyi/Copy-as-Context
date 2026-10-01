@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copy as Context performance smoke test</title>
+<style>
+  body { font: 16px system-ui; max-width: 70rem; margin: 2rem auto; padding: 1rem; }
+  button, input { font: inherit; }
+  th, td { text-align: left; padding: .25rem; }
+</style>
+<h1>Performance and export quality</h1>
+<p>Synthetic data only. Reload the unpacked extension before testing. Start small, then increase the row count.</p>
+<ol>
+  <li>Compare Without, Detailed, Compact and Maximum in both export formats.</li>
+  <li>Check split button labels, partial Save / Save as text, closed states, heading levels and link targets.</li>
+  <li>Enable privacy: the password must be redacted. Disable privacy: the synthetic value must remain.</li>
+  <li>Copy and save repeatedly; close the popup during capture, reopen it and capture again.</li>
+  <li>Confirm the debugger indicator clears after each capture; inspect popup and background performance separately.</li>
+</ol>
+<label>Rows <input id="rows" type="number" min="1" max="10000" value="1000"></label>
+<button id="generate" type="button">Generate rows</button>
+<p id="status" role="status"></p>
+<label>Password <input type="text" value="synthetic-performance-password" readonly></label>
+<button aria-label="Save as">Save</button>
+<button aria-expanded="false">Closed menu</button>
+<table><caption>Synthetic resources</caption><thead><tr><th>Selected</th><th>Resource</th><th>Action</th></tr></thead><tbody id="resources"></tbody></table>
+<script>
+  document.getElementById('generate').addEventListener('click', () => {
+    const rowsInput = document.getElementById('rows');
+    if (!(rowsInput instanceof HTMLInputElement)) return;
+    const count = Math.min(10000, Math.max(1, Number(rowsInput.value) || 1));
+    const fragment = document.createDocumentFragment();
+    for (let index = 0; index < count; index++) {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td><input type="checkbox" aria-label="Select resource ${index}"></td><td><a href="#resource-${index}">Resource ${index}</a></td><td><button aria-label="Save resource"><span>Save</span> <span>resource</span></button></td>`;
+      fragment.append(row);
+    }
+    document.getElementById('resources').replaceChildren(fragment);
+    document.getElementById('status').textContent = `${count} rows ready.`;
+  });
+</script>
+</html>
