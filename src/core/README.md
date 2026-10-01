@@ -57,3 +57,19 @@ character count, `ceil(characters / 4)` approximate token count, a reduction
 ratio against the redacted Without output in the same format, and a redaction
 count. It contains no browser APIs. Clipboard and file-download code belongs in
 the popup and must consume only the already prepared serialized content.
+
+The browser background entrypoint now prepares the export and sends only final
+content and counters to the popup. The popup does not receive the semantic tree
+or run transforms. Browser-specific capture and message validation remain outside
+the core; future browser adapters can call the same `prepareExport` function.
+
+Export preparation reads the normalized input directly for Without, reuses its
+selected size as the baseline, and counts other profiles' Without output through
+the same rendering code without accumulating baseline lines or a full string.
+Public compression functions still return independent trees. Compact's href
+filter modifies only its owned clone, and ancestor label reference counts are
+scoped to a single traversal. There is no retained capture cache.
+
+Redaction skips the replacement passes for strings without any supported
+credential marker. This fast check is a superset of the credential patterns;
+adding a pattern requires updating the marker check and its regression cases.

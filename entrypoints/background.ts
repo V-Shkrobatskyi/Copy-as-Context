@@ -1,7 +1,7 @@
 import { captureChromeAccessibilityTree } from '../src/adapters/chrome/capture';
 import { addChromeDocumentMetadata } from '../src/adapters/chrome/document-metadata';
-import { CAPTURE_ACTIVE_TAB_MESSAGE, type CaptureActiveTabResponse } from '../src/capture-message';
-import type { SemanticNode } from '@/src/core';
+import { CAPTURE_ACTIVE_TAB_MESSAGE, isCaptureActiveTabRequest, type CaptureActiveTabResponse } from '../src/capture-message';
+import { prepareExport, type CaptureResult } from '@/src/core';
 
 function unsupportedPage(message: string): CaptureActiveTabResponse {
   return { ok: false, error: { code: 'unsupported-page', message } };
@@ -17,21 +17,16 @@ function canAttemptCapture(url: string | undefined): boolean {
   }
 }
 
-function countNodes(node: SemanticNode): number {
-  return 1 + node.children.reduce((count, child) => count + countNodes(child), 0);
-}
-
 function formatCaptureTime(date: Date): string {
   const pad = (value: number): string => value.toString().padStart(2, '0');
   return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-function reportCaptureResult(result: CaptureActiveTabResponse): void {
+function reportCaptureResult(result: CaptureResult): void {
   // Keep raw CDP data and page text out of diagnostics, but make the local
   // service-worker console sufficient to confirm each capture lifecycle.
   if (result.ok) {
     console.info('[Copy as Context] Capture succeeded', {
-      nodeCount: countNodes(result.tree.root),
       rootRole: result.tree.root.role,
     });
     return;
@@ -39,7 +34,6 @@ function reportCaptureResult(result: CaptureActiveTabResponse): void {
 
   console.error('[Copy as Context] Capture failed', {
     code: result.error.code,
-    details: result.error.details,
   });
 }
 
@@ -56,6 +50,10 @@ export default defineBackground(() => {
       return;
     }
 
+    if (!isCaptureActiveTabRequest(message)) {
+      sendResponse({ ok: false, error: { code: 'capture-failed', message: 'Invalid export preferences.' } });
+      return;
+    }
     console.info('[Copy as Context] Capture request received.');
 
     void (async () => {
@@ -63,27 +61,32 @@ export default defineBackground(() => {
       const tab = tabs[0];
       if (!tab?.id || !canAttemptCapture(tab.url)) {
         const result = unsupportedPage('This Chrome page cannot be captured.');
-        reportCaptureResult(result);
         sendResponse(result);
         return;
       }
       const capture = await captureChromeAccessibilityTree(tab.id);
-      const result: CaptureActiveTabResponse = capture.ok
+      const result: CaptureResult = capture.ok
         ? {
           ok: true,
           tree: addChromeDocumentMetadata(capture.tree, tab, formatCaptureTime(new Date())),
         }
         : capture;
       reportCaptureResult(result);
-      sendResponse(result);
-    })().catch((error) => {
-      const details = error instanceof Error ? error.message : String(error);
+      const response: CaptureActiveTabResponse = result.ok
+        ? { ok: true, export: prepareExport(result.tree, message.compression, message.format, message.redactSensitiveData) }
+        : result;
+      sendResponse(response);
+    })().catch(() => {
       const result: CaptureActiveTabResponse = {
         ok: false,
-        error: { code: 'capture-failed', message: 'Unable to capture this page’s accessibility tree.', details },
+        error: { code: 'capture-failed', message: 'Unable to prepare this page’s context.' },
       };
       reportCaptureResult(result);
-      sendResponse(result);
+      try {
+        sendResponse(result);
+      } catch {
+        // The popup may have closed while capture was finishing.
+      }
     });
 
     return true;
