@@ -6,6 +6,7 @@ import {
   type SupportedExportFormat,
 } from '@/src/core';
 import { CAPTURE_ACTIVE_TAB_MESSAGE, isCaptureActiveTabResponse, type CaptureActiveTabRequest } from '@/src/capture-message';
+import { wrapClipboardContext } from '@/src/clipboard-context';
 
 type ExportAction = 'copy' | 'save';
 type StoredPopupSettings = {
@@ -40,10 +41,13 @@ function formatMetrics(
   approximateTokenCount: number,
   reductionRatio: number | null,
   redactionCount: number,
+  action: ExportAction,
 ): string {
   const reduction = reductionRatio === null ? 'reduction unavailable' : `${Math.round(reductionRatio * 100)}% smaller than Without`;
   const redactions = `${redactionCount} redaction${redactionCount === 1 ? '' : 's'}`;
-  return `${characterCount} characters · ~${approximateTokenCount} tokens · ${reduction} · ${redactions}.`;
+  const countLabel = action === 'copy' ? 'characters copied' : 'characters';
+  const reductionLabel = action === 'copy' ? `context ${reduction}` : reduction;
+  return `${characterCount} ${countLabel} · ~${approximateTokenCount} tokens · ${reductionLabel} · ${redactions}.`;
 }
 
 function downloadFilename(format: SupportedExportFormat): string {
@@ -230,19 +234,25 @@ async function exportPageContext(action: ExportAction): Promise<void> {
     }
 
     const result = response.export;
+    let characterCount = result.characterCount;
+    let approximateTokenCount = result.approximateTokenCount;
     destinationStarted = true;
     if (action === 'copy') {
-      await navigator.clipboard.writeText(result.serialized.content);
+      const content = wrapClipboardContext(result.serialized.content, request.compression);
+      await navigator.clipboard.writeText(content);
+      characterCount = content.length;
+      approximateTokenCount = Math.ceil(characterCount / 4);
       showFeedback(`Copied ${FORMAT_LABELS[exportFormat]}.`);
     } else {
       await saveContext(result.serialized.content, exportFormat);
       showFeedback(`Saved ${FORMAT_LABELS[exportFormat]} file.`);
     }
     metrics.textContent = formatMetrics(
-      result.characterCount,
-      result.approximateTokenCount,
+      characterCount,
+      approximateTokenCount,
       result.reductionRatio,
       result.redactionCount,
+      action,
     );
   } catch {
     showFeedback(ERROR_MESSAGES[
