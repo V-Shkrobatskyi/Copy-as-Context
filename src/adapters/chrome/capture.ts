@@ -89,6 +89,7 @@ export function createChromeAccessibilityCapturer(client: ChromeDebuggerClient) 
     let attached = false;
     let accessibilityEnabled = false;
     let result: CaptureResult | undefined;
+    let snapshot: unknown;
 
     try {
       const attachError = await new Promise<string | undefined>((resolve) => {
@@ -106,20 +107,18 @@ export function createChromeAccessibilityCapturer(client: ChromeDebuggerClient) 
       if (enableError) {
         const code = errorCode(enableError);
         result = failure(code, userMessage(code), enableError);
-        return result;
-      }
-      accessibilityEnabled = true;
-
-      const command = await new Promise<{ response: unknown; error?: string }>((resolve) => {
-        client.sendCommand(target, 'Accessibility.getFullAXTree', (response, error) => resolve({ response, error }));
-      });
-      if (command.error) {
-        const code = errorCode(command.error);
-        result = failure(code, userMessage(code), command.error);
-      } else if (!isChromeAxTreeResponse(command.response)) {
-        result = failure('invalid-tree', 'Chrome returned an invalid accessibility tree.');
       } else {
-        result = normalizeChromeAxTree(command.response);
+        accessibilityEnabled = true;
+
+        const command = await new Promise<{ response: unknown; error?: string }>((resolve) => {
+          client.sendCommand(target, 'Accessibility.getFullAXTree', (response, error) => resolve({ response, error }));
+        });
+        if (command.error) {
+          const code = errorCode(command.error);
+          result = failure(code, userMessage(code), command.error);
+        } else {
+          snapshot = command.response;
+        }
       }
     } catch (error) {
       const details = error instanceof Error ? error.message : String(error);
@@ -153,7 +152,15 @@ export function createChromeAccessibilityCapturer(client: ChromeDebuggerClient) 
       inFlightTabs.delete(tabId);
     }
 
-    return result ?? failure('capture-failed', 'Unable to capture this page’s accessibility tree.');
+    if (result) return result;
+    // Release Chrome's AX domain and debugger before the CPU-only normalization.
+    try {
+      if (!isChromeAxTreeResponse(snapshot)) return failure('invalid-tree', 'Chrome returned an invalid accessibility tree.');
+      return normalizeChromeAxTree(snapshot);
+    } catch (error) {
+      return failure('invalid-tree', 'Chrome returned an invalid accessibility tree.',
+        error instanceof Error ? error.message : String(error));
+    }
   };
 }
 

@@ -5,7 +5,7 @@ import {
   type ChromeDebuggerClient,
 } from '@/src/adapters/chrome/capture';
 
-function fakeClient(options: { attachError?: string; commandError?: string; detachError?: string } = {}) {
+function fakeClient(options: { attachError?: string; commandError?: string; detachError?: string; disableError?: string; enableError?: string } = {}) {
   const calls: string[] = [];
   const client: ChromeDebuggerClient = {
     attach(_target, _version, callback) {
@@ -18,7 +18,9 @@ function fakeClient(options: { attachError?: string; commandError?: string; deta
         {
           nodes: [{ nodeId: 'root', role: { value: 'RootWebArea' } }],
         },
-        method === 'Accessibility.getFullAXTree' ? options.commandError : undefined,
+        method === 'Accessibility.getFullAXTree' ? options.commandError
+          : method === 'Accessibility.disable' ? options.disableError
+            : method === 'Accessibility.enable' ? options.enableError : undefined,
       );
     },
     detach(_target, callback) {
@@ -100,5 +102,54 @@ describe('Chrome accessibility capture', () => {
     });
     finishAttach?.();
     await expect(first).resolves.toMatchObject({ ok: true });
+  });
+
+  it('cleans up before reading the snapshot for normalization', async () => {
+    const { client, calls } = fakeClient();
+    const send = client.sendCommand;
+    client.sendCommand = (target, method, callback) => {
+      if (method !== 'Accessibility.getFullAXTree') return send(target, method, callback);
+      calls.push(method);
+      callback({ get nodes() {
+        expect(calls.at(-1)).toBe('detach');
+        return [{ nodeId: 'root', role: { value: 'RootWebArea' } }];
+      } });
+    };
+    await expect(createChromeAccessibilityCapturer(client)(42)).resolves.toMatchObject({ ok: true });
+  });
+
+  it('reports cleanup failure instead of success and still attempts detach', async () => {
+    for (const options of [{ disableError: 'Synthetic disable error' }, { detachError: 'Synthetic detach error' }]) {
+      const { client, calls } = fakeClient(options);
+      await expect(createChromeAccessibilityCapturer(client)(42)).resolves.toMatchObject({ ok: false, error: { code: 'capture-failed' } });
+      expect(calls.at(-1)).toBe('detach');
+    }
+  });
+
+  it('detaches when enable fails, and releases the guard after malformed or thrown responses', async () => {
+    const failedEnable = fakeClient({ enableError: 'Synthetic enable error' });
+    await expect(createChromeAccessibilityCapturer(failedEnable.client)(42)).resolves.toMatchObject({ ok: false });
+    expect(failedEnable.calls).toEqual(['attach', 'Accessibility.enable', 'detach']);
+    const { client, calls } = fakeClient();
+    const original = client.sendCommand;
+    client.sendCommand = (target, method, callback) => {
+      if (method === 'Accessibility.getFullAXTree') callback({ nodes: [{ nodeId: 'root' }] });
+      else original(target, method, callback);
+    };
+    const capture = createChromeAccessibilityCapturer(client);
+    await expect(capture(42)).resolves.toMatchObject({ ok: false, error: { code: 'invalid-tree' } });
+    client.sendCommand = () => { throw new Error('Synthetic command failure'); };
+    await expect(capture(42)).resolves.toMatchObject({ ok: false });
+    client.sendCommand = original;
+    await expect(capture(42)).resolves.toMatchObject({ ok: true });
+    expect(calls.filter((call) => call === 'detach')).toHaveLength(3);
+  });
+
+  it('handles repeated captures with a fresh lifecycle and no stale in-flight guard', async () => {
+    const { client, calls } = fakeClient();
+    const capture = createChromeAccessibilityCapturer(client);
+    for (let index = 0; index < 30; index++) await expect(capture(42)).resolves.toMatchObject({ ok: true });
+    expect(calls.filter((call) => call === 'attach')).toHaveLength(30);
+    expect(calls.filter((call) => call === 'detach')).toHaveLength(30);
   });
 });
