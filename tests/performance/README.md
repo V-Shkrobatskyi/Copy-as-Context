@@ -33,6 +33,29 @@ repeat when a small-case regression needs checking.
 These Node timings do not measure Chrome renderer, debugger, IPC, popup paint,
 Android, or total browser RAM. Treat small timing differences as noise.
 
+For a focused AX normalization timing and retention check:
+
+```sh
+PERFORMANCE_NORMALIZATION=1 PERFORMANCE_REPORT=/tmp/normalization-after.json npx vitest run --config tests/performance/vitest.config.ts
+```
+
+Use `PERFORMANCE_BASELINE_ROOT` as above for the baseline. This harness tests
+417, 10,001, and 50,001 nodes, with and without frame IDs, an identical repeated
+leaf, and a conflicting repeated leaf. It records output hashes and success
+status, timing after ten warmups, and heap samples across 30 calls with GC.
+Compare timing only for scenarios with matching behavior; a baseline rejection
+is not equivalent to successful normalization. Output hashes for successful
+framed/unframed cases must match across versions. Diagnostics are silenced with
+a non-retaining console stub; this does not measure Chrome console overhead.
+Post-call heap is sampled with the result alive, then the result is released
+before GC. First/last five retained-heap medians help identify accumulation;
+small deltas include harness/runtime noise. This does not measure peak heap or
+prove the absence of browser leaks. A separate series creates 30 fresh snapshots
+and uses WeakRefs after an event-loop turn and forced GC to check that completed
+successful/failed calls release the input records and successful output trees.
+The existing export heap check below does
+not exercise normalization.
+
 For an opt-in heap check with GC exposed only in the test process:
 
 ```sh

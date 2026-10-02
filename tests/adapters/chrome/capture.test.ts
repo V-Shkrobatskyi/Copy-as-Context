@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createChromeAccessibilityCapturer,
@@ -32,6 +32,53 @@ function fakeClient(options: { attachError?: string; commandError?: string; deta
 }
 
 describe('Chrome accessibility capture', () => {
+  beforeEach(() => { vi.spyOn(console, 'warn').mockImplementation(() => {}); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('captures identical repeated nodes and releases Chrome before normalization', async () => {
+    const { client, calls } = fakeClient();
+    const send = client.sendCommand;
+    client.sendCommand = (target, method, callback) => {
+      if (method !== 'Accessibility.getFullAXTree') return send(target, method, callback);
+      calls.push(method);
+      const button = { nodeId: 'button', role: { value: 'button' }, name: { value: 'Save' } };
+      callback({ get nodes() {
+        expect(calls.at(-1)).toBe('detach');
+        return [
+          { nodeId: 'root', role: { value: 'RootWebArea' }, childIds: ['button'] },
+          button, { ...button },
+        ];
+      } });
+    };
+    await expect(createChromeAccessibilityCapturer(client)(42)).resolves.toMatchObject({
+      ok: true, tree: { root: { children: [{ role: 'button', name: 'Save', children: [] }] } },
+    });
+    expect(calls).toEqual([
+      'attach', 'Accessibility.enable', 'Accessibility.getFullAXTree', 'Accessibility.disable', 'detach',
+    ]);
+  });
+
+  it.each([
+    ['invalid-response', {}],
+    ['normalization-exception', { get nodes() { throw new Error('Private page data'); } }],
+    ['normalization-range-error', { get nodes() { throw new RangeError('Private page data'); } }],
+  ])('logs only the safe %s category after releasing Chrome', async (reason, response) => {
+    const { client, calls } = fakeClient();
+    const send = client.sendCommand;
+    client.sendCommand = (target, method, callback) => {
+      if (method !== 'Accessibility.getFullAXTree') return send(target, method, callback);
+      calls.push(method);
+      callback(response);
+    };
+    await expect(createChromeAccessibilityCapturer(client)(42)).resolves.toMatchObject({
+      ok: false, error: { code: 'invalid-tree' },
+    });
+    expect(calls).toEqual([
+      'attach', 'Accessibility.enable', 'Accessibility.getFullAXTree', 'Accessibility.disable', 'detach',
+    ]);
+    expect(console.warn).toHaveBeenCalledExactlyOnceWith('[Copy as Context] AX normalization rejected', { reason });
+  });
+
   it('attaches, captures one AX snapshot, and always detaches after success', async () => {
     const { client, calls } = fakeClient();
     const capture = createChromeAccessibilityCapturer(client);

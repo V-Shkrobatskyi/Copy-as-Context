@@ -13,10 +13,26 @@ const STATE_PROPERTIES: ReadonlyMap<string, keyof NodeStates> = new Map([
   ['focused', 'focused'],
 ]);
 
-function invalidTree(details: string): CaptureResult {
+type InvalidTreeReason = 'empty-nodes' | 'missing-id' | 'conflicting-duplicate-id' | 'missing-child' |
+  'shared-child' | 'root-count' | 'cycle' | 'missing-role' | 'disconnected';
+
+/** Structural counters only: never log page text, values, URLs, or CDP IDs. */
+function graphSummary(nodes: ChromeAxNode[]) {
+  const ids = new Set(nodes.map((node) => node.nodeId));
+  const references = nodes.flatMap((node) => node.childIds ?? []);
+  const referencedIds = new Set(references);
   return {
-    ok: false,
-    error: { code: 'invalid-tree', message: 'Chrome returned an invalid accessibility tree.', details },
+    nodes: nodes.length,
+    duplicateIds: nodes.length - ids.size,
+    missingIds: nodes.filter((node) => typeof node.nodeId !== 'string' || node.nodeId.length === 0).length,
+    roots: nodes.filter((node) => !referencedIds.has(node.nodeId)).length,
+    missingChildReferences: references.filter((id) => !ids.has(id)).length,
+    repeatedChildReferences: references.length - referencedIds.size,
+    ignoredNodes: nodes.filter((node) => node.ignored === true).length,
+    missingRoles: nodes.filter((node) => !stringValue(node.role)).length,
+    ignoredMissingRoles: nodes.filter((node) => node.ignored === true && !stringValue(node.role)).length,
+    rootWebAreas: nodes.filter((node) => stringValue(node.role) === 'RootWebArea').length,
+    explicitFrameIds: new Set(nodes.flatMap((node) => node.frameId === undefined ? [] : [node.frameId])).size,
   };
 }
 
@@ -81,54 +97,95 @@ function rootFrameNodes(nodes: ChromeAxNode[]): ChromeAxNode[] {
   // Chrome may include frameId only on document-root nodes. Descendants without
   // an explicit frameId belong to the root document unless they are reached
   // through a separately identified embedded-frame root.
-  const rootNodes = nodes.filter((node) => node.frameId === undefined || node.frameId === rootFrameId);
-  const rootNodeIds = new Set(rootNodes.map((node) => node.nodeId));
-  return rootNodes.map((node) => ({
+  return nodes.filter((node) => node.frameId === undefined || node.frameId === rootFrameId);
+}
+
+function filterChildReferences(
+  nodes: ChromeAxNode[],
+  nodeIds: ReadonlySet<string> | ReadonlyMap<string, ChromeAxNode> = new Set(nodes.map((node) => node.nodeId)),
+): ChromeAxNode[] {
+  return nodes.map((node) => ({
     ...node,
-    childIds: node.childIds?.filter((childId) => rootNodeIds.has(childId)),
+    childIds: node.childIds?.filter((childId) => nodeIds.has(childId)),
   }));
 }
 
 /** Converts a complete Chrome CDP accessibility response into the browser-neutral core model. */
 export function normalizeChromeAxTree(response: ChromeAxTreeResponse): CaptureResult {
+  const frameNodes = Array.isArray(response.nodes) ? rootFrameNodes(response.nodes) : [];
+  // Preserve the existing child-reference filtering only when a root frame is identified.
+  const hasRootFrame = frameNodes.some((node) => node.frameId !== undefined && stringValue(node.role) === 'RootWebArea');
+  const invalidTree = (reason: InvalidTreeReason, details: string): CaptureResult => {
+    console.warn('[Copy as Context] AX normalization rejected', {
+      reason,
+      raw: graphSummary(Array.isArray(response.nodes) ? response.nodes : []),
+      filtered: graphSummary(hasRootFrame ? filterChildReferences(frameNodes) : frameNodes),
+    });
+    return {
+      ok: false,
+      error: { code: 'invalid-tree', message: 'Chrome returned an invalid accessibility tree.', details },
+    };
+  };
   if (!Array.isArray(response.nodes) || response.nodes.length === 0) {
-    return invalidTree('The response contains no AX nodes.');
+    return invalidTree('empty-nodes', 'The response contains no AX nodes.');
   }
 
-  const nodes = rootFrameNodes(response.nodes);
-  const nodesById = new Map<string, ChromeAxNode>();
-  for (const node of nodes) {
-    if (!node.nodeId || nodesById.has(node.nodeId)) {
-      return invalidTree('AX node IDs must be present and unique.');
+  const uniqueNodes = new Map<string, ChromeAxNode>();
+  for (const node of frameNodes) {
+    if (typeof node.nodeId !== 'string' || node.nodeId.length === 0) {
+      return invalidTree('missing-id', 'AX node IDs must be present.');
     }
-    nodesById.set(node.nodeId, node);
+    const previous = uniqueNodes.get(node.nodeId);
+    if (previous) {
+      // Compare the complete CDP records before filtering child references.
+      // Only identical repetitions are safe to collapse; conflicts remain errors.
+      if (JSON.stringify(previous) !== JSON.stringify(node)) {
+        return invalidTree('conflicting-duplicate-id', 'Repeated AX node IDs contain conflicting records.');
+      }
+      continue;
+    }
+    uniqueNodes.set(node.nodeId, node);
+  }
+  const uniqueFrameNodes = uniqueNodes.size === frameNodes.length ? frameNodes : [...uniqueNodes.values()];
+  const nodes = hasRootFrame ? filterChildReferences(uniqueFrameNodes, uniqueNodes) : uniqueFrameNodes;
+  // Reuse the ID index after duplicate checking instead of keeping a second Map.
+  const nodesById = uniqueNodes;
+  if (hasRootFrame) {
+    for (const node of nodes) nodesById.set(node.nodeId, node);
   }
 
   const childReferences = new Set<string>();
   for (const node of nodes) {
     for (const childId of node.childIds ?? []) {
       if (!nodesById.has(childId)) {
-        return invalidTree(`AX node ${node.nodeId} references a missing child.`);
+        return invalidTree('missing-child', `AX node ${node.nodeId} references a missing child.`);
       }
       if (childReferences.has(childId)) {
-        return invalidTree(`AX node ${childId} has more than one parent.`);
+        return invalidTree('shared-child', `AX node ${childId} has more than one parent.`);
       }
       childReferences.add(childId);
     }
   }
 
   const root = rootNode(nodes, new Set(nodesById.keys()));
-  if (!root) return invalidTree('The response must have exactly one root AX node.');
+  if (!root) return invalidTree('root-count', 'The response must have exactly one root AX node.');
 
   const visiting = new Set<string>();
   const visited = new Set<string>();
+  let traversalFailure: 'cycle' | 'missing-role' | undefined;
 
   const normalizeNode = (node: ChromeAxNode): SemanticNode | undefined => {
-    if (visiting.has(node.nodeId)) return undefined;
+    if (visiting.has(node.nodeId)) {
+      traversalFailure = 'cycle';
+      return undefined;
+    }
     visiting.add(node.nodeId);
 
     const role = stringValue(node.role);
-    if (!role) return undefined;
+    if (!role) {
+      traversalFailure = 'missing-role';
+      return undefined;
+    }
 
     const properties = propertiesByName(node.properties);
     const children: SemanticNode[] = [];
@@ -161,7 +218,8 @@ export function normalizeChromeAxTree(response: ChromeAxTreeResponse): CaptureRe
 
   const normalizedRoot = normalizeNode(root);
   if (!normalizedRoot || visited.size !== nodes.length) {
-    return invalidTree('The AX node graph is cyclic, disconnected, or has a node without a role.');
+    return invalidTree(traversalFailure ?? 'disconnected',
+      'The AX node graph is cyclic, disconnected, or has a node without a role.');
   }
 
   const tree: SemanticTree = { schemaVersion: 1, root: normalizedRoot };

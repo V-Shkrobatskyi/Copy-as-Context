@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { normalizeChromeAxTree } from '@/src/adapters/chrome/normalize-ax';
 import type { ChromeAxTreeResponse } from '@/src/adapters/chrome/types';
@@ -16,6 +16,80 @@ async function fixture<T>(directory: string, scenario: string): Promise<T> {
 }
 
 describe('normalizeChromeAxTree', () => {
+  beforeEach(() => { vi.spyOn(console, 'warn').mockImplementation(() => {}); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('reports missing roles and pre-filter graph problems without logging page data', () => {
+    const result = normalizeChromeAxTree({ nodes: [
+      {
+        nodeId: 'private-root-id', frameId: 'private-frame-id',
+        role: { value: 'RootWebArea' }, name: { value: 'Private page title' },
+        childIds: ['private-wrapper-id', 'private-missing-id'],
+      },
+      {
+        nodeId: 'private-wrapper-id', ignored: true,
+        name: { value: 'Private label' }, value: { value: 'person@example.test' },
+      },
+    ] });
+    expect(result).toMatchObject({ ok: false, error: { code: 'invalid-tree' } });
+    expect(console.warn).toHaveBeenCalledExactlyOnceWith('[Copy as Context] AX normalization rejected', {
+      reason: 'missing-role',
+      raw: {
+        nodes: 2, duplicateIds: 0, missingIds: 0, roots: 1, missingChildReferences: 1,
+        repeatedChildReferences: 0, ignoredNodes: 1, missingRoles: 1,
+        ignoredMissingRoles: 1, rootWebAreas: 1, explicitFrameIds: 1,
+      },
+      filtered: {
+        nodes: 2, duplicateIds: 0, missingIds: 0, roots: 1, missingChildReferences: 0,
+        repeatedChildReferences: 0, ignoredNodes: 1, missingRoles: 1,
+        ignoredMissingRoles: 1, rootWebAreas: 1, explicitFrameIds: 1,
+      },
+    });
+  });
+
+  it('collapses identical repeated dialog records without dropping controls or mutating input', async () => {
+    const raw = await fixture<ChromeAxTreeResponse>('raw-ax', 'dialog');
+    const expected = await fixture<SemanticTree>('semantic', 'dialog');
+    const repeated = { nodes: [...raw.nodes, ...JSON.parse(JSON.stringify(raw.nodes))] };
+    const before = JSON.stringify(repeated);
+    expect(normalizeChromeAxTree(repeated)).toEqual({ ok: true, tree: expected });
+    expect(JSON.stringify(repeated)).toBe(before);
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: { value: 'Changed label' } },
+    { value: { value: 'Changed value' } },
+    { childIds: ['missing-child'] },
+    { properties: [{ name: 'disabled', value: { value: true } }] },
+    { parentId: 'different-parent' },
+  ])('rejects conflicting duplicate records before filtering, including CDP-only fields: %j', (difference) => {
+    const button = { nodeId: 'button', role: { value: 'button' }, name: { value: 'Save' } };
+    const result = normalizeChromeAxTree({ nodes: [
+      { nodeId: 'root', frameId: 'main', role: { value: 'RootWebArea' }, childIds: ['button'] },
+      button,
+      { ...button, ...difference },
+    ] });
+    expect(result).toMatchObject({ ok: false, error: { code: 'invalid-tree' } });
+    expect(console.warn).toHaveBeenCalledWith('[Copy as Context] AX normalization rejected',
+      expect.objectContaining({ reason: 'conflicting-duplicate-id' }));
+  });
+
+  it('reports a missing ID separately from duplicates', () => {
+    expect(normalizeChromeAxTree({ nodes: [
+      { nodeId: '', role: { value: 'RootWebArea' } },
+    ] })).toMatchObject({ ok: false, error: { code: 'invalid-tree' } });
+    expect(console.warn).toHaveBeenCalledWith('[Copy as Context] AX normalization rejected',
+      expect.objectContaining({ reason: 'missing-id', raw: expect.objectContaining({ missingIds: 1 }) }));
+  });
+
+  it('does not emit rejection diagnostics for a successful capture', () => {
+    expect(normalizeChromeAxTree({ nodes: [
+      { nodeId: 'root', role: { value: 'RootWebArea' } },
+    ] })).toMatchObject({ ok: true });
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
   it('preserves CDP tristate checked tokens through every compression profile', async () => {
     const raw = await fixture<ChromeAxTreeResponse>('raw-ax', 'checked-tristate');
     const result = normalizeChromeAxTree(raw);

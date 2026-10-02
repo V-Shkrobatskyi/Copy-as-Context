@@ -155,9 +155,15 @@ export function createChromeAccessibilityCapturer(client: ChromeDebuggerClient) 
     if (result) return result;
     // Release Chrome's AX domain and debugger before the CPU-only normalization.
     try {
-      if (!isChromeAxTreeResponse(snapshot)) return failure('invalid-tree', 'Chrome returned an invalid accessibility tree.');
+      if (!isChromeAxTreeResponse(snapshot)) {
+        console.warn('[Copy as Context] AX normalization rejected', { reason: 'invalid-response' });
+        return failure('invalid-tree', 'Chrome returned an invalid accessibility tree.');
+      }
       return normalizeChromeAxTree(snapshot);
     } catch (error) {
+      console.warn('[Copy as Context] AX normalization rejected', {
+        reason: error instanceof RangeError ? 'normalization-range-error' : 'normalization-exception',
+      });
       return failure('invalid-tree', 'Chrome returned an invalid accessibility tree.',
         error instanceof Error ? error.message : String(error));
     }
