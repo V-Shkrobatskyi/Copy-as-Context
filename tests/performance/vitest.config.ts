@@ -11,6 +11,6 @@ export default defineConfig({
       : process.env.PERFORMANCE_MEMORY ? 'tests/performance/memory.bench.ts' : 'tests/performance/pipeline.bench.ts'],
     testTimeout: 180_000,
     ...(process.env.PERFORMANCE_MEMORY || process.env.PERFORMANCE_NORMALIZATION
-      ? { pool: 'forks', poolOptions: { forks: { execArgv: ['--expose-gc'] } } } : {}),
+      ? { pool: 'forks', execArgv: ['--expose-gc'] } : {}),
   },
 });

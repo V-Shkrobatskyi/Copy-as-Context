@@ -18,9 +18,11 @@
     "postinstall": "wxt prepare"
   },
   "devDependencies": {
+    "@types/jsdom": "^30.0.0",
+    "jsdom": "^29.1.1",
     "typescript": "^5.9.3",
     "vite": "^8.1.5",
-    "vitest": "^3.2.7",
+    "vitest": "4.1.11",
     "web-ext": "^10.5.0",
     "wxt": "^0.21.3"
   }
