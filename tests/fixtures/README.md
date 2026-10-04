@@ -4,6 +4,12 @@ Each scenario has a small, hand-authored `raw-ax` fixture and its expected norma
 
 Fixtures are synthetic and must remain free of personal data, real credentials, private URLs, and production page content. They define normalization expectations only. Compression/pruning expectations belong to the stage 3 test corpus.
 
+`quality/desktop-holdout.html` is an independent DOM/Chrome AX quality fixture.
+`tests/helpers/desktop-quality.ts` specifies required controls, states, named
+ancestors, exclusions, Unicode, privacy outcomes and live SPA updates. It is used
+by both the DOM unit suite and opt-in native browser probe; allowed summary-role
+differences are explicit. Native results are not compared byte-for-byte.
+
 `compression-input/` contains browser-independent trees before compression.
 `compression-expected/detailed/` is their lossless baseline, while
 `compression-expected/compact/` records the intentional removals and

@@ -22,7 +22,11 @@ def sizes(root):
     }
 
 
-report = {target: sizes(Path(".output") / target) for target in ("chrome-mv3", "firefox-mv2")}
+targets = ("chrome-mv3", "firefox-mv3")
+for target in targets:
+    if not (Path(".output") / target / "manifest.json").is_file():
+        raise SystemExit(f"Missing {target} build; build both browser targets first.")
+report = {target: sizes(Path(".output") / target) for target in targets}
 if len(sys.argv) > 1:
     Path(sys.argv[1]).write_text(json.dumps(report, indent=2) + "\n")
 print(json.dumps(report, indent=2))

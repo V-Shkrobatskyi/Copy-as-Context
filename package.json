@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run compile && npm test && npm run build && npm run build:firefox && npm run check:browser-builds && npm run lint:firefox",
+    "check:desktop-runtime": "node scripts/check-desktop-runtime.mjs",
     "check:browser-builds": "node scripts/check-browser-builds.mjs",
     "lint:firefox": "web-ext lint --source-dir .output/firefox-mv3",
     "postinstall": "wxt prepare"
