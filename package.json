@@ -1,25 +1,28 @@
 {
   "name": "copy-as-context",
-  "description": "Local Chrome extension for copying semantic page context.",
+  "description": "Local browser extension for copying semantic page context in Chrome and Firefox.",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox",
-    "build:firefox:android-test": "wxt build -b firefox --mode android-test",
+    "build:firefox:android": "wxt build -b firefox --mode android",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
+    "zip:firefox:android": "wxt zip -b firefox --mode android",
     "check:firefox-package": "node scripts/check-firefox-package.mjs",
+    "check:firefox-android-package": "node scripts/check-firefox-package.mjs --android",
     "compile": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run compile && npm test && npm run build && npm run build:firefox && npm run check:browser-builds && npm run lint:firefox",
+    "check": "npm run compile && npm test && npm run build && npm run build:firefox && npm run build:firefox:android && npm run check:browser-builds && npm run lint:firefox && npm run lint:firefox:android",
     "check:desktop-runtime": "node scripts/check-desktop-runtime.mjs",
     "check:browser-builds": "node scripts/check-browser-builds.mjs",
     "lint:firefox": "web-ext lint --source-dir .output/firefox-mv3",
+    "lint:firefox:android": "web-ext lint --source-dir .output/firefox-mv3-android",
     "postinstall": "wxt prepare"
   },
   "devDependencies": {
@@ -30,5 +33,9 @@
     "vitest": "4.1.11",
     "web-ext": "^10.5.0",
     "wxt": "^0.21.3"
+  },
+  "engines": {
+    "node": ">=24.10.0 <25",
+    "npm": ">=11.6.0 <12"
   }
 }

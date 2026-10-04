@@ -12,7 +12,7 @@ export default defineConfig({
     resolve: {
       alias: {
         '@popup-style.css': fileURLToPath(new URL(
-          browser === 'firefox' && mode === 'android-test'
+          browser === 'firefox' && mode === 'android'
             ? './entrypoints/popup/android.css'
             : './entrypoints/popup/style.css',
           import.meta.url,
@@ -20,11 +20,11 @@ export default defineConfig({
       },
     },
   }),
-  manifest: ({ browser, mode }) => browserManifest(browser, mode === 'android-test'),
+  manifest: ({ browser, mode }) => browserManifest(browser, mode === 'android'),
   zip: {
     includeSources: [
       'package.json', 'package-lock.json', 'wxt.config.ts', 'tsconfig.json', 'vitest.config.ts',
-      'README.md', 'CONTRIBUTING.md', 'LICENSE', 'BUILDING.md',
+      'README.md', 'CONTRIBUTING.md', 'LICENSE', 'BUILDING.md', 'CHANGELOG.md', 'PRIVACY.md', '.nvmrc',
       'entrypoints/**', 'src/**', 'public/**', 'scripts/**', 'tests/fixtures/**',
       'tests/helpers/**', 'tests/manual/**', 'tests/performance/**', 'docs/**',
     ],

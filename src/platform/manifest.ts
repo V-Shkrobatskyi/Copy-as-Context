@@ -1,12 +1,12 @@
 import type { UserManifest } from 'wxt';
 
 /** Keep browser capabilities separate without requesting persistent site access. */
-export function browserManifest(target: string, androidProbe = false): UserManifest {
+export function browserManifest(target: string, androidBuild = false): UserManifest {
   return {
     name: 'Copy as Context',
     description: 'Copy a compact semantic representation of the current page for LLM chats.',
     permissions: target === 'firefox'
-      ? ['activeTab', 'scripting', 'clipboardWrite', 'storage', ...(!androidProbe ? ['downloads'] : [])]
+      ? ['activeTab', 'scripting', 'clipboardWrite', 'storage', ...(!androidBuild ? ['downloads'] : [])]
       : ['debugger', 'clipboardWrite', 'downloads', 'storage'],
     ...(target === 'firefox' ? {
       browser_specific_settings: {
@@ -15,7 +15,7 @@ export function browserManifest(target: string, androidProbe = false): UserManif
           strict_min_version: '140.0',
           data_collection_permissions: { required: ['none'] },
         },
-        ...(androidProbe ? { gecko_android: { strict_min_version: '142.0' } } : {}),
+        ...(androidBuild ? { gecko_android: { strict_min_version: '142.0' } } : {}),
       },
     } : {}),
     icons: {

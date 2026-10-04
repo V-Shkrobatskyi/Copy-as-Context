@@ -1,14 +1,16 @@
 # Firefox release preparation
 
-The local artifacts are unsigned development packages. No add-on has been signed,
-submitted to AMO, listed, pushed or published by this work. Full Desktop toolbar
-and lifecycle evidence is still required; Android remains deferred.
+The maintainer confirmed successful manual browser checks on Desktop and Android
+on 2026-10-04. Desktop supports Copy and Save; Android support is Copy-only.
+Exact tested browser/device versions and per-scenario reports were not supplied.
+Local artifacts remain unsigned; browser verification does not imply store
+submission, signing or approval.
 
 ## Build and archives
 
 Run `npm run check`, then `npm run zip:firefox` and
 `npm run check:firefox-package`. The package check verifies exact uncompressed ZIP
-content against the built Desktop directory, required license/notice files,
+content against the corresponding build directory, required license/notice files,
 metadata and the source allowlist. It emits SHA-256 for both archives. See
 [BUILDING.md](../BUILDING.md) for the reviewer reproduction, including Node/npm
 versions and the locked `npm ci` build. No local plan or report is part of either
@@ -21,16 +23,24 @@ its exact dependency sources are in package-lock.json. There are no private buil
 dependencies, remotely loaded scripts, analytics SDKs or signing credentials in
 the source archive. Re-audit bundled licenses if dependencies or assets change.
 
+For Android, run `npm run zip:firefox:android` and
+`npm run check:firefox-android-package`. This produces a separate Android ZIP and
+matching source ZIP. Both variants retain the same add-on ID. They are alternative
+builds, not separate products. The default ZIP remains Desktop-only. Before
+publishing both platforms, resolve the shared-package/update strategy in the
+[release checklist](releasing.md); two ZIPs with one ID must not be treated as
+independently updatable listings.
+
 ## Metadata and owner decisions
 
 | Field | Prepared value | Remaining release requirement |
 | --- | --- | --- |
 | Name | Copy as Context | Confirm final listing |
-| Version | 0.0.0, development | Choose release version before signing |
+| Version | 1.0.0, prepared for submission | Verify final manifest/package before signing |
 | Add-on ID | {e97aa566-cac0-4e2c-81f7-0ab664bf86ce} | AMO uniqueness/account ownership checked on first submission |
-| Desktop minimum | Firefox 140.0 | Native 140 ESR/157 probes pass; full toolbar matrix pending |
-| Android | No production gecko_android declaration | Physical-device/Save gate deferred |
-| Permissions | activeTab, scripting, clipboardWrite, storage, downloads | Explain on listing; no debugger or broad host access |
+| Desktop minimum | Firefox 140.0 | Manual Desktop checks confirmed; exact tested versions not recorded |
+| Android | Separate production build, Firefox Android 142+, Copy-only | Manual Android checks confirmed; exact tested device/version not recorded |
+| Permissions | activeTab, scripting, clipboardWrite, storage; Desktop also downloads | Explain on listing; no debugger or broad host access |
 | Data collection | required: [none] | Reconfirm final package matches local-only implementation |
 | Channel | Undecided | Owner chooses listed AMO or signed self-distribution |
 | Signing | Not performed | Use owner's account/credentials only after authorization |
@@ -56,15 +66,15 @@ outcome, and reports success only after completion. No broad host permissions or
 network request are needed. The filename contains a timestamp and extension,
 not page title/URL. Native probes check exact UTF-8 bytes for both formats after
 the initiating extension document closes. The probe chooses a temporary directory
-and bypasses Save As; the real Desktop picker remains a manual test. Browsers
-without downloads API show Save unavailable.
+and bypasses Save As; use the manual checklist for real Desktop picker regressions.
+Browsers without downloads API show Save unavailable.
 
 The current web-ext linter reports one reviewed warning,
 KEY_FIREFOX_ANDROID_UNSUPPORTED_BY_MIN_VERSION: it infers Android 140 from the
 Desktop minimum while data_collection_permissions requires Android 142. The
-production manifest deliberately omits gecko_android, so AMO Desktop-only
-availability is intentional. The separate Android probe declares 142 and omits
-unsupported downloads; it is not a production release or a support claim.
+Desktop manifest deliberately omits gecko_android, so AMO Desktop-only
+availability is intentional for that artifact. The separate supported Android
+production build declares 142 and omits unsupported downloads. Lint both targets.
 
 ## Prepared listing draft
 
@@ -80,15 +90,18 @@ Frame/canvas warnings identify detected omissions. Password values are always
 excluded; optional credential redaction is heuristic and does not guarantee
 removal of all sensitive information. Review context before sharing it.
 
-This draft describes Desktop scope. Do not advertise Android, universal page
+On Firefox Desktop, Copy and Save are available. On Firefox Android 142+, the
+Android build supports Copy; Save is unavailable. Do not promise universal page
 coverage or exact model token counts. Store category, screenshots, release notes,
 support links and final version are owner decisions. Use synthetic content for
 screenshots and verification rather than private real pages.
 
 ## Signing and publication gate
 
-Complete [Desktop smoke](firefox-desktop-testing.md), record the actual versions,
-confirm the release version and distribution channel, regenerate both archives,
+Manual Desktop and Android checks are confirmed by the maintainer. Keep
+[Desktop](firefox-desktop-testing.md) and [Android](firefox-android-testing.md)
+checklists for future regressions and record actual versions when available.
+Confirm the release version and distribution channel, regenerate matching archives,
 review hashes/source reproduction and current Mozilla policies, then obtain
 explicit authorization to sign or submit. Credentials stay outside source and
 command logs. This document does not execute a signing or submission command.

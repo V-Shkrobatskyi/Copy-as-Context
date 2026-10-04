@@ -1,9 +1,10 @@
-# Firefox Android research gate
+# Firefox Android verification
 
-Android support is deferred. The development machine has no ADB binary, Android
-SDK or available ADB server/device. No emulator result is represented as physical
-device evidence. The default package is prepared for Desktop; its manifest omits
-the Android availability declaration.
+The maintainer confirmed successful manual browser checks on Desktop and Android
+on 2026-10-04. Android is supported as a copy-only build for Firefox Android 142+.
+Exact device/browser versions and per-scenario results were not supplied. This
+records the maintainer confirmation, not a claim that every scenario below passed
+on every supported version. The instructions remain available for regressions.
 
 ## Compatibility decision
 
@@ -13,26 +14,16 @@ requires critical-path device testing before declaring compatibility. The curren
 records removal of the downloads API from Firefox Android starting at version 79;
 `saveAs` is unsupported. Changing only `saveAs` cannot provide a working Save path.
 
-| Capability | Documentation/build evidence | Device status |
-| --- | --- | --- |
-| Action popup and activeTab | Separate Android 142+ probe manifest | Pending real action-menu grant |
-| scripting.executeScript, isolated top frame | Same bounded Firefox collector; package lint passes | Pending device injection and restricted pages |
-| Clipboard text | clipboardWrite requested; async capture stays local | Pending Copy after async capture/app switch |
-| Preferences | storage permission | Pending reload/restart/low-memory persistence |
-| downloads.download / Save As | Removed/unsupported according to MDN | Save unavailable; full Android export gate blocked |
-| Responsive UI | Viewport meta, bounded width and 44px narrow/touch controls | Desktop Gecko layout is only supporting evidence |
-| Background lifecycle | Event-page manifest, bounded requests | Pending actual Android suspension/recovery |
-
-The copy-only research build omits the unsupported downloads permission. The popup
-disables Save when the downloads API is absent, retains Copy, and keeps Save
-disabled after pending actions finish. It does not use external uploads, persistent
-host access, native messaging, a guessed file-picker fallback or a different MV2
-implementation to claim that the gate passed.
+The Android production build omits the unsupported downloads permission. The popup
+keeps Copy available and disables Save when the downloads API is absent, including
+after an export completes. Save is outside the supported Android scope; its absence
+does not block the copy-only release. Capture, formats, compression and privacy
+settings use the same pipeline as Desktop.
 
 ## Separate popup layout
 
 Desktop uses `entrypoints/popup/style.css` with the original 376px popup and 18px
-range control. Only `build:firefox:android-test` selects `android.css`, which imports
+range control. Only `build:firefox:android` selects `android.css`, which imports
 the base styles and adds responsive sizing and touch targets. WXT chooses the CSS
 at build time; Desktop does not respond to narrow-screen/touch media queries from
 the Android stylesheet. Export/preferences logic stays shared.
@@ -56,14 +47,14 @@ serial numbers and exported page text are not needed in tracked reports.
 
 ```sh
 adb devices
-npm run build:firefox:android-test
+npm run build:firefox:android
 ```
 
 Follow the [web-ext command reference](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/)
-to run the temporary research build on the connected device:
+to run the temporary installation of the Android build on the connected device:
 
 ```sh
-npx web-ext run --target firefox-android --source-dir .output/firefox-mv3-android-test --android-device YOUR_DEVICE --firefox-apk org.mozilla.firefox
+npx web-ext run --target firefox-android --source-dir .output/firefox-mv3-android --android-device YOUR_DEVICE --firefox-apk org.mozilla.firefox
 ```
 
 Use `org.mozilla.firefox_beta` or `org.mozilla.fenix` only when testing the installed
@@ -96,11 +87,11 @@ Stop the server and remove the port mapping afterwards:
 adb reverse --remove tcp:8765
 ```
 
-## Exit decision
+## Release scope
 
-Keep the production package Desktop-only until critical Copy behavior and a
-supported Android Save design pass physical-device tests. A copy-only supported
-product would require an explicit product decision and corresponding store/UI
-scope; the research build does not make that decision. If later device evidence
-requires an alternative manifest version or export destination, make that a
-separate reviewed change and rerun Desktop/Chrome regressions.
+Package with `npm run zip:firefox:android` and verify with
+`npm run check:firefox-android-package` and `npm run lint:firefox:android`.
+The Android manifest declares `gecko_android.strict_min_version: 142.0`.
+Document Copy-only support in the store listing; Desktop also supports Save.
+Store submission and signing are separate from successful manual browser checks.
+Any future Android file-export implementation needs its own device verification.
