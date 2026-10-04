@@ -14,6 +14,12 @@
       .language-switch button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-dark); background: var(--selected); }
       .language-switch button:hover { border-color: var(--accent); }
       .language-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+      .support-card { display: flex; align-items: center; gap: 24px; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+      .support-card p { margin: 0 0 14px; }
+      .support-link { display: inline-block; padding: 9px 14px; border-radius: 8px; color: #fff; background: var(--accent); font-weight: 700; text-decoration: none; }
+      .support-link:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 3px; }
+      .support-qr { display: block; width: 160px; max-width: 100%; height: auto; flex-shrink: 0; }
+      @media (max-width: 560px) { .support-card { flex-direction: column; align-items: flex-start; } }
     </style>
   </head>
   <body>
@@ -77,6 +83,16 @@
         <p>Have a suggestion, found a bug, or want to share feedback? Email <a href="mailto:copyascontext@gmail.com">copyascontext@gmail.com</a>.</p>
         <p>For bug reports, include your extension version, browser version, and steps to reproduce the issue. Please do not send passwords, tokens, or sensitive page content.</p>
       </section>
+      <section aria-labelledby="support-heading">
+        <h2 id="support-heading">Support the developer</h2>
+        <div class="support-card">
+          <div>
+            <p>If you find Copy as Context useful, you can support my development work. Contributions are voluntary and help me maintain my projects, improve existing tools, and build new ones.</p>
+            <a class="support-link" href="https://www.privat24.ua/send/kh73d" target="_blank" rel="noopener noreferrer">Support via PrivatBank (UAH)</a>
+          </div>
+          <img class="support-qr" src="donate-qr.png" width="310" height="309" alt="Scan to support the developer via PrivatBank" loading="lazy" />
+        </div>
+      </section>
       <footer>Copy as Context works with the page’s accessibility structure, not by uploading the page to a service. <a href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener">View the project on GitHub</a>.</footer>
       </div>
       <div id="guide-uk" lang="uk" hidden>
@@ -133,6 +149,16 @@
         <h2 id="feedback-heading-uk">Відгуки та пропозиції</h2>
         <p>Маєте пропозицію, знайшли помилку чи хочете поділитися зауваженнями? Напишіть на <a href="mailto:copyascontext@gmail.com">copyascontext@gmail.com</a>.</p>
         <p>У повідомленні про помилку вкажіть версію розширення, версію браузера та кроки для відтворення проблеми. Будь ласка, не надсилайте паролі, токени чи чутливий вміст сторінок.</p>
+      </section>
+      <section aria-labelledby="support-heading-uk">
+        <h2 id="support-heading-uk">Підтримати розробника</h2>
+        <div class="support-card">
+          <div>
+            <p>Якщо Copy as Context вам корисний, ви можете підтримати мою роботу над програмним забезпеченням. Добровільні внески допомагають підтримувати мої проєкти, покращувати наявні інструменти та створювати нові.</p>
+            <a class="support-link" href="https://www.privat24.ua/send/kh73d" target="_blank" rel="noopener noreferrer">Підтримати через ПриватБанк (грн)</a>
+          </div>
+          <img class="support-qr" src="donate-qr.png" width="310" height="309" alt="Відскануйте QR-код для підтримки розробника через ПриватБанк" loading="lazy" />
+        </div>
       </section>
       <footer>Copy as Context використовує структуру доступності сторінки, без завантаження її вмісту на сторонній сервіс. <a href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener">Переглянути проєкт на GitHub</a>.</footer>
       </div>
