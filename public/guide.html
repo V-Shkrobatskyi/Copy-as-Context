@@ -7,10 +7,28 @@
     <style>
       :root { --background: #e9eef5; --surface: #f7f9fc; --text: #1b2942; --muted: #52617a; --accent: #365ed7; --accent-dark: #263e89; --selected: #e4ecff; --border: #cbd5e1; color: var(--text); background: var(--background); font-family: Inter, ui-sans-serif, system-ui, sans-serif; line-height: 1.55; }
       * { box-sizing: border-box; } body { margin: 0; } main { width: min(100% - 32px, 760px); margin: 0 auto; padding: 46px 0 72px; } .eyebrow { margin: 0 0 10px; color: var(--accent); font-size: .74rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; } h1 { max-width: 620px; margin: 0; font-size: clamp(2rem, 7vw, 3.1rem); letter-spacing: -.045em; line-height: 1.03; } .lede { max-width: 590px; margin: 18px 0 0; color: var(--muted); font-size: 1.05rem; } .start { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; padding: 8px 12px; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent-dark); background: var(--selected); font-size: .82rem; font-weight: 700; } .start::before { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); content: ""; } section { margin-top: 42px; } h2 { margin: 0 0 12px; font-size: 1.18rem; letter-spacing: -.015em; } h3 { margin: 0; font-size: .9rem; } p { color: var(--muted); } .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; } .step { min-height: 138px; padding: 16px; border-radius: 12px; background: var(--surface); } .step-number { display: grid; width: 24px; height: 24px; margin-bottom: 22px; place-items: center; border-radius: 50%; color: #fff; background: var(--accent); font-size: .72rem; font-weight: 800; } .step p { margin: 6px 0 0; font-size: .84rem; line-height: 1.45; } .settings { border-top: 1px solid var(--border); } .setting { display: grid; grid-template-columns: 135px 1fr; gap: 20px; padding: 15px 0; border-bottom: 1px solid var(--border); } .setting p { margin: 0; font-size: .9rem; } .note { display: grid; grid-template-columns: 4px 1fr; gap: 12px; margin-top: 14px; padding: 14px 16px 14px 0; background: var(--surface); } .note::before { border-radius: 4px; background: var(--accent); content: ""; } .note p { margin: 0; font-size: .88rem; } .troubleshooting { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } .trouble { padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--background); } .trouble p { margin: 5px 0 0; font-size: .84rem; } code { padding: 2px 5px; border-radius: 4px; background: var(--selected); color: var(--accent-dark); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86em; } strong { color: var(--text); } footer { margin-top: 42px; color: var(--muted); font-size: .78rem; } @media (max-width: 560px) { main { padding-top: 32px; } .steps, .troubleshooting { grid-template-columns: 1fr; } .step { min-height: auto; } .step-number { margin-bottom: 14px; } .setting { grid-template-columns: 1fr; gap: 4px; } }
+      [hidden] { display: none !important; }
+      li { margin: 10px 0; color: var(--muted); overflow-wrap: anywhere; }
+      .language-switch { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 24px; }
+      .language-switch button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); background: var(--surface); font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; }
+      .language-switch button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-dark); background: var(--selected); }
+      .language-switch button:hover { border-color: var(--accent); }
+      .language-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+      .support-card { display: flex; align-items: center; gap: 24px; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+      .support-card p { margin: 0 0 14px; }
+      .support-link { display: inline-block; padding: 9px 14px; border-radius: 8px; color: #fff; background: var(--accent); font-weight: 700; text-decoration: none; }
+      .support-link:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 3px; }
+      .support-qr { display: block; width: 160px; max-width: 100%; height: auto; flex-shrink: 0; }
+      @media (max-width: 560px) { .support-card { flex-direction: column; align-items: flex-start; } }
     </style>
   </head>
   <body>
     <main>
+      <nav class="language-switch" aria-label="Language / Мова">
+        <button type="button" data-language="en" aria-controls="guide-en" aria-pressed="true" aria-label="English"><span aria-hidden="true">🇬🇧</span> EN</button>
+        <button type="button" data-language="uk" aria-controls="guide-uk" aria-pressed="false" aria-label="Українська"><span aria-hidden="true">🇺🇦</span> UA</button>
+      </nav>
+      <div id="guide-en" lang="en">
       <p class="eyebrow">Copy as Context</p>
       <h1>Turn the open page into useful context.</h1>
       <p class="lede">Create a focused semantic export for an AI conversation without manually selecting, cleaning, or restructuring page content.</p>
@@ -40,6 +58,17 @@
       <section aria-labelledby="privacy-heading">
         <h2 id="privacy-heading">Privacy is in your control</h2>
         <p><strong>Redact sensitive data</strong> is on by default. It replaces detected credentials with <code>[REDACTED]</code> before the export reaches your clipboard or a saved file. Disable it only when you intentionally need original values.</p>
+        <h3>What gets hidden</h3>
+        <p>The filter looks for common credential patterns in captured text, field values, and URLs. Examples below use fictional values:</p>
+        <ul>
+          <li>API keys such as <code>sk-proj_abcdefghijklmnopqrstuvwxyz</code>, GitHub tokens such as <code>ghp_abcdefghijklmnopqrstuvwxyz123456</code>, and AWS access key IDs such as <code>AKIA1234567890ABCDEF</code> become <code>[REDACTED]</code>.</li>
+          <li><code>Authorization: Bearer abcdefghijklmnopqrstuvwxyz.12345678</code> becomes <code>Authorization: Bearer [REDACTED]</code>. Recognized Basic authorization values and JWTs are hidden too.</li>
+          <li><code>https://example.test/?token=example-token</code> becomes <code>https://example.test/?token=[REDACTED]</code>. Values of <code>api_key</code>, <code>secret</code>, and <code>password</code> query parameters are also hidden.</li>
+          <li>Captured field values with labels containing English terms such as <code>Password</code>, <code>Passcode</code>, <code>API key</code>, <code>Token</code>, <code>Secret</code>, or <code>Authorization</code> are hidden. In ordinary text, assignments such as <code>password: example-password</code> are hidden when the value has at least eight characters.</li>
+        </ul>
+        <h3>What can remain visible</h3>
+        <p>Names, email addresses, phone numbers, and postal addresses are not automatically hidden just because they are personal information. Ordinary text such as <code>Token count: 42</code> also stays visible. A password written as plain text without a recognized label or pattern, or with an unrecognized label in another language, can remain visible.</p>
+        <aside class="note"><p>This is a pattern-based credential filter, not a complete personal-data anonymizer. Review the exported text before sharing it, even when redaction is enabled.</p></aside>
       </section>
 
       <section aria-labelledby="help-heading">
@@ -49,7 +78,91 @@
           <article class="trouble"><h3>Capture is busy or fails</h3><p>Close DevTools for the active tab and try again. Chrome only allows one debugger connection at a time.</p></article>
         </div>
       </section>
+      <section aria-labelledby="feedback-heading">
+        <h2 id="feedback-heading">Feedback and suggestions</h2>
+        <p>Have a suggestion, found a bug, or want to share feedback? Email <a href="mailto:copyascontext@gmail.com">copyascontext@gmail.com</a>.</p>
+        <p>For bug reports, include your extension version, browser version, and steps to reproduce the issue. Please do not send passwords, tokens, or sensitive page content.</p>
+      </section>
+      <section aria-labelledby="support-heading">
+        <h2 id="support-heading">Support the developer</h2>
+        <div class="support-card">
+          <div>
+            <p>If you find Copy as Context useful, you can support my development work. Contributions are voluntary and help me maintain my projects, improve existing tools, and build new ones.</p>
+            <a class="support-link" href="https://www.privat24.ua/send/kh73d" target="_blank" rel="noopener noreferrer">Support via PrivatBank (UAH)</a>
+          </div>
+          <img class="support-qr" src="donate-qr.png" width="310" height="309" alt="Scan to support the developer via PrivatBank" loading="lazy" />
+        </div>
+      </section>
       <footer>Copy as Context works with the page’s accessibility structure, not by uploading the page to a service. <a href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener">View the project on GitHub</a>.</footer>
+      </div>
+      <div id="guide-uk" lang="uk" hidden>
+      <p class="eyebrow">Copy as Context</p>
+      <h1>Перетворіть відкриту сторінку на корисний контекст.</h1>
+      <p class="lede">Створюйте структурований контекст для розмови з ШІ без ручного виділення, очищення чи впорядкування вмісту сторінки.</p>
+      <p class="start">Усе обробляється локально у вашому браузері</p>
+
+      <section aria-labelledby="start-heading-uk">
+        <h2 id="start-heading-uk">Швидкий експорт у три кроки</h2>
+        <div class="steps">
+          <article class="step"><span class="step-number">1</span><h3>Відкрийте сторінку</h3><p>Перейдіть на вкладку, вміст якої хочете використати як контекст.</p></article>
+          <article class="step"><span class="step-number">2</span><h3>Виберіть формат</h3><p>Виберіть рівень стиснення та формат Semantic Text або Markdown.</p></article>
+          <article class="step"><span class="step-number">3</span><h3>Скопіюйте або збережіть</h3><p>Скопіюйте результат у запит до ШІ або збережіть його у файл.</p></article>
+        </div>
+      </section>
+
+      <section aria-labelledby="settings-heading-uk">
+        <h2 id="settings-heading-uk">Виберіть потрібний обсяг контексту</h2>
+        <div class="settings">
+          <div class="setting"><h3>Without</h3><p>Зберігає всі отримані семантичні вузли. Вибирайте Without (без стиснення), коли повнота важливіша за обсяг.</p></div>
+          <div class="setting"><h3>Detailed</h3><p>Видаляє лише порожні елементи оформлення, щоб текст було зручно читати й уважно перевіряти.</p></div>
+          <div class="setting"><h3>Compact</h3><p>Прибирає повторювані службові дані структури доступності, зберігаючи важливі елементи керування. Це стандартний режим.</p></div>
+          <div class="setting"><h3>Maximum</h3><p>Зберігає контекст режиму Compact, додатково стискаючи його за допомогою вибіркових скорочень і повторюваних текстів або структур. Коротка легенда пояснює результат. Якщо додаткове стиснення збільшує обсяг, використовується Compact. Економія токенів залежить від сторінки та моделі.</p></div>
+          <div class="setting"><h3>Формат експорту</h3><p>Вибирайте Semantic Text для стислої структури або Markdown, якщо потрібне форматування в нотатках чи чаті з ШІ.</p></div>
+        </div>
+        <aside class="note"><p>Кнопка <strong>Save preferences</strong> (зберегти налаштування) зберігає рівень стиснення, формат і параметр приватності для наступного відкриття вікна розширення.</p></aside>
+      </section>
+
+      <section aria-labelledby="privacy-heading-uk">
+        <h2 id="privacy-heading-uk">Ви керуєте приватністю</h2>
+        <p>Параметр <strong>Redact sensitive data</strong> (приховувати чутливі дані) увімкнений за замовчуванням. Він замінює виявлені облікові дані на <code>[REDACTED]</code> перед копіюванням у буфер обміну або збереженням у файл. Вимикайте його лише тоді, коли свідомо потребуєте оригінальних значень.</p>
+        <h3>Що буде приховано</h3>
+        <p>Фільтр шукає поширені шаблони облікових даних в отриманому тексті, значеннях полів і URL-адресах. У прикладах нижче використано вигадані значення:</p>
+        <ul>
+          <li>API-ключі на кшталт <code>sk-proj_abcdefghijklmnopqrstuvwxyz</code>, токени GitHub на кшталт <code>ghp_abcdefghijklmnopqrstuvwxyz123456</code> та ідентифікатори ключів доступу AWS на кшталт <code>AKIA1234567890ABCDEF</code> замінюються на <code>[REDACTED]</code>.</li>
+          <li><code>Authorization: Bearer abcdefghijklmnopqrstuvwxyz.12345678</code> перетворюється на <code>Authorization: Bearer [REDACTED]</code>. Розпізнані значення авторизації Basic і токени JWT також приховуються.</li>
+          <li><code>https://example.test/?token=example-token</code> перетворюється на <code>https://example.test/?token=[REDACTED]</code>. Значення параметрів URL <code>api_key</code>, <code>secret</code> і <code>password</code> також приховуються.</li>
+          <li>Отримані значення полів приховуються, якщо їхні назви містять англійські слова на кшталт <code>Password</code>, <code>Passcode</code>, <code>API key</code>, <code>Token</code>, <code>Secret</code> або <code>Authorization</code>. У звичайному тексті записи на кшталт <code>password: example-password</code> приховуються, якщо значення має щонайменше вісім символів.</li>
+        </ul>
+        <h3>Що може залишитися видимим</h3>
+        <p>Імена, email-адреси, номери телефонів і поштові адреси не приховуються автоматично лише тому, що це персональні дані. Звичайний текст на кшталт <code>Token count: 42</code> також залишається видимим. Пароль, написаний звичайним текстом без розпізнаної назви чи шаблону або з нерозпізнаною назвою іншою мовою, може залишитися видимим.</p>
+        <aside class="note"><p>Це фільтр облікових даних за шаблонами, а не повне знеособлення персональних даних. Перевіряйте експортований текст перед передаванням іншим, навіть якщо приховування увімкнене.</p></aside>
+      </section>
+
+      <section aria-labelledby="help-heading-uk">
+        <h2 id="help-heading-uk">Якщо щось не працює</h2>
+        <div class="troubleshooting">
+          <article class="trouble"><h3>Не вдається отримати вміст сторінки</h3><p>Браузер обмежує доступ до службових сторінок Chrome, Chrome Web Store та сторінок інших розширень.</p></article>
+          <article class="trouble"><h3>Отримання вмісту зайняте або завершується помилкою</h3><p>Закрийте DevTools для активної вкладки та спробуйте ще раз. Chrome дозволяє лише одне підключення налагоджувача одночасно.</p></article>
+        </div>
+      </section>
+      <section aria-labelledby="feedback-heading-uk">
+        <h2 id="feedback-heading-uk">Відгуки та пропозиції</h2>
+        <p>Маєте пропозицію, знайшли помилку чи хочете поділитися зауваженнями? Напишіть на <a href="mailto:copyascontext@gmail.com">copyascontext@gmail.com</a>.</p>
+        <p>У повідомленні про помилку вкажіть версію розширення, версію браузера та кроки для відтворення проблеми. Будь ласка, не надсилайте паролі, токени чи чутливий вміст сторінок.</p>
+      </section>
+      <section aria-labelledby="support-heading-uk">
+        <h2 id="support-heading-uk">Підтримати розробника</h2>
+        <div class="support-card">
+          <div>
+            <p>Якщо Copy as Context вам корисний, ви можете підтримати мою роботу над програмним забезпеченням. Добровільні внески допомагають підтримувати мої проєкти, покращувати наявні інструменти та створювати нові.</p>
+            <a class="support-link" href="https://www.privat24.ua/send/kh73d" target="_blank" rel="noopener noreferrer">Підтримати через ПриватБанк (грн)</a>
+          </div>
+          <img class="support-qr" src="donate-qr.png" width="310" height="309" alt="Відскануйте QR-код для підтримки розробника через ПриватБанк" loading="lazy" />
+        </div>
+      </section>
+      <footer>Copy as Context використовує структуру доступності сторінки, без завантаження її вмісту на сторонній сервіс. <a href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener">Переглянути проєкт на GitHub</a>.</footer>
+      </div>
     </main>
+    <script src="guide.js"></script>
   </body>
 </html>

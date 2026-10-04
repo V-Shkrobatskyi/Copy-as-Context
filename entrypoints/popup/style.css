@@ -43,7 +43,7 @@ input[type="range"]::-webkit-slider-thumb { width: 14px; height: 14px; margin-to
 .privacy-toggle input { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
 .privacy-setting p { margin: 3px 0 0 20px; color: var(--muted); font-size: .67rem; line-height: 1.3; }
 .privacy-setting code { color: var(--accent-dark); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.format-field { padding-bottom: 6px; }
+.format-field { padding: 4px 0 6px; border-top: 0; }
 .save-settings { width: 100%; margin-top: 0; border: 1px solid var(--border); background: var(--surface); color: var(--accent-dark); }
 .save-settings:hover:not(:disabled) { background: var(--selected); }
 .format-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 3px; }

@@ -61,6 +61,10 @@ downloads remain in the popup layer.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow.
 
+## Support
+
+If you find Copy as Context useful, you can [support my development work via PrivatBank (UAH)](https://www.privat24.ua/send/kh73d). Voluntary contributions help me maintain my projects, improve existing tools, and build new ones.
+
 ## License
 
 [MIT](LICENSE)
