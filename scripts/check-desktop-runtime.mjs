@@ -13,7 +13,7 @@ const fixture = await readFile('tests/fixtures/quality/desktop-holdout.html', 'u
 const collector = await readFile('.output/firefox-mv3/dom-capture.js', 'utf8');
 const firefoxManifest = JSON.parse(await readFile('.output/firefox-mv3/manifest.json', 'utf8'));
 assert.ok(['desktop', 'android'].includes(options['popup-layout']), 'Unknown popup layout');
-const popupAssets = options['popup-layout'] === 'android' ? '.output/firefox-mv3-android-test/assets' : '.output/firefox-mv3/assets';
+const popupAssets = options['popup-layout'] === 'android' ? '.output/firefox-mv3-android/assets' : '.output/firefox-mv3/assets';
 const popupCssName = (await readdir(popupAssets)).find((name) => name.startsWith('popup-') && name.endsWith('.css'));
 const popupCss = await readFile(`${popupAssets}/${popupCssName}`, 'utf8');
 const fixtureExtensionUuid = '11111111-2222-4333-8444-555555555555';

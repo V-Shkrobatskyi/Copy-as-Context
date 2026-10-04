@@ -22,7 +22,7 @@ describe('browser capabilities', () => {
     expect(manifest.browser_specific_settings?.gecko_android).toBeUndefined();
   });
 
-  it('enables Android only in the explicit copy-only probe without unsupported downloads permission', () => {
+  it('enables Android only in the production copy-only build without unsupported downloads permission', () => {
     const manifest = browserManifest('firefox', true);
     expect(manifest.browser_specific_settings?.gecko_android).toEqual({ strict_min_version: '142.0' });
     expect(manifest.permissions).toEqual(['activeTab', 'scripting', 'clipboardWrite', 'storage']);

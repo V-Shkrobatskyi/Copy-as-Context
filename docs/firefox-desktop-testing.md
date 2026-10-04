@@ -1,8 +1,10 @@
 # Firefox Desktop verification
 
-Firefox Desktop is experimental. The development minimum is 140; Android remains
-unvalidated. A successful DOM test or headless capture does not establish toolbar,
-clipboard, download or event-page behavior.
+The maintainer confirmed successful manual browser checks on Desktop and Android
+on 2026-10-04. Firefox Desktop support starts at 140. Exact browser/device versions
+and per-scenario results were not supplied, so this confirmation does not claim
+that every minimum/ESR or lifecycle scenario below was individually verified.
+The checklist remains the regression procedure for subsequent changes.
 
 ## Automated gate
 
@@ -11,7 +13,7 @@ npm ci
 npm run check
 ```
 
-CI runs type checking, the shared and browser-specific unit suites, both production
+CI runs type checking, the shared and browser-specific unit suites, all three production
 builds, manifest/bundle checks and Firefox package lint. The bundle check executes
 the production DOM collector in jsdom and guards against password value reads.
 
@@ -123,6 +125,6 @@ Keep local reports and exported synthetic examples outside tracked source.
    For Chrome, verify debugger release and retry after a competing debugger is
    detached. Node/native probes do not cover `chrome.debugger` permission UX.
 
-The full Desktop release gate remains open until the toolbar destinations,
-permissions and lifecycle rows have recorded runtime evidence. Android/device and
-store/signing checks belong to the next stage.
+Manual browser verification is confirmed by the maintainer. For future changes,
+repeat the applicable checks and record exact versions and per-scenario results.
+Store submission and signing remain separate release steps.

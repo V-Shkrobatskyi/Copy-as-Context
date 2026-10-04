@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Copy as Context — Privacy policy</title><style>body{max-width:760px;margin:40px auto;padding:0 20px;font:16px/1.6 system-ui,sans-serif;color:#1b2942;background:#f7f9fc}h1{line-height:1.2}h2{margin-top:32px}a{color:#365ed7}li{margin:8px 0}</style></head><body><main>
+<h1>Privacy policy for Copy as Context</h1>
+<p>Last updated: 2026-10-04. Applies to version 1.0.0.</p>
+<h2>Purpose and local processing</h2>
+<p>Copy as Context exports semantic content from the active page for your AI conversations or notes. Capture, compression, credential redaction, and serialization run locally on your device after you request an export. The extension has no capture backend, analytics, advertising SDK, or LLM API integration.</p>
+<h2>Information processed</h2>
+<p>An export can contain page text, title, URL, accessible labels, semantic roles, form values and states, capture time, browser/platform/version metadata when available, and the extension version and selected settings. This information can include personal or sensitive information present on the page. Chrome reads an accessibility-tree snapshot; Firefox reads HTML/ARIA semantics. Firefox always omits password input values.</p>
+<p>The extension uses this information only to create the export you request. It does not monitor your browsing history in the background or upload captured pages to the developer.</p>
+<h2>Storage and retention</h2>
+<p>The extension persists your compression, format, and privacy preferences in browser-local extension storage when you choose Save preferences. It does not maintain a persistent archive of captured pages. Capture data is held temporarily for processing; runtime and browser cleanup determine when memory is reclaimed.</p>
+<p>Copy places the result on your clipboard. Desktop Save writes a UTF-8 file to a destination controlled by your browser. Clipboard history, operating-system clipboard synchronization, browser download history, backups, and destination applications may retain copies under their own settings. Android supports Copy only.</p>
+<p>You can change saved preferences in the popup or remove extension-local preferences by clearing the extension&#x27;s data or uninstalling it. Delete exported files and clipboard/history entries separately using your browser, operating system, or destination application.</p>
+<h2>Sharing and external services</h2>
+<p>The extension does not send captured page content, URLs, or preferences to the developer, sell user data, or use it for advertising. You decide whether to paste or upload an export into another application; that application then handles it under its own policies.</p>
+<p>Help, project, contact, and voluntary donation links are opened only when you choose them. GitHub, your email provider, and the payment provider may receive normal navigation/contact/payment information under their own privacy policies. Capture data is not attached to these links.</p>
+<p>If you email a bug report or post a GitHub issue, the recipient/service receives the information you provide and may retain it for support. Do not include passwords, tokens, or private page content. Contact the developer to request deletion of information you sent directly; public GitHub content is also governed by GitHub&#x27;s controls and policies.</p>
+<h2>Permissions</h2>
+<ul><li>Chrome debugger: briefly reads the active page&#x27;s accessibility tree after an export action and detaches afterward.</li><li>Firefox activeTab and scripting: obtain temporary page access and run on-demand semantic extraction.</li><li>clipboardWrite: writes the export you request to your clipboard.</li><li>downloads (Desktop only): saves the export you request as a local file.</li><li>storage: persists export preferences locally.</li></ul>
+<p>The extension does not request persistent access to all websites.</p>
+<h2>Security and redaction</h2>
+<p>Credential redaction is enabled by default and replaces detected credential patterns before export. It is heuristic and cannot guarantee that all credentials or personal information are removed. Disabling redaction can expose original values. Review the output before sharing it. Page content is untrusted; the extension does not guarantee removal of instructions aimed at AI assistants.</p>
+<p>Local diagnostics contain operational information such as capture status, root role, warning codes, and failure information; they do not log raw page text or the exported context.</p>
+<h2>Chrome Web Store Limited Use</h2>
+<p>Copy as Context uses information obtained through browser permissions solely for its user-requested page-context export feature. Its use of that information complies with the Chrome Web Store User Data Policy, including the Limited Use requirements. The extension does not transfer captured data to the developer or third parties, use it for personalized advertising, or give the developer access to your captures.</p>
+<h2>Changes and contact</h2>
+<p>Changes to data handling will be reflected in this policy with an updated date. The policy is included in the extension and maintained in the project repository.</p>
+<p>For privacy questions, contact <a href="mailto:copyascontext@gmail.com">copyascontext@gmail.com</a> or visit the <a href="https://github.com/V-Shkrobatskyi/Copy-as-Context">project repository</a>. Avoid sharing sensitive exports in public issues.</p>
+</main></body></html>

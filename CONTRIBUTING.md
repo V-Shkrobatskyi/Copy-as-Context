@@ -4,10 +4,10 @@ Thanks for contributing.
 
 ## Development setup
 
-Use a current Node.js LTS release and npm:
+Use Node.js 24.10.0 (see `.nvmrc`) and npm 11.6.0. CI uses the same Node version:
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
