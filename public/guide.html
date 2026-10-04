@@ -46,7 +46,7 @@
       <section aria-labelledby="settings-heading">
         <h2 id="settings-heading">Choose the right amount of context</h2>
         <div class="settings">
-          <div class="setting"><h3>Without</h3><p>Keeps every captured semantic node. Use it when completeness matters more than length.</p></div>
+          <div class="setting"><h3>Without</h3><p>Keeps every captured semantic node, not all HTML text on the page. Use it when completeness of the captured context matters more than length.</p></div>
           <div class="setting"><h3>Detailed</h3><p>Removes only empty presentation wrappers for readable, careful review.</p></div>
           <div class="setting"><h3>Compact</h3><p>Removes repeated accessibility noise while retaining meaningful controls. This is the default.</p></div>
           <div class="setting"><h3>Maximum</h3><p>Preserves Compact context using selective abbreviations and repeated text or structures. A short legend explains the output; pages fall back to Compact when packing adds overhead. Token savings depend on the page and model.</p></div>
@@ -69,6 +69,19 @@
         <h3>What can remain visible</h3>
         <p>Names, email addresses, phone numbers, and postal addresses are not automatically hidden just because they are personal information. Ordinary text such as <code>Token count: 42</code> also stays visible. A password written as plain text without a recognized label or pattern, or with an unrecognized label in another language, can remain visible.</p>
         <aside class="note"><p>This is a pattern-based credential filter, not a complete personal-data anonymizer. Review the exported text before sharing it, even when redaction is enabled.</p></aside>
+      </section>
+
+      <section aria-labelledby="content-review-heading">
+        <h2 id="content-review-heading">Review page content before sharing</h2>
+        <p>Exported context can include text you did not see, such as white text on a white background, text covered by another element, or accessible labels. Inclusion depends on what Chrome exposes in its accessibility tree and what the export preserves. Hidden accessibility text can be legitimate; its presence alone does not mean a page is malicious.</p>
+        <p>The export does not include all HTML text. Content excluded from the accessibility tree, not yet loaded, or present only as image pixels may be absent. The extension does not perform OCR. Some hidden text can still contribute to an element's accessible name.</p>
+        <p>Visible or hidden page text can contain instructions aimed at an AI assistant, often called <strong>prompt injection</strong>. These may ask it to ignore your task, reveal private information, or take unrelated actions.</p>
+        <ul>
+          <li>Review the exported text before sharing it, and remove suspicious or irrelevant instructions.</li>
+          <li>Tell the assistant to use the page as source material rather than instructions to follow.</li>
+          <li>Review consequential actions, such as sending information or changing data, before allowing them.</li>
+        </ul>
+        <aside class="note"><p>Local processing, credential redaction, compression, and export boundaries do not detect or guarantee removal of malicious instructions. These review steps can help reduce risk, but they do not guarantee protection.</p></aside>
       </section>
 
       <section aria-labelledby="help-heading">
@@ -136,6 +149,19 @@
         <h3>Що може залишитися видимим</h3>
         <p>Імена, email-адреси, номери телефонів і поштові адреси не приховуються автоматично лише тому, що це персональні дані. Звичайний текст на кшталт <code>Token count: 42</code> також залишається видимим. Пароль, написаний звичайним текстом без розпізнаної назви чи шаблону або з нерозпізнаною назвою іншою мовою, може залишитися видимим.</p>
         <aside class="note"><p>Це фільтр облікових даних за шаблонами, а не повне знеособлення персональних даних. Перевіряйте експортований текст перед передаванням іншим, навіть якщо приховування увімкнене.</p></aside>
+      </section>
+
+      <section aria-labelledby="content-review-heading-uk">
+        <h2 id="content-review-heading-uk">Перевіряйте вміст сторінки перед передаванням</h2>
+        <p>Експортований контекст може містити текст, якого ви не бачили: наприклад, білий текст на білому фоні, текст, перекритий іншим елементом, або назви елементів для допоміжних технологій. Потрапляння такого тексту в контекст залежить від того, що Chrome надає в дереві доступності та що зберігається під час експорту. Прихований текст для допоміжних технологій може мати законне призначення; сама його наявність не означає, що сторінка шкідлива.</p>
+        <p>Експорт не містить усього тексту з HTML. Вміст, виключений із дерева доступності, ще не завантажений або наявний лише як пікселі зображення, може бути відсутнім. Розширення не розпізнає текст із зображень (OCR). Деякий прихований текст усе ж може використовуватися для формування доступної назви елемента. <strong>Without</strong> зберігає отримані семантичні вузли, а не все, що існує на сторінці.</p>
+        <p>Видимий або прихований текст сторінки може містити інструкції, спрямовані на ШІ-асистента. Такі спроби впливу часто називають <strong>ін’єкцією інструкцій (prompt injection)</strong>. Вони можуть вимагати ігнорувати ваше завдання, розкрити приватну інформацію або виконати сторонні дії.</p>
+        <ul>
+          <li>Перевіряйте експортований текст перед передаванням і видаляйте підозрілі інструкції або ті, що не стосуються вашого завдання.</li>
+          <li>Вкажіть асистенту використовувати сторінку як джерело інформації, а не як інструкції до виконання.</li>
+          <li>Перевіряйте дії з важливими наслідками, наприклад надсилання інформації чи зміну даних, перш ніж дозволяти їх.</li>
+        </ul>
+        <aside class="note"><p>Локальна обробка, приховування облікових даних, стиснення та маркери меж експортованого контексту не виявляють шкідливих інструкцій і не гарантують їх видалення. Наведені кроки перевірки можуть зменшити ризик, але не гарантують захисту.</p></aside>
       </section>
 
       <section aria-labelledby="help-heading-uk">
