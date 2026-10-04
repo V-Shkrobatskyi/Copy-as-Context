@@ -15,7 +15,7 @@ async function loadBackground(target = 'chrome') {
     tabs: { query: vi.fn().mockResolvedValue([{ id: 42, title: 'Synthetic', url: 'https://example.test/' }]) } };
   vi.stubGlobal('chrome', chromeApi);
   const firefoxApi = {
-    runtime: { id: 'synthetic-firefox-id', getURL: (path: string) => `moz-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
+    runtime: { getBrowserInfo: vi.fn().mockResolvedValue({ name: 'Firefox', version: '157.0' }), getPlatformInfo: vi.fn().mockResolvedValue({ os: 'android' }), id: 'synthetic-firefox-id', getURL: (path: string) => `moz-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
     tabs: {
       query: vi.fn().mockResolvedValue([{ id: 42, url: 'https://example.test/' }]),
       get: vi.fn().mockResolvedValue({ id: 42, url: 'https://example.test/' }),
@@ -50,10 +50,19 @@ describe('background export boundary', () => {
     if (response.ok) {
       expect(response.export.serialized.content).toContain('button "Save"');
       expect(response.warnings).toEqual(['embedded-frames']);
+      expect(response.export.serialized.content).toContain('Browser: Firefox Android 157.0');
     }
     expect(capture).not.toHaveBeenCalled();
     expect(response).not.toHaveProperty('tree');
     expect(background.firefoxApi.scripting.executeScript).toHaveBeenCalledOnce();
+  });
+  it('exports even when browser metadata APIs reject', async () => {
+    const background = await loadBackground('firefox');
+    background.firefoxApi.runtime.getBrowserInfo.mockRejectedValue(Error('Unavailable'));
+    background.firefoxApi.runtime.getPlatformInfo.mockRejectedValue(Error('Unavailable'));
+    const response = await background.request({ type: 'capture-active-tab', compression: 'maximum', format: 'markdown', redactSensitiveData: true });
+    expect(response.ok).toBe(true);
+    if (response.ok) expect(response.export.serialized.content).toContain('**Browser:**');
   });
   it('returns only prepared content and counters with request-selected privacy and format', async () => {
     const tree = { schemaVersion: 1 as const, root: { role: 'page', children: [

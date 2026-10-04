@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { resolveBrowserInfo, type BrowserInfoDependencies } from '../src/platform/browser-info';
 import { captureActiveTab } from '../src/adapters/capture';
 import { CAPTURE_ACTIVE_TAB_MESSAGE, isCaptureActiveTabRequest, type CaptureActiveTabResponse } from '../src/capture-message';
 import { prepareExport, type CaptureResult } from '@/src/core';
@@ -39,6 +40,7 @@ function reportCaptureResult(result: CaptureResult): void {
 // noinspection JSUnusedGlobalSymbols
 export default defineBackground(() => {
   console.info('[Copy as Context] Background ready.');
+  const runtime = browser.runtime as typeof browser.runtime & { getBrowserInfo?: BrowserInfoDependencies['getBrowserInfo'] };
 
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (
@@ -67,6 +69,14 @@ export default defineBackground(() => {
       }
       const result = await captureActiveTab({ id: tab.id, title: tab.title, url: tab.url }, formatCaptureTime(new Date()));
       reportCaptureResult(result);
+      if (result.ok) {
+        result.tree.browser = await resolveBrowserInfo({
+          getBrowserInfo: typeof runtime.getBrowserInfo === 'function' ? () => runtime.getBrowserInfo!() : undefined,
+          getPlatformInfo: () => browser.runtime.getPlatformInfo(),
+          userAgent: globalThis.navigator?.userAgent,
+          userAgentData: (globalThis.navigator as Navigator & { userAgentData?: BrowserInfoDependencies['userAgentData'] })?.userAgentData,
+        });
+      }
       const response: CaptureActiveTabResponse = result.ok
         ? { ok: true, export: prepareExport(result.tree, message.compression, message.format, message.redactSensitiveData), ...(result.warnings?.length ? { warnings: result.warnings } : {}) }
         : result;

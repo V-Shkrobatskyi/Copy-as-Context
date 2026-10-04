@@ -65,6 +65,7 @@ function copyDocumentMetadata(source: SemanticTree, target: SemanticTree): void 
   if (source.title !== undefined) target.title = source.title;
   if (source.sourceUrl !== undefined) target.sourceUrl = source.sourceUrl;
   if (source.capturedAt !== undefined) target.capturedAt = source.capturedAt;
+  if (source.browser !== undefined) target.browser = source.browser;
 }
 
 function compactRoot(root: SemanticNode): SemanticNode {

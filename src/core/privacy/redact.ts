@@ -81,6 +81,7 @@ export function redactSemanticTree(tree: SemanticTree): RedactionResult {
   if (tree.title !== undefined) result.title = redactText(tree.title);
   if (tree.sourceUrl !== undefined) result.sourceUrl = redactText(tree.sourceUrl);
   if (tree.capturedAt !== undefined) result.capturedAt = tree.capturedAt;
+  if (tree.browser !== undefined) result.browser = tree.browser;
 
   return { tree: result, redactionCount };
 }
