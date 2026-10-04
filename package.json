@@ -9,12 +9,16 @@
     "dev:firefox": "wxt -b firefox",
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox",
+    "build:firefox:android-test": "wxt build -b firefox --mode android-test",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
+    "check:firefox-package": "node scripts/check-firefox-package.mjs",
     "compile": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run compile && npm test && npm run build",
+    "check": "npm run compile && npm test && npm run build && npm run build:firefox && npm run check:browser-builds && npm run lint:firefox",
+    "check:browser-builds": "node scripts/check-browser-builds.mjs",
+    "lint:firefox": "web-ext lint --source-dir .output/firefox-mv3",
     "postinstall": "wxt prepare"
   },
   "devDependencies": {

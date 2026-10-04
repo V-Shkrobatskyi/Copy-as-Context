@@ -1,5 +1,5 @@
-import { captureChromeAccessibilityTree } from '../src/adapters/chrome/capture';
-import { addChromeDocumentMetadata } from '../src/adapters/chrome/document-metadata';
+import { browser } from 'wxt/browser';
+import { captureActiveTab } from '../src/adapters/capture';
 import { CAPTURE_ACTIVE_TAB_MESSAGE, isCaptureActiveTabRequest, type CaptureActiveTabResponse } from '../src/capture-message';
 import { prepareExport, type CaptureResult } from '@/src/core';
 
@@ -23,8 +23,7 @@ function formatCaptureTime(date: Date): string {
 }
 
 function reportCaptureResult(result: CaptureResult): void {
-  // Keep raw CDP data and page text out of diagnostics, but make the local
-  // service-worker console sufficient to confirm each capture lifecycle.
+  // Keep raw capture data and page text out of local diagnostics.
   if (result.ok) {
     console.info('[Copy as Context] Capture succeeded', {
       rootRole: result.tree.root.role,
@@ -39,9 +38,9 @@ function reportCaptureResult(result: CaptureResult): void {
 
 // noinspection JSUnusedGlobalSymbols
 export default defineBackground(() => {
-  console.info('[Copy as Context] Background service worker ready.');
+  console.info('[Copy as Context] Background ready.');
 
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (
       typeof message !== 'object' ||
       message === null ||
@@ -50,6 +49,8 @@ export default defineBackground(() => {
       return;
     }
 
+    if (sender.tab || sender.id !== browser.runtime.id || sender.url !== browser.runtime.getURL('/popup.html')) return;
+
     if (!isCaptureActiveTabRequest(message)) {
       sendResponse({ ok: false, error: { code: 'capture-failed', message: 'Invalid export preferences.' } });
       return;
@@ -57,23 +58,17 @@ export default defineBackground(() => {
     console.info('[Copy as Context] Capture request received.');
 
     void (async () => {
-      const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
       const tab = tabs[0];
-      if (!tab?.id || !canAttemptCapture(tab.url)) {
-        const result = unsupportedPage('This Chrome page cannot be captured.');
+      if (tab?.id === undefined || !canAttemptCapture(tab.url)) {
+        const result = unsupportedPage('This browser page cannot be captured.');
         sendResponse(result);
         return;
       }
-      const capture = await captureChromeAccessibilityTree(tab.id);
-      const result: CaptureResult = capture.ok
-        ? {
-          ok: true,
-          tree: addChromeDocumentMetadata(capture.tree, tab, formatCaptureTime(new Date())),
-        }
-        : capture;
+      const result = await captureActiveTab({ id: tab.id, title: tab.title, url: tab.url }, formatCaptureTime(new Date()));
       reportCaptureResult(result);
       const response: CaptureActiveTabResponse = result.ok
-        ? { ok: true, export: prepareExport(result.tree, message.compression, message.format, message.redactSensitiveData) }
+        ? { ok: true, export: prepareExport(result.tree, message.compression, message.format, message.redactSensitiveData), ...(result.warnings?.length ? { warnings: result.warnings } : {}) }
         : result;
       sendResponse(response);
     })().catch(() => {

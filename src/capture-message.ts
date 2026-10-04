@@ -1,4 +1,5 @@
 import { COMPRESSION_LEVELS, type CaptureError, type CompressionLevel, type PreparedExport, type SupportedExportFormat } from './core';
+import { isCaptureWarnings, type CaptureWarningCode } from './capture-warnings';
 
 export const CAPTURE_ACTIVE_TAB_MESSAGE = 'capture-active-tab' as const;
 
@@ -9,7 +10,7 @@ export interface CaptureActiveTabRequest {
   redactSensitiveData: boolean;
 }
 
-export type CaptureActiveTabResponse = { ok: true; export: PreparedExport } | { ok: false; error: CaptureError };
+export type CaptureActiveTabResponse = { ok: true; export: PreparedExport; warnings?: CaptureWarningCode[] } | { ok: false; error: CaptureError };
 
 export function isCaptureActiveTabRequest(value: unknown): value is CaptureActiveTabRequest {
   if (typeof value !== 'object' || value === null) return false;
@@ -25,6 +26,7 @@ export function isCaptureActiveTabResponse(value: unknown): value is CaptureActi
   const response = value as Partial<CaptureActiveTabResponse>;
   if (response.ok === false) return typeof response.error?.code === 'string';
   if (response.ok !== true || !response.export) return false;
+  if (response.warnings !== undefined && !isCaptureWarnings(response.warnings)) return false;
   const result = response.export;
   return typeof result.serialized?.content === 'string' &&
     (result.serialized.format === 'semantic-text' || result.serialized.format === 'markdown') &&

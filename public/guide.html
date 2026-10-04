@@ -55,6 +55,15 @@
         <aside class="note"><p><strong>Save preferences</strong> stores your compression, format, and privacy choice for the next time you open the popup.</p></aside>
       </section>
 
+      <section aria-labelledby="firefox-heading">
+        <h2 id="firefox-heading">Firefox Desktop capture</h2>
+        <p>The experimental Firefox build reads the current page's HTML and ARIA semantics. It captures the main document and supported open web components; embedded frames, closed web components, canvas pixels, and content that has not loaded are outside its scope. Frame and canvas warnings appear with the export metrics.</p>
+        <p>Password input values are always omitted in Firefox, including when redaction is off. Hidden labels can still contribute to control names. Collapsed content is not automatically opened or included.</p>
+        <p>If capture exceeds a page-size or time limit, or the page changes during capture, wait for the page to finish loading and try again. Browser pages and protected websites may deny access. Firefox capture does not need a debugger connection.</p>
+        <p>Open the extension from the browser toolbar to grant access to the current page. Reopen it after navigating to another site. The Firefox Desktop build is experimental; Android has not been validated. Without and Detailed can match when there are no presentation wrappers, and Maximum can match Compact when additional encoding would not save enough space.</p>
+        <p>Save downloads a local file and confirms completion while the popup remains open. If you close the popup, check the browser download manager for completion. If this browser does not support file downloads, Save is unavailable and you can use Copy page context.</p>
+      </section>
+
       <section aria-labelledby="privacy-heading">
         <h2 id="privacy-heading">Privacy is in your control</h2>
         <p><strong>Redact sensitive data</strong> is on by default. It replaces detected credentials with <code>[REDACTED]</code> before the export reaches your clipboard or a saved file. Disable it only when you intentionally need original values.</p>
