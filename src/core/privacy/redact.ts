@@ -46,17 +46,24 @@ export function redactSemanticTree(tree: SemanticTree): RedactionResult {
     return redacted;
   };
 
-  const redactNode = (node: SemanticNode): SemanticNode => {
+  const redactFieldText = (value: string): string => {
+    if (value !== '[REDACTED]') redactionCount += 1;
+    return '[REDACTED]';
+  };
+
+  const redactNode = (node: SemanticNode, insideSensitiveField = false): SemanticNode => {
+    const sensitiveField = node.value !== undefined && SENSITIVE_FIELD_NAME.test(node.name ?? '');
+    const sensitiveText = insideSensitiveField && ['StaticText', 'InlineTextBox', 'text'].includes(node.role);
     const result: SemanticNode = {
       role: node.role,
-      children: node.children.map(redactNode),
+      // AX trees may repeat a control value as text below generic wrappers.
+      children: node.children.map((child) => redactNode(child, insideSensitiveField || sensitiveField)),
     };
     if (node.id !== undefined) result.id = node.id;
-    if (node.name !== undefined) result.name = redactText(node.name);
+    if (node.name !== undefined) result.name = sensitiveText ? redactFieldText(node.name) : redactText(node.name);
     if (node.value !== undefined) {
-      if (SENSITIVE_FIELD_NAME.test(node.name ?? '') && node.value !== '[REDACTED]') {
-        redactionCount += 1;
-        result.value = '[REDACTED]';
+      if (sensitiveField || sensitiveText) {
+        result.value = redactFieldText(node.value);
       } else {
         result.value = redactText(node.value);
       }

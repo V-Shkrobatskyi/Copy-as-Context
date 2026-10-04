@@ -37,6 +37,8 @@ interface PopupHarness {
   metrics: FakeElement;
   clipboardWrite: ReturnType<typeof vi.fn>;
   download: ReturnType<typeof vi.fn>;
+  downloadSearch: ReturnType<typeof vi.fn>;
+  downloadChanged: { addListener: ReturnType<typeof vi.fn>; removeListener: ReturnType<typeof vi.fn> };
   storageSet: ReturnType<typeof vi.fn>;
   sendMessage: ReturnType<typeof vi.fn>;
 }
@@ -58,6 +60,8 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   clipboardError?: boolean;
   downloadError?: boolean;
   storedSettings?: unknown;
+  firefox?: boolean;
+  downloadsUnavailable?: boolean;
 }): Promise<PopupHarness> {
   const app = new FakeElement();
   const compression = new FakeElement();
@@ -92,6 +96,8 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
     if (options?.downloadError) throw new Error('download denied');
     return 1;
   });
+  const downloadSearch = vi.fn().mockResolvedValue([{ id: 1, state: 'complete' }]);
+  const downloadChanged = { addListener: vi.fn(), removeListener: vi.fn() };
   const storageSet = vi.fn().mockResolvedValue(undefined);
   const sendMessage = vi.fn().mockImplementation(async (request: CaptureActiveTabRequest) => {
     if (typeof response === 'object' && response !== null && 'ok' in response && response.ok === true && 'tree' in response) {
@@ -105,26 +111,42 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
       (elements.get(selector) as unknown as T | undefined) ?? null,
   });
   vi.stubGlobal('navigator', { clipboard: { writeText: clipboardWrite } });
-  vi.stubGlobal('chrome', {
+  const extensionApi = {
     runtime: {
       sendMessage,
       getURL: (path: string) => `chrome-extension://test/${path}`,
     },
-    downloads: { download },
+    downloads: options?.downloadsUnavailable ? undefined : {
+      download, search: downloadSearch, onChanged: downloadChanged,
+    },
     storage: {
       local: {
         get: vi.fn().mockResolvedValue({ 'popup-settings': options?.storedSettings }),
         set: storageSet,
       },
     },
-  });
+  };
+  vi.stubGlobal('chrome', extensionApi);
+  const firefoxApi = {
+      ...extensionApi,
+      runtime: {
+        id: 'synthetic-firefox-id',
+        sendMessage,
+        getURL: (path: string) => `moz-extension://test/${path}`,
+      },
+  };
+  vi.doMock('wxt/browser', () => ({ browser: options?.firefox ? firefoxApi : extensionApi }));
+  if (options?.firefox) {
+    vi.stubGlobal('browser', firefoxApi);
+    vi.stubGlobal('chrome', undefined);
+  }
   vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:popup-test');
   vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
 
   await import('@/entrypoints/popup/main');
   return {
     app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings,
-    copy, save, status, metrics, clipboardWrite, download, storageSet, sendMessage,
+    copy, save, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage,
   };
 }
 
@@ -139,6 +161,49 @@ afterEach(() => {
 });
 
 describe('popup export flow', () => {
+  it('shows validated scope warnings after a successful export and blocks concurrent actions', async () => {
+    const result = successfulCapture();
+    if (!result.ok) throw new Error('Expected fixture');
+    const popup = await loadPopup(result);
+    let finish!: (value: unknown) => void;
+    popup.sendMessage.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    popup.copy.click(); popup.copy.click(); popup.save.click();
+    expect(popup.sendMessage).toHaveBeenCalledOnce();
+    finish({ ok: true, export: prepareExport(result.tree, 'compact', 'semantic-text'), warnings: ['embedded-frames', 'canvas-content'] });
+    await settle();
+    expect(popup.clipboardWrite).toHaveBeenCalledOnce();
+    expect(popup.download).not.toHaveBeenCalled();
+    expect(popup.metrics.textContent).toContain('Embedded frames are not included.');
+    expect(popup.metrics.textContent).toContain('Canvas content is not included.');
+    expect(popup.copy.disabled).toBe(false);
+  });
+
+  it('rejects an unknown warning rather than displaying arbitrary content', async () => {
+    const result = successfulCapture();
+    if (!result.ok) throw new Error('Expected fixture');
+    const popup = await loadPopup({ ok: true, export: prepareExport(result.tree, 'compact', 'semantic-text'), warnings: ['synthetic-private-detail'] });
+    popup.copy.click(); await settle();
+    expect(popup.clipboardWrite).not.toHaveBeenCalled();
+    expect(popup.status.textContent).not.toContain('synthetic-private-detail');
+  });
+  it('uses native Firefox APIs for preferences and reports unfinished capture without exporting', async () => {
+    const popup = await loadPopup({
+      ok: false,
+      error: { code: 'capture-unavailable', message: 'synthetic private details' },
+    }, { firefox: true });
+    await settle();
+    popup.saveSettings.click();
+    await settle();
+    expect(popup.storageSet).toHaveBeenCalledOnce();
+    for (const action of [popup.copy, popup.save]) {
+      action.click();
+      await settle();
+      expect(popup.status.textContent).toBe('Page capture is not available in this build yet.');
+      expect(action.disabled).toBe(false);
+    }
+    expect(popup.clipboardWrite).not.toHaveBeenCalled();
+    expect(popup.download).not.toHaveBeenCalled();
+  });
   it.each(['semantic-text', 'markdown'] as const)('wraps Copy and preserves Save across all profiles and privacy settings in %s', async (format) => {
     const capture = successfulCapture();
     if (!capture.ok) throw new Error('Expected successful fixture');
@@ -163,11 +228,11 @@ describe('popup export flow', () => {
         expect(popup.metrics.textContent).toContain(`context ${Math.round(result.reductionRatio! * 100)}% smaller than Without`);
         expect(popup.download).not.toHaveBeenCalled();
 
-        vi.mocked(URL.createObjectURL).mockClear();
         popup.save.click();
         await settle();
-        const blob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
+        const blob = vi.mocked(URL.createObjectURL).mock.calls.at(-1)?.[0] as Blob;
         expect(await blob.text()).toBe(result.serialized.content);
+        expect(popup.status.textContent).toBe(`Saved ${format === 'markdown' ? 'Markdown' : 'Semantic Text'} file.`);
         expect(popup.metrics.textContent).toContain(`${result.characterCount} characters ·`);
         expect(popup.clipboardWrite).toHaveBeenCalledOnce();
       }
@@ -228,7 +293,7 @@ describe('popup export flow', () => {
     expect(clipboardPopup.copy.disabled).toBe(false);
   });
 
-  it('recovers from download failures and revokes the temporary Blob URL', async () => {
+  it('recovers from download initiation failures and releases the unused Blob URL', async () => {
     const popup = await loadPopup(successfulCapture(), { downloadError: true });
     popup.markdown.checked = true;
 
@@ -242,12 +307,48 @@ describe('popup export flow', () => {
       saveAs: true,
     }));
     const blob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
-    expect(await blob.text()).toContain('[REDACTED]');
-    expect(await blob.text()).not.toContain(SECRET);
+    const content = await blob.text();
+    expect(content).toContain('[REDACTED]');
+    expect(content).not.toContain(SECRET);
     expect(popup.status.textContent).toContain('Unable to save');
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:popup-test');
     expect(popup.copy.disabled).toBe(false);
     expect(popup.save.disabled).toBe(false);
+  });
+
+  it.each(['complete', 'interrupted'])('retains the Blob until download %s and cleans up its listener', async (state) => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true });
+    popup.downloadSearch.mockResolvedValue([{ id: 1, state: 'in_progress' }]);
+    popup.save.click();
+    await settle();
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    expect(popup.save.disabled).toBe(true);
+    expect(popup.status.textContent).not.toContain('Saved');
+    const listener = popup.downloadChanged.addListener.mock.calls[0]?.[0];
+    listener({ id: 2, state: { current: 'complete' } });
+    await settle();
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    listener({ id: 1, state: { current: state } });
+    await settle();
+    expect(URL.revokeObjectURL).toHaveBeenCalledOnce();
+    expect(popup.downloadChanged.removeListener).toHaveBeenCalledWith(listener);
+    expect(popup.status.textContent).toContain(state === 'complete' ? 'Saved' : 'Unable to save');
+    expect(popup.save.disabled).toBe(false);
+  });
+
+  it('keeps Save unavailable after Copy when the browser has no downloads API', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true, downloadsUnavailable: true });
+    expect(popup.save.disabled).toBe(true);
+    expect(popup.save.textContent).toBe('Save unavailable');
+    popup.copy.click();
+    await settle();
+    expect(popup.clipboardWrite).toHaveBeenCalledOnce();
+    expect(popup.save.disabled).toBe(true);
+    popup.save.click();
+    await settle();
+    expect(popup.sendMessage).toHaveBeenCalledOnce();
+    expect(popup.download).not.toHaveBeenCalled();
+    expect(popup.status.textContent).toContain('Saving files is unavailable');
   });
 
   it('persists settings and allows an explicitly unredacted export', async () => {

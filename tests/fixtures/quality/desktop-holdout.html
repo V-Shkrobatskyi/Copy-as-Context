@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Desktop semantic holdout</title></head><body>
+<main><h1>Workspace settings</h1>
+  <form aria-label="Project details">
+    <label>Workspace name <input id="workspace" value="Synthetic workspace"></label>
+    <label>Password <input type="password" value="synthetic-password-never-export"></label>
+    <label>API key <input value="synthetic-api-key-never-share"></label>
+    <label><input id="mixed" type="checkbox"> Mixed permission</label>
+    <label><input type="checkbox" checked> Enable notifications</label>
+    <button type="button" disabled>Unavailable action</button>
+  </form>
+  <div role="tablist" aria-label="Workspace tabs">
+    <button role="tab" aria-selected="true">Overview</button><button role="tab" aria-selected="false">Security</button>
+  </div>
+  <div role="tabpanel" aria-label="Overview panel"><p id="spa">Initial workspace status</p></div>
+  <details><summary>Advanced options</summary><button>Rotate credentials</button></details>
+  <div role="menu" aria-label="Workspace actions"><button role="menuitem">Archive workspace</button><button role="menuitemcheckbox" aria-checked="false">Pin workspace</button></div>
+  <dialog open aria-label="Confirm removal"><button>Cancel removal</button><button>Confirm removal</button></dialog>
+  <table><caption>Resource inventory</caption><thead><tr><th>Resource</th><th>Action</th></tr></thead>
+    <tbody><tr><th scope="row">Synthetic resource</th><td><button>Open resource</button></td></tr></tbody>
+  </table>
+  <button style="position:absolute;left:-10000px">Offscreen action</button>
+  <button>Зберегти 🙂 東京</button>
+  <div id="host"><button slot="action">Slotted action</button></div>
+  <span hidden id="hidden-label">Hidden reference name</span><button aria-labelledby="hidden-label">Reference</button>
+  <div hidden><button>Hidden forbidden action</button></div><div aria-hidden="true"><button>ARIA forbidden action</button></div>
+  <div inert><button>Inert forbidden action</button></div>
+  <p>Authorization: Bearer abcdefghijklmnopqrstuvwxyz1234567890</p>
+</main>
+<script>
+  document.querySelector('#mixed').indeterminate = true;
+  document.querySelector('#host').attachShadow({ mode: 'open' }).innerHTML = '<div role="group" aria-label="Shadow controls"><slot name="action"></slot></div>';
+</script>
+</body></html>

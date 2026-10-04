@@ -1,10 +1,26 @@
 # Copy as Context
 
-Chrome Desktop extension that will copy a compact, semantic representation of the current web page for use with LLM chats. It works locally: it does not call an LLM API or send page data to a backend.
+Desktop browser extension that copies a compact, semantic representation of the current web page for use with LLM chats. It works locally: it does not call an LLM API or send page data to a backend.
 
 > Work in progress.
 
-The extension captures a normalized accessibility-tree snapshot from an ordinary active Chrome web page and exports a compact semantic representation locally. It does not call an LLM API or send page data to a backend. Firefox is not supported.
+Chrome uses a normalized accessibility-tree snapshot. The experimental Firefox Desktop build uses DOM/HTML/ARIA semantics and the same local export pipeline. Firefox Android has not been validated.
+
+## Firefox Desktop capture (experimental)
+
+Run `npm run build:firefox`, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `.output/firefox-mv3/manifest.json`. The initial development target is Firefox 140+. Reload the temporary add-on after rebuilding.
+
+Copy and Save capture the active top-level document on demand. Firefox requests `activeTab` and `scripting` instead of `debugger`, plus `clipboardWrite`, `downloads`, and `storage`. It does not request persistent access to all sites. Capture excludes password input values even with redaction disabled. Other values follow the selected privacy setting.
+
+The DOM adapter preserves supported HTML/ARIA roles, labels, live form values and states, tables, lists, open Shadow DOM and slots. It approximates accessible names; it is not Gecko's native accessibility tree or a complete implementation of the Accessible Name specification. Closed shadow roots, embedded frames, canvas pixels, CSS-generated content, unmounted virtualized UI and `aria-owns` reordering are not captured. Embedded-frame/canvas warnings appear next to export metrics. Hidden/inert content is excluded, but explicitly referenced hidden labels can contribute to accessible names. Collapsed details retain their summary and expanded state.
+
+Capture has explicit node, depth, text and time limits; overflow produces an error rather than a silent partial export. Navigation during capture discards the result. Some browser pages and protected websites cannot be injected into.
+
+For synthetic manual checks, serve the repository locally with `python3 -m http.server 8765 --bind 127.0.0.1`, open `http://127.0.0.1:8765/tests/manual/firefox-dom-quality.html`, and test both formats and all compression profiles. This test server serves only the fixture; the extension itself has no backend.
+
+The Desktop quality gate also compares critical semantics with Chrome AX on an independent synthetic holdout. See [Firefox Desktop verification](docs/firefox-desktop-testing.md) for native-browser probes, performance/retention checks, the support evidence required for minimum/ESR versions, and toolbar/lifecycle smoke tests. Android and full Desktop release certification remain pending.
+
+The default Firefox package is prepared for Desktop and does not declare Android availability. A separate `npm run build:firefox:android-test` produces a copy-only research build; Android Save is unavailable because its downloads API is unsupported. See [Android gate](docs/firefox-android-testing.md). For unsigned ZIP/source archives, licenses and reproducible builds, see [release preparation](docs/firefox-release.md) and [BUILDING.md](BUILDING.md).
 
 ## Chrome capture
 
@@ -22,7 +38,9 @@ The popup shows the exact JavaScript character count (including boundaries for C
 
 Before every export, the extension applies a local heuristic redaction pass to the normalized context. It replaces password field values and common credential-shaped text (for example Bearer/Basic authorization values, JWTs, GitHub tokens, AWS access-key IDs, OpenAI-style keys, and selected `token`/`api_key` URL parameters) with `[REDACTED]`. This is a safeguard against obvious accidental disclosure, **not** a general DLP or PII detector: review exported context before sharing it, especially when it contains personal or business-sensitive data.
 
-The extension requests three permissions: `debugger` to read the computed accessibility tree, `clipboardWrite` to copy a user-requested export, and `downloads` to save a user-requested local file. Download filenames use the local `YYYY.MM.DD_HHmmss` timestamp and do not include the page title or URL.
+The Chrome build requests `debugger` to read the computed accessibility tree, `clipboardWrite` to copy a user-requested export, `downloads` to save a user-requested local file, and `storage` to keep preferences. Download filenames use the local `YYYY.MM.DD_HHmmss` timestamp and do not include the page title or URL.
+
+Save downloads a local UTF-8 file. The popup confirms completion while it remains open; the browser download manager also shows download progress and completion. Browsers without downloads API show Save unavailable.
 
 ## Review page content before sharing
 
@@ -57,15 +75,17 @@ Run the unit tests with:
 npm test
 ```
 
-Run all checks, including a production extension build, with:
+Run all automated checks, including both production builds and Firefox package lint, with:
 
 ```bash
 npm run check
 ```
 
+After building, run the optional native Firefox/Chrome capture probe with `npm run check:desktop-runtime`. It uses fresh temporary profiles and synthetic localhost content; it does not test clipboard/download destinations or replace toolbar smoke tests.
+
 ## Architecture
 
-`src/core/` contains the normalized semantic model and must not depend on Chrome, WXT entrypoints, browser globals, or DOM APIs. Browser-specific code belongs in `src/adapters/`; UI belongs in `entrypoints/`. The Chrome adapter owns CDP payloads and the attach → command → detach lifecycle, and returns only a browser-agnostic semantic tree. This separation allows a future DOM/ARIA adapter to produce the same semantic tree.
+`src/core/` contains the normalized semantic model and must not depend on Chrome, WXT entrypoints, browser globals, or DOM APIs. Browser-specific code belongs in `src/adapters/`; UI belongs in `entrypoints/`. The Chrome adapter owns CDP payloads and the attach → command → detach lifecycle. The DOM adapter owns semantic extraction; the Firefox adapter owns isolated-world injection and validation. Both return the same browser-agnostic semantic tree. Scope warnings stay outside the core model.
 
 The pure core pipeline is `SemanticTree → compression profile → privacy redaction
 → serializer`. `without` is the unpruned normalized tree; `detailed` removes

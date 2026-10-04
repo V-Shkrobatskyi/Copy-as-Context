@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Firefox DOM capture — synthetic settings</title>
+  <style>
+    body { max-width: 850px; margin: 30px auto; padding: 0 20px; font: 16px system-ui; }
+    fieldset, section, details { margin: 18px 0; padding: 15px; border: 1px solid #bbb; }
+    label { display: block; margin: 10px 0; }
+    button, input, select, textarea { font: inherit; }
+    table { border-collapse: collapse; } th, td { padding: 8px; border: 1px solid #bbb; }
+  </style>
+</head>
+<body>
+  <header><h1>Security settings</h1><p>All values on this page are synthetic. Change controls before capturing to check live states.</p></header>
+  <nav aria-label="Settings navigation"><a href="#account">Account</a> <a href="#sessions">Sessions</a></nav>
+  <main>
+    <div role="tablist" aria-label="Settings tabs">
+      <button role="tab" aria-selected="false">Profile</button>
+      <button role="tab" aria-selected="true">Security</button>
+    </div>
+    <section id="account" aria-label="Account settings">
+      <h2>Account</h2>
+      <label>Account name <input value="Synthetic account"></label>
+      <label>Password <input type="password" value="synthetic-password-never-export"></label>
+      <label>API key <input value="sk-proj-abcdefghijklmnopqrstuv123456"></label>
+      <label>Notes <textarea>Change this text before capturing.</textarea></label>
+      <label><input id="mixed" type="checkbox"> Mixed permission</label>
+      <label><input type="checkbox" role="switch" checked> Authenticator app</label>
+      <label>Region <select><option>Europe</option><option>Asia</option></select></label>
+      <label>Zoom <input type="range" min="50" max="200" value="125"></label>
+      <fieldset disabled><legend>Unavailable setting</legend><button>Blocked action</button></fieldset>
+      <span id="hidden-name" hidden>Configure two-factor authentication</span>
+      <button aria-labelledby="hidden-name">Configure</button>
+      <p>Authorization: Bearer abcdefghijklmnopqrstuvwxyz1234567890</p>
+    </section>
+    <details><summary>Advanced options</summary><button>Rotate credentials</button></details>
+    <section id="sessions" aria-label="Sessions"><h2>Current devices</h2>
+      <table><caption>Active sessions</caption><thead><tr><th>Device</th><th>Action</th></tr></thead>
+        <tbody><tr><th scope="row">Synthetic laptop</th><td><button>Revoke session</button></td></tr></tbody></table>
+    </section>
+    <section aria-label="Web component"><h2>Open Shadow DOM</h2><div id="host"><button slot="action">Shadow action</button></div></section>
+    <section aria-label="Capture boundaries"><h2>Excluded sources</h2>
+      <iframe title="Synthetic embedded frame" srcdoc="<button>Frame-only action</button>"></iframe>
+      <canvas id="canvas" width="260" height="50">Canvas fallback is excluded.</canvas>
+      <div hidden><button>Hidden-only action</button></div>
+      <div aria-hidden="true"><button>ARIA-hidden action</button></div>
+    </section>
+  </main>
+  <script>
+    document.querySelector('#mixed').indeterminate = true;
+    document.querySelector('#host').attachShadow({ mode: 'open' }).innerHTML = '<div role="group" aria-label="Shadow settings"><slot name="action"></slot></div>';
+    const context = document.querySelector('#canvas').getContext('2d');
+    context.font = '16px system-ui'; context.fillText('Canvas-only label', 5, 30);
+    for (const tab of document.querySelectorAll('[role="tab"]')) tab.addEventListener('click', () => {
+      for (const sibling of document.querySelectorAll('[role="tab"]')) sibling.setAttribute('aria-selected', String(sibling === tab));
+    });
+  </script>
+</body>
+</html>

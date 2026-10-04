@@ -17,6 +17,10 @@ export const CAPTURE_ERROR_CODES = [
   'permission-denied',
   'debugger-busy',
   'capture-failed',
+  'capture-unavailable',
+  'capture-limit',
+  'capture-timeout',
+  'page-changed',
   'invalid-tree',
 ] as const;
 export type CaptureErrorCode = (typeof CAPTURE_ERROR_CODES)[number];

@@ -17,3 +17,10 @@ jobs:
       - run: npm run compile
       - run: npm test
       - run: npm run build
+      - run: npm run build:firefox
+      - run: npm run check:browser-builds
+      - run: npm run lint:firefox
+        env:
+          NO_UPDATE_NOTIFIER: '1'
+      - run: npm run zip:firefox
+      - run: npm run check:firefox-package

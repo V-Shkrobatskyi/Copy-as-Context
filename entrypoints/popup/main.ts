@@ -1,4 +1,5 @@
-import './style.css';
+import '@popup-style.css';
+import { browser } from 'wxt/browser';
 
 import {
   DEFAULT_COMPRESSION_LEVEL,
@@ -7,6 +8,7 @@ import {
 } from '@/src/core';
 import { CAPTURE_ACTIVE_TAB_MESSAGE, isCaptureActiveTabResponse, type CaptureActiveTabRequest } from '@/src/capture-message';
 import { wrapClipboardContext } from '@/src/clipboard-context';
+import { contextBlob, contextDownloadOptions } from '@/src/download-context';
 
 type ExportAction = 'copy' | 'save';
 type StoredPopupSettings = {
@@ -18,12 +20,16 @@ type StoredPopupSettings = {
 const POPUP_SETTINGS_KEY = 'popup-settings';
 
 const ERROR_MESSAGES: Record<string, string> = {
-  'unsupported-page': 'This Chrome page cannot be captured. Open a regular web page and try again.',
-  'permission-denied': 'Chrome denied access to this page.',
+  'unsupported-page': 'This browser page cannot be captured. Open a regular web page and try again.',
+  'permission-denied': 'The browser denied access to this page.',
   'debugger-busy': 'Chrome debugging is already in use for this tab. Close DevTools and try again.',
-  'invalid-tree': 'Chrome returned an invalid accessibility tree. Try again.',
-  'capture-failed': 'Unable to capture the accessibility tree. Try again.',
-  'copy-failed': 'Unable to copy the page context. Check Chrome clipboard access and try again.',
+  'invalid-tree': 'The browser returned an invalid semantic tree. Try again.',
+  'capture-failed': 'Unable to capture this page’s semantic structure. Try again.',
+  'capture-unavailable': 'Page capture is not available in this build yet.',
+  'capture-limit': 'This page exceeds the capture limits. Try a smaller page.',
+  'capture-timeout': 'Page capture took too long. Try again.',
+  'page-changed': 'The page changed during capture. Wait for it to finish loading and try again.',
+  'copy-failed': 'Unable to copy the page context. Check browser clipboard access and try again.',
   'save-failed': 'Unable to save the page context. Try again.',
 };
 
@@ -50,21 +56,26 @@ function formatMetrics(
   return `${characterCount} ${countLabel} · ~${approximateTokenCount} tokens · ${reductionLabel} · ${redactions}.`;
 }
 
-function downloadFilename(format: SupportedExportFormat): string {
-  const now = new Date();
-  const pad = (value: number): string => value.toString().padStart(2, '0');
-  const timestamp = `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-  return `${timestamp}.${format === 'markdown' ? 'md' : 'txt'}`;
-}
-
 async function saveContext(content: string, format: SupportedExportFormat): Promise<void> {
-  const blob = new Blob([content], {
-    type: format === 'markdown' ? 'text/markdown;charset=utf-8' : 'text/plain;charset=utf-8',
-  });
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(contextBlob(content, format));
+  let changed: ((delta: { id: number; state?: { current?: string }; error?: { current?: string } }) => void) | undefined;
   try {
-    await chrome.downloads.download({ url, filename: downloadFilename(format), saveAs: true });
+    const id = await browser.downloads.download(contextDownloadOptions(url, format));
+    await new Promise<void>((resolve, reject) => {
+      const check = (state?: string, error?: string) => {
+        if (state === 'interrupted' || error) reject(new Error('download-interrupted'));
+        else if (state === 'complete') resolve();
+      };
+      changed = (delta) => { if (delta.id === id) check(delta.state?.current, delta.error?.current); };
+      browser.downloads.onChanged.addListener(changed);
+      // A small local download may finish before the listener is attached.
+      void browser.downloads.search({ id }).then((items) => {
+        if (!items[0]) reject(new Error('download-unavailable'));
+        else check(items[0].state, items[0].error);
+      }, reject);
+    });
   } finally {
+    if (changed) browser.downloads.onChanged.removeListener(changed);
     URL.revokeObjectURL(url);
   }
 }
@@ -121,6 +132,12 @@ const semanticTextFormat = document.querySelector<HTMLInputElement>('#format-sem
 const markdownFormat = document.querySelector<HTMLInputElement>('#format-markdown')!;
 const copyButton = document.querySelector<HTMLButtonElement>('.primary-action')!;
 const saveButton = document.querySelector<HTMLButtonElement>('.secondary-action')!;
+const canSave = typeof browser.downloads?.download === 'function';
+if (!canSave) {
+  saveButton.disabled = true;
+  saveButton.textContent = 'Save unavailable';
+  saveButton.title = 'Saving files is unavailable in this browser. Use Copy page context.';
+}
 const status = document.querySelector<HTMLParagraphElement>('.status')!;
 const metrics = document.querySelector<HTMLParagraphElement>('.metrics')!;
 const feedback = document.querySelector<HTMLElement>('.feedback')!;
@@ -134,7 +151,7 @@ const controls = [
 
 const COMPRESSION_VALUES: readonly CompressionLevel[] = ['without', 'detailed', 'compact', 'maximum'];
 
-guideLink.href = chrome.runtime.getURL('guide.html');
+guideLink.href = browser.runtime.getURL('/guide.html');
 
 function selectedRangeCompression(value: string): CompressionLevel {
   const index = Number.parseInt(value, 10);
@@ -166,7 +183,7 @@ function readSettings(value: unknown): StoredPopupSettings | undefined {
 
 async function loadSettings(): Promise<void> {
   try {
-    const stored = await chrome.storage.local.get(POPUP_SETTINGS_KEY);
+    const stored = await browser.storage.local.get(POPUP_SETTINGS_KEY);
     const settings = readSettings(stored[POPUP_SETTINGS_KEY]);
     if (settings === undefined) return;
 
@@ -192,7 +209,7 @@ async function saveSettings(): Promise<void> {
     redactSensitiveData: redactSensitiveData.checked,
   };
   try {
-    await chrome.storage.local.set({ [POPUP_SETTINGS_KEY]: settings });
+    await browser.storage.local.set({ [POPUP_SETTINGS_KEY]: settings });
     showFeedback('Settings saved for future popup openings.');
   } catch {
     showFeedback('Unable to save settings. Try again.');
@@ -206,13 +223,22 @@ function showFeedback(message: string): void {
 
 function setPending(pending: boolean, action?: ExportAction): void {
   for (const control of controls) control.disabled = pending;
+  saveButton.disabled = pending || !canSave;
   if (pending) {
     metrics.textContent = '';
     showFeedback(action === 'copy' ? 'Capturing and copying page context…' : 'Capturing and preparing download…');
   }
 }
 
+let exportPending = false;
+
 async function exportPageContext(action: ExportAction): Promise<void> {
+  if (action === 'save' && !canSave) {
+    showFeedback('Saving files is unavailable in this browser. Use Copy page context.');
+    return;
+  }
+  if (exportPending) return;
+  exportPending = true;
   setPending(true, action);
   let destinationStarted = false;
   try {
@@ -223,7 +249,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       format: exportFormat,
       redactSensitiveData: redactSensitiveData.checked,
     };
-    const response = await chrome.runtime.sendMessage(request);
+    const response = await browser.runtime.sendMessage(request);
     if (!isCaptureActiveTabResponse(response)) {
       showFeedback(ERROR_MESSAGES['capture-failed']!);
       return;
@@ -247,18 +273,21 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       await saveContext(result.serialized.content, exportFormat);
       showFeedback(`Saved ${FORMAT_LABELS[exportFormat]} file.`);
     }
+    const warnings = (response.warnings ?? []).map((code) => code === 'embedded-frames'
+      ? 'Embedded frames are not included.' : 'Canvas content is not included.').join(' ');
     metrics.textContent = formatMetrics(
       characterCount,
       approximateTokenCount,
       result.reductionRatio,
       result.redactionCount,
       action,
-    );
+    ) + (warnings ? ` ${warnings}` : '');
   } catch {
     showFeedback(ERROR_MESSAGES[
       destinationStarted ? (action === 'copy' ? 'copy-failed' : 'save-failed') : 'capture-failed'
     ]!);
   } finally {
+    exportPending = false;
     setPending(false);
   }
 }

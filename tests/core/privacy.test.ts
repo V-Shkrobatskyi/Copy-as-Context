@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { redactSemanticTree, serializeMarkdown, serializeSemanticText, type SemanticTree } from '@/src/core';
+import { COMPRESSION_LEVELS, prepareExport, redactSemanticTree, serializeMarkdown, serializeSemanticText, type SemanticTree } from '@/src/core';
 
 const fixturePath = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -21,6 +21,29 @@ async function privacyFixture(): Promise<{ positive: SemanticTree; negative: Sem
 }
 
 describe('semantic privacy redaction', () => {
+  it('redacts AX value copies and split text inside sensitive fields without changing sibling context or privacy-off exports', () => {
+    const tree: SemanticTree = { schemaVersion: 1, root: { role: 'page', children: [
+      { role: 'textbox', name: 'API key', value: 'synthetic-sensitive-value', children: [{ role: 'generic', children: [
+        { role: 'StaticText', name: 'synthetic-sensitive-value', children: [
+          { role: 'InlineTextBox', name: 'synthetic-sensitive-', children: [] },
+          { role: 'InlineTextBox', name: 'value', children: [] },
+        ] },
+      ] }] },
+      { role: 'StaticText', name: 'Ordinary sibling context', children: [] },
+      { role: 'textbox', name: 'Resource name', value: 'Public resource', children: [{ role: 'StaticText', name: 'Public resource', children: [] }] },
+    ] } };
+    const original = structuredClone(tree);
+    const once = redactSemanticTree(tree);
+    expect(redactSemanticTree(once.tree)).toEqual({ tree: once.tree, redactionCount: 0 });
+    for (const profile of COMPRESSION_LEVELS) for (const format of ['semantic-text', 'markdown'] as const) {
+      const output = prepareExport(tree, profile, format, true).serialized.content;
+      expect(output).not.toContain('synthetic');
+      expect(output).toContain('Ordinary sibling context');
+      expect(output).toContain('Public resource');
+      expect(prepareExport(tree, profile, format, false).serialized.content).toContain('synthetic');
+    }
+    expect(tree).toEqual(original);
+  });
   it.each([
     'Bearer abcdefghijklmnop', 'Basic abcdefghijklmnop',
     'eyJabcdef.abcdefgh.abcdefgh',
