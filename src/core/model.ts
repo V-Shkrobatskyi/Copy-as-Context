@@ -31,5 +31,7 @@ export interface SemanticTree {
   sourceUrl?: string;
   /** Local capture time, formatted as YYYY.MM.DD HH:mm:ss. */
   capturedAt?: string;
+  /** Browser name, platform and available version supplied by the extension runtime. */
+  browser?: string;
   root: SemanticNode;
 }
