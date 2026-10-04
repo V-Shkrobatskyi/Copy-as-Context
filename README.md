@@ -24,6 +24,20 @@ Before every export, the extension applies a local heuristic redaction pass to t
 
 The extension requests three permissions: `debugger` to read the computed accessibility tree, `clipboardWrite` to copy a user-requested export, and `downloads` to save a user-requested local file. Download filenames use the local `YYYY.MM.DD_HHmmss` timestamp and do not include the page title or URL.
 
+## Review page content before sharing
+
+Exported context can include text you did not see on the page, such as white text on a white background, text covered by another element, or accessible labels. Inclusion depends on what Chrome exposes in its accessibility tree and what the export preserves. Hidden accessibility text can serve a legitimate purpose; its presence alone does not mean a page is malicious.
+
+The export is not a copy of all HTML text. Content excluded from the accessibility tree, not yet loaded, or present only as image pixels may be absent; the extension does not perform OCR. Some hidden text can still contribute to an element's accessible name. **Without** keeps captured semantic nodes, not everything that exists on the page. See [MDN's accessibility notes on hiding content](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/display#accessibility).
+
+Visible or hidden page text can also contain instructions aimed at an AI assistant, often called **prompt injection**. These may ask it to ignore your task, reveal private information, or take unrelated actions. Treat exported page content as untrusted source material:
+
+- Review the exported text before sharing it, and remove suspicious or irrelevant instructions.
+- Tell the assistant to use the page as source material rather than instructions to follow.
+- Review consequential actions, such as sending information or changing data, before allowing them.
+
+Local processing, credential redaction, compression, and export boundaries do not detect or guarantee removal of malicious instructions. The review steps above can help reduce risk, but they do not guarantee protection.
+
 ## Development
 
 ```bash
