@@ -65,14 +65,15 @@ capture. No host permissions are added to make the probe pass.
 The native Firefox probe also renders the built popup markup/CSS in a same-origin
 376px iframe, checking the original Desktop popup width, 18px range and compact
 buttons. The separate `--popup-layout android` probe checks the shared Firefox CSS in Android mode at
-280/320/376px; these are Gecko layout checks, not Android touch tests. On a fresh profile the optional downloads permission is not granted. WebDriver
-cannot activate trusted input in this privileged extension tab, so the probe
-records `downloadsProbe: requires-manual-permission-grant` and skips file writes.
-It never changes the manifest or silently grants permissions to make the probe
-pass. If a grant is already present, the API probe verifies synthetic UTF-8 bytes
-for both formats after closing the initiating extension document. Permission
-approval, denial, retry, and the real Save As picker require the toolbar checklist
-below; popup unit tests cover the permission flow with mocked APIs.
+280/320/376px; these are Gecko layout checks, not Android touch tests. On a fresh
+profile the production extension's optional downloads permission is not granted.
+The harness installs a separate synthetic extension with required downloads
+permission to reproduce an expired document-owned Blob URL and verify exact
+UTF-8 bytes for both export formats while the save document survives closure of
+a separate initiating popup.
+It does not modify the production manifest or grant its optional permission.
+Permission approval, denial, retry, and the real Save As picker require the toolbar
+checklist below; popup unit tests cover the permission flow with mocked APIs.
 
 Performance samples cover 20, 200 and 1,000 resource rows, five measured captures
 after a warmup at each size, and all eight profile/format exports per sample. Reports
@@ -110,7 +111,10 @@ Keep local reports and exported synthetic examples outside tracked source.
    Copy, filename/extension, metrics, Unicode and the persisted preferences.
    On a fresh Firefox installation, decline the first Save permission prompt:
    no capture or download should start, and Copy must remain usable. Retry Save,
-   grant downloads permission, and verify completion. Revoke downloads permission
+   grant downloads permission, and verify completion. Leave the Save As picker
+   open for at least 30 seconds before choosing a destination. The separate save
+   tab must stay open until completion and then close automatically. Cancel a
+   save and check that the tab shows a clear error without captured text. Revoke downloads permission
    in Add-ons Manager and verify the next Save requests it again.
 3. Check the critical controls and their named ancestors described above. Change
    the workspace value, switch tabs and open Advanced options. Capture again:

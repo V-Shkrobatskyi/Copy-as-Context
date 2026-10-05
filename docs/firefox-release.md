@@ -61,13 +61,15 @@ The extension has no backend or LLM request; clipboard and local file destinatio
 are explicitly selected by the user. User-activated help/support links are normal
 browser navigations, not capture-data uploads.
 
-Save uses a local Blob URL and retains it until the browser reports download
-completion or interruption. The popup releases the URL and listener on either
-outcome, and reports success only after completion. No broad host permissions or
-network request are needed. The filename contains a timestamp and extension,
-not page title/URL. Native probes record a skipped download check when a fresh profile lacks the
-optional permission; unit tests verify the grant/denial flow and download cleanup.
-Use the manual checklist for real Desktop permission prompts and picker checks.
+Firefox Save opens a separate extension tab that owns the local Blob URL until
+completion or interruption. This keeps the file available when the Save As dialog
+closes the popup. Keep that tab open during saving; it closes after success and
+shows a generic error if saving fails or is cancelled. Chrome retains the popup's
+Blob URL until completion or interruption. No broad host permissions or network
+request are needed. The filename contains a timestamp and extension, not page
+title/URL. Native probes verify both UTF-8 formats with a surviving save document
+and reproduce the expired Blob failure. Use the manual checklist for real
+Desktop permission prompts and Save As picker checks.
 Browsers without downloads API show Save unavailable.
 
 Desktop Save requests downloads permission directly from the click handler,

@@ -2,6 +2,8 @@
 
 ## 1.0.1 — unreleased
 
+- Keep Firefox Save files available after the Save As dialog closes the popup.
+
 - Use one Firefox package and stable add-on ID for Desktop 140+ and Android 142+.
 - Request optional download permission only when Save is clicked on Firefox Desktop.
 - Keep Android Copy-only and select responsive controls at runtime.

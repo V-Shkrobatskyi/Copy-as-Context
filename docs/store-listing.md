@@ -22,7 +22,7 @@ Turn the current page into useful context for an AI conversation or local notes.
 
 Choose Without, Detailed, Compact, or Maximum compression. Optional credential redaction is enabled by default. Save preferences for your next export and see character counts, rough token estimates, and context reduction.
 
-Firefox Desktop supports clipboard export and local UTF-8 downloads. Firefox Android supports clipboard export; file downloads are unavailable. Both platforms use the same extension package. Desktop asks for download permission the first time Save is clicked.
+Firefox Desktop supports clipboard export and local UTF-8 downloads. Firefox Android supports clipboard export; file downloads are unavailable. Both platforms use the same extension package. Desktop asks for download permission the first time Save is clicked. Firefox uses a separate extension tab to keep the file available while the Save As picker is open; that tab closes after success.
 
 There is no LLM service, capture backend, analytics, or advertising integration. The extension does not upload captured page content to the developer. You decide whether to share the exported text with another application.
 

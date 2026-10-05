@@ -52,7 +52,7 @@ The maintainer confirmed manual checks of the separate 1.0.0 builds on 2026-10-0
 
 1. Open the page you want to export, then open the extension from the browser toolbar or Android extensions menu.
 2. Choose **Semantic Text** or **Markdown**, a compression level, and the privacy setting.
-3. Click **Copy page context**, then paste into your conversation or notes. On Desktop, **Save to file** exports a local UTF-8 file. Firefox asks for download permission the first time.
+3. Click **Copy page context**, then paste into your conversation or notes. On Desktop, **Save to file** exports a local UTF-8 file. Firefox asks for download permission the first time. Its Save action opens a separate extension tab; keep it open until saving finishes. It closes after success.
 
 **Save preferences** keeps your choices for the next popup session.
 
