@@ -48,7 +48,6 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 0; bo
 .privacy-setting code { color: var(--accent-dark); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .format-field { padding: 4px 0 6px; border-top: 0; }
 .save-settings { width: 100%; margin-top: 0; border: 1px solid var(--border); background: var(--surface); color: var(--accent-dark); }
-.save-settings:hover:not(:disabled) { background: var(--selected); }
 .format-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 3px; }
 .format-option { display: flex; align-items: center; gap: 6px; min-height: 34px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: .75rem; font-weight: 650; cursor: pointer; }
 .format-option:has(input:checked) { border-color: var(--accent); background: var(--selected); color: var(--accent-dark); }
@@ -57,9 +56,7 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 0; bo
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 button { border-radius: 8px; cursor: pointer; padding: 9px 8px; font: inherit; font-size: .76rem; font-weight: 700; }
 .primary-action { border: 1px solid var(--accent); background: var(--accent); color: #fff; box-shadow: 0 1px 2px #263e8929; }
-.primary-action:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); }
 .secondary-action { border: 1px solid var(--border); background: var(--surface); color: var(--accent-dark); }
-.secondary-action:hover:not(:disabled) { background: var(--selected); }
 button:disabled, input:disabled { cursor: wait; opacity: .65; }
 button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--selected); outline-offset: 2px; }
 .feedback { margin-top: 10px; padding: 9px 10px; border-radius: 8px; background: var(--surface); }
@@ -68,4 +65,13 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .metrics { margin-top: 3px; color: var(--muted); }
 .help { margin-top: 13px; padding-top: 10px; border-top: 1px solid var(--border); color: var(--muted); font-size: .7rem; text-align: center; }
 .help a { color: var(--accent); font-weight: 700; text-decoration: none; }
-.help a:hover { text-decoration: underline; }
+.save-settings:active:not(:disabled),
+.secondary-action:active:not(:disabled) { background: var(--selected); border-color: var(--accent); }
+.primary-action:active:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); }
+/* Touch browsers can retain emulated hover after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .save-settings:hover:not(:disabled) { background: var(--selected); }
+  .primary-action:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); }
+  .secondary-action:hover:not(:disabled) { background: var(--selected); }
+  .help a:hover { text-decoration: underline; }
+}
