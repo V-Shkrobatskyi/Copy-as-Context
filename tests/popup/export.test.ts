@@ -104,6 +104,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const downloadChanged = { addListener: vi.fn(), removeListener: vi.fn() };
   const storageSet = vi.fn().mockResolvedValue(undefined);
   const sendMessage = vi.fn().mockImplementation(async (request: CaptureActiveTabRequest) => {
+    if (request.type === 'save-firefox-export' as string) return { accepted: true };
     if (typeof response === 'object' && response !== null && 'ok' in response && response.ok === true && 'tree' in response) {
       return { ok: true, export: prepareExport(response.tree as SemanticTree, request.compression, request.format, request.redactSensitiveData) };
     }
@@ -119,6 +120,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   });
   vi.stubGlobal('navigator', { clipboard: { writeText: clipboardWrite }, userAgent: options?.android ? 'Firefox Android' : 'Firefox Desktop' });
   const extensionApi = {
+    tabs: { create: vi.fn().mockResolvedValue({ id: 2 }), remove: vi.fn().mockResolvedValue(undefined) },
     runtime: {
       sendMessage,
       getURL: (path: string) => `chrome-extension://test/${path}`,
@@ -329,24 +331,14 @@ describe('popup export flow', () => {
     expect(popup.save.disabled).toBe(false);
   });
 
-  it.each(['complete', 'interrupted'])('retains the Blob until download %s and cleans up its listener', async (state) => {
+  it('hands Firefox Save to a separate document without creating a popup Blob', async () => {
     const popup = await loadPopup(successfulCapture(), { firefox: true });
-    popup.downloadSearch.mockResolvedValue([{ id: 1, state: 'in_progress' }]);
     popup.save.click();
     await settle();
-    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
-    expect(popup.save.disabled).toBe(true);
-    expect(popup.status.textContent).not.toContain('Saved');
-    const listener = popup.downloadChanged.addListener.mock.calls[0]?.[0];
-    listener({ id: 2, state: { current: 'complete' } });
-    await settle();
-    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
-    listener({ id: 1, state: { current: state } });
-    await settle();
-    expect(URL.revokeObjectURL).toHaveBeenCalledOnce();
-    expect(popup.downloadChanged.removeListener).toHaveBeenCalledWith(listener);
-    expect(popup.status.textContent).toContain(state === 'complete' ? 'Saved' : 'Unable to save');
-    expect(popup.save.disabled).toBe(false);
+    expect(popup.sendMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'save-firefox-export', format: 'semantic-text', content: expect.stringContaining('[REDACTED]') }));
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(popup.download).not.toHaveBeenCalled();
+    expect(popup.status.textContent).toContain('Saving file in a separate tab');
   });
 
   it('keeps Save unavailable after Copy when the browser has no downloads API', async () => {
@@ -375,8 +367,8 @@ describe('popup export flow', () => {
     expect(popup.requestPermission).toHaveBeenCalledWith({ permissions: ['downloads'] });
     expect(popup.sendMessage).not.toHaveBeenCalled();
     await settle();
-    expect(popup.download).toHaveBeenCalledOnce();
-    expect(popup.status.textContent).toContain('Saved');
+    expect(popup.sendMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'save-firefox-export' }));
+    expect(popup.status.textContent).toContain('Saving');
   });
 
   it('keeps Copy usable when Firefox download permission is denied', async () => {
@@ -393,8 +385,8 @@ describe('popup export flow', () => {
     popup.requestPermission.mockResolvedValue(true);
     popup.save.click();
     await settle();
-    expect(popup.download).toHaveBeenCalledOnce();
-    expect(popup.status.textContent).toContain('Saved');
+    expect(popup.sendMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'save-firefox-export' }));
+    expect(popup.status.textContent).toContain('Saving');
   });
 
   it('blocks Save on Android even if a downloads API stub is exposed', async () => {

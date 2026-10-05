@@ -1,3 +1,4 @@
+import { openFirefoxSave } from '@/src/firefox-save';
 import '@popup-style.css';
 import { browser } from 'wxt/browser';
 
@@ -57,6 +58,10 @@ function formatMetrics(
 }
 
 async function saveContext(content: string, format: SupportedExportFormat): Promise<void> {
+  if (firefox) {
+    await openFirefoxSave(content, format);
+    return;
+  }
   const url = URL.createObjectURL(contextBlob(content, format));
   let changed: ((delta: { id: number; state?: { current?: string }; error?: { current?: string } }) => void) | undefined;
   try {
@@ -291,7 +296,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       showFeedback(`Copied ${FORMAT_LABELS[exportFormat]}.`);
     } else {
       await saveContext(result.serialized.content, exportFormat);
-      showFeedback(`Saved ${FORMAT_LABELS[exportFormat]} file.`);
+      showFeedback(firefox ? 'Saving file in a separate tab.' : `Saved ${FORMAT_LABELS[exportFormat]} file.`);
     }
     const warnings = (response.warnings ?? []).map((code) => code === 'embedded-frames'
       ? 'Embedded frames are not included.' : 'Canvas content is not included.').join(' ');

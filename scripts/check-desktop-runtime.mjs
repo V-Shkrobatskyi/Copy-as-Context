@@ -17,6 +17,8 @@ const popupAssets = '.output/firefox-mv3/assets';
 const popupCssName = (await readdir(popupAssets)).find((name) => name.startsWith('popup-') && name.endsWith('.css'));
 const popupCss = await readFile(`${popupAssets}/${popupCssName}`, 'utf8');
 const fixtureExtensionUuid = '11111111-2222-4333-8444-555555555555';
+const downloadFixtureId = 'download-lifetime-probe@example.test';
+const downloadFixtureUuid = '22222222-3333-4444-8555-666666666666';
 const source = await createServer({ configFile: false, server: { middlewareMode: true, ws: false, hmr: false }, optimizeDeps: { noDiscovery: true, include: [] } });
 const { normalizeChromeAxTree } = await source.ssrLoadModule('/src/adapters/chrome/normalize-ax.ts');
 const { prepareExport, COMPRESSION_LEVELS } = await source.ssrLoadModule('/src/core/index.ts');
@@ -83,7 +85,7 @@ async function launch(target) {
     'user_pref("browser.download.folderList", 2);',
     'user_pref("browser.download.useDownloadDir", true);',
     `user_pref("browser.download.dir", ${JSON.stringify(downloadsDirectory)});`,
-    `user_pref("extensions.webextensions.uuids", ${JSON.stringify(JSON.stringify({ [firefoxManifest.browser_specific_settings.gecko.id]: fixtureExtensionUuid }))});`,
+    `user_pref("extensions.webextensions.uuids", ${JSON.stringify(JSON.stringify({ [firefoxManifest.browser_specific_settings.gecko.id]: fixtureExtensionUuid, [downloadFixtureId]: downloadFixtureUuid }))});`,
   ].join('\n'));
   const child = spawn(binary, flags, { stdio: ['ignore', 'pipe', 'pipe'] });
   let close;
@@ -139,7 +141,7 @@ try {
           let { context: popup } = await protocol.send('browsingContext.create', { type: 'tab' });
           const extensionEvaluate = async (expression) => {
             const response = await protocol.send('script.evaluate', { expression, target: { context: popup }, awaitPromise: true });
-            assert.equal(response.type, 'success', 'Extension script failed (details omitted to avoid retaining synthetic export URLs)');
+            assert.equal(response.type, 'success', `Extension script failed: ${response.exceptionDetails?.text?.replace(/(?:data|blob):\S+/g, '[export URL]') ?? 'unknown error'}`);
             return response.result.value;
           };
           await protocol.send('browsingContext.navigate', { context: popup, url: popupUrl, wait: 'complete' });
@@ -201,33 +203,71 @@ try {
           // WebDriver cannot provide trusted input in this privileged extension tab.
           // A fresh profile has no optional downloads grant; never modify the manifest to bypass it.
           const downloadsGranted = await extensionEvaluate('browser.permissions.contains({ permissions: ["downloads"] })');
+          await protocol.send('browsingContext.close', { context: popup });
+          await protocol.send('webExtension.uninstall', { extension });
+
+          // Isolate URL lifetime from optional-permission UX in a downloads-only fixture.
+          // The production package and its permissions are left unchanged.
+          const fixtureDirectory = resolve(browser.downloadsDirectory, 'download-fixture');
+          await mkdir(fixtureDirectory);
+          await writeFile(resolve(fixtureDirectory, 'manifest.json'), JSON.stringify({
+            manifest_version: 3, name: 'Synthetic download lifetime probe', version: '1.0',
+            permissions: ['downloads'],
+            browser_specific_settings: { gecko: { id: downloadFixtureId, strict_min_version: '140.0', data_collection_permissions: { required: ['none'] } } },
+          }));
+          await writeFile(resolve(fixtureDirectory, 'download.html'), '<!doctype html><meta charset="utf-8"><title>Synthetic download probe</title>');
+          await protocol.send('webExtension.install', { extensionData: { type: 'path', path: fixtureDirectory } });
+          const downloadPage = `moz-extension://${downloadFixtureUuid}/download.html`;
+          const openDownloadPage = async () => {
+            ({ context: popup } = await protocol.send('browsingContext.create', { type: 'tab' }));
+            await protocol.send('browsingContext.navigate', { context: popup, url: downloadPage, wait: 'complete' });
+          };
+          await openDownloadPage();
+          const expiredBlob = await extensionEvaluate('URL.createObjectURL(new Blob(["Synthetic expired Blob"]))');
+          await protocol.send('browsingContext.close', { context: popup });
+          await openDownloadPage();
+          const blobRejected = await extensionEvaluate(`(async () => {
+            try {
+              const id = await browser.downloads.download({ url: ${JSON.stringify(expiredBlob)}, filename: 'expired-blob.txt', saveAs: false });
+              for (let attempt = 0; attempt < 50; attempt++) {
+                const [item] = await browser.downloads.search({ id });
+                if (item?.state === 'interrupted') return true;
+                if (item?.state === 'complete') return false;
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+              return false;
+            } catch { return true; }
+          })()`);
+          assert.equal(blobRejected, true, 'Expired document-owned Blob unexpectedly downloaded');
+
           const savedDownloads = [];
-          for (const format of downloadsGranted ? ['semantic-text', 'markdown'] : []) {
+          for (const format of ['semantic-text', 'markdown']) {
             const content = 'Synthetic download context 🙂 東京 Україна & % , +\n'.repeat(2000);
-            const mime = format === 'markdown' ? 'text/markdown' : 'text/plain';
-            const blobUrl = await extensionEvaluate(`URL.createObjectURL(new Blob([${JSON.stringify(content)}], { type: ${JSON.stringify(`${mime};charset=utf-8`)} }))`);
-            const options = contextDownloadOptions(blobUrl, format);
-            // The harness uses its temporary download directory instead of opening a Save As dialog.
+            const fileUrl = await extensionEvaluate(`URL.createObjectURL(new Blob([${JSON.stringify(content)}], { type: 'text/plain;charset=utf-8' }))`);
+            const owner = popup;
+            // Keep the save document alive while a separate initiating popup closes.
+            await openDownloadPage();
+            await protocol.send('browsingContext.close', { context: popup });
+            popup = owner;
+            const options = contextDownloadOptions(fileUrl, format);
             const id = await extensionEvaluate(`browser.downloads.download(${JSON.stringify({ ...options, saveAs: false })})`);
             assert.ok(Number.isInteger(id));
-            await protocol.send('browsingContext.close', { context: popup });
-            ({ context: popup } = await protocol.send('browsingContext.create', { type: 'tab' }));
-            await protocol.send('browsingContext.navigate', { context: popup, url: popupUrl, wait: 'complete' });
             let completed = false;
             for (let attempt = 0; attempt < 100 && !completed; attempt++) {
               const items = JSON.parse(await extensionEvaluate(`browser.downloads.search({ id: ${id} }).then(items => JSON.stringify(items.map(item => ({ state: item.state, error: item.error }))))`));
-              assert.ok(!items[0]?.error, 'Synthetic download was interrupted');
+              assert.ok(!items[0]?.error, 'Synthetic save-document download was interrupted');
               completed = items[0]?.state === 'complete';
-              if (!completed) await new Promise((resolve) => setTimeout(resolve, 100));
+              if (!completed) await new Promise(resolve => setTimeout(resolve, 100));
             }
-            assert.ok(completed, 'Download did not finish after popup document closed');
+            assert.ok(completed, 'Save-document download did not finish after popup closure');
             const bytes = await readFile(resolve(browser.downloadsDirectory, options.filename));
             assert.equal(bytes.toString('utf8'), content);
+            await extensionEvaluate(`URL.revokeObjectURL(${JSON.stringify(fileUrl)})`);
             savedDownloads.push({ format, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), completedAfterPopupClose: true });
           }
           await protocol.send('browsingContext.close', { context: popup });
-          await protocol.send('webExtension.uninstall', { extension });
-          return { temporaryInstall: true, popupDocument: true, missingActiveTabGrant: 'injection-rejected', tabDocumentSenderRejected: true, reloadAndStorage: true, popupLayout: options['popup-layout'], viewports, optionalDownloadsGranted: downloadsGranted, downloadsProbe: downloadsGranted ? 'completed' : 'requires-manual-permission-grant', savedDownloads };
+          await protocol.send('webExtension.uninstall', { extension: downloadFixtureId });
+          return { temporaryInstall: true, popupDocument: true, missingActiveTabGrant: 'injection-rejected', tabDocumentSenderRejected: true, reloadAndStorage: true, popupLayout: options['popup-layout'], viewports, optionalDownloadsGranted: downloadsGranted, downloadsProbe: 'save-document-blob-in-isolated-downloads-fixture', expiredBlobRejected: blobRejected, savedDownloads };
         };
         evaluate = async (expression) => {
           const response = await protocol.send('script.evaluate', { expression, target: { context, sandbox: 'copy-as-context-quality' }, awaitPromise: true });
