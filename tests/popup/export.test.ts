@@ -41,6 +41,7 @@ interface PopupHarness {
   downloadChanged: { addListener: ReturnType<typeof vi.fn>; removeListener: ReturnType<typeof vi.fn> };
   storageSet: ReturnType<typeof vi.fn>;
   sendMessage: ReturnType<typeof vi.fn>;
+  requestPermission: ReturnType<typeof vi.fn>;
 }
 
 const SECRET = 'synthetic-popup-password-value';
@@ -62,6 +63,9 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   storedSettings?: unknown;
   firefox?: boolean;
   downloadsUnavailable?: boolean;
+  android?: boolean;
+  permissionDenied?: boolean;
+  platformError?: boolean;
 }): Promise<PopupHarness> {
   const app = new FakeElement();
   const compression = new FakeElement();
@@ -106,11 +110,14 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
     return response;
   });
 
+  const requestPermission = vi.fn().mockResolvedValue(!options?.permissionDenied);
+  vi.stubEnv('BROWSER', options?.firefox ? 'firefox' : 'chrome');
   vi.stubGlobal('document', {
+    body: { dataset: {} },
     querySelector: <T extends Element>(selector: string): T | null =>
       (elements.get(selector) as unknown as T | undefined) ?? null,
   });
-  vi.stubGlobal('navigator', { clipboard: { writeText: clipboardWrite } });
+  vi.stubGlobal('navigator', { clipboard: { writeText: clipboardWrite }, userAgent: options?.android ? 'Firefox Android' : 'Firefox Desktop' });
   const extensionApi = {
     runtime: {
       sendMessage,
@@ -129,8 +136,12 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   vi.stubGlobal('chrome', extensionApi);
   const firefoxApi = {
       ...extensionApi,
+      permissions: { request: requestPermission },
       runtime: {
         id: 'synthetic-firefox-id',
+        getPlatformInfo: options?.platformError
+          ? vi.fn().mockRejectedValue(new Error('platform unavailable'))
+          : vi.fn().mockResolvedValue({ os: options?.android ? 'android' : 'linux' }),
         sendMessage,
         getURL: (path: string) => `moz-extension://test/${path}`,
       },
@@ -144,9 +155,10 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
 
   await import('@/entrypoints/popup/main');
+  await settle();
   return {
     app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings,
-    copy, save, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage,
+    copy, save, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission,
   };
 }
 
@@ -157,6 +169,7 @@ async function settle(): Promise<void> {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.resetModules();
 });
 
@@ -337,7 +350,7 @@ describe('popup export flow', () => {
   });
 
   it('keeps Save unavailable after Copy when the browser has no downloads API', async () => {
-    const popup = await loadPopup(successfulCapture(), { firefox: true, downloadsUnavailable: true });
+    const popup = await loadPopup(successfulCapture(), { firefox: true, android: true, downloadsUnavailable: true });
     expect(popup.save.disabled).toBe(true);
     expect(popup.save.textContent).toBe('Save unavailable');
     popup.copy.click();
@@ -349,6 +362,63 @@ describe('popup export flow', () => {
     expect(popup.sendMessage).toHaveBeenCalledOnce();
     expect(popup.download).not.toHaveBeenCalled();
     expect(popup.status.textContent).toContain('Saving files is unavailable');
+  });
+
+  it('requests Firefox download permission from Save before capturing the page', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true });
+    expect(popup.requestPermission).not.toHaveBeenCalled();
+    popup.copy.click();
+    await settle();
+    expect(popup.requestPermission).not.toHaveBeenCalled();
+    popup.sendMessage.mockClear();
+    popup.save.click();
+    expect(popup.requestPermission).toHaveBeenCalledWith({ permissions: ['downloads'] });
+    expect(popup.sendMessage).not.toHaveBeenCalled();
+    await settle();
+    expect(popup.download).toHaveBeenCalledOnce();
+    expect(popup.status.textContent).toContain('Saved');
+  });
+
+  it('keeps Copy usable when Firefox download permission is denied', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true, permissionDenied: true });
+    popup.save.click();
+    await settle();
+    expect(popup.sendMessage).not.toHaveBeenCalled();
+    expect(popup.download).not.toHaveBeenCalled();
+    expect(popup.status.textContent).toContain('permission was not granted');
+    expect(popup.save.disabled).toBe(false);
+    popup.copy.click();
+    await settle();
+    expect(popup.clipboardWrite).toHaveBeenCalledOnce();
+    popup.requestPermission.mockResolvedValue(true);
+    popup.save.click();
+    await settle();
+    expect(popup.download).toHaveBeenCalledOnce();
+    expect(popup.status.textContent).toContain('Saved');
+  });
+
+  it('blocks Save on Android even if a downloads API stub is exposed', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true, android: true });
+    expect(document.body.dataset.platform).toBe('android');
+    expect(popup.save.disabled).toBe(true);
+    popup.save.click();
+    await settle();
+    expect(popup.requestPermission).not.toHaveBeenCalled();
+    expect(popup.sendMessage).not.toHaveBeenCalled();
+    expect(popup.download).not.toHaveBeenCalled();
+    popup.copy.click();
+    await settle();
+    expect(popup.clipboardWrite).toHaveBeenCalledOnce();
+    expect(popup.save.disabled).toBe(true);
+  });
+
+  it('keeps Copy usable when Firefox platform detection fails', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true, platformError: true });
+    expect(popup.save.disabled).toBe(true);
+    popup.copy.click();
+    await settle();
+    expect(popup.clipboardWrite).toHaveBeenCalledOnce();
+    expect(popup.requestPermission).not.toHaveBeenCalled();
   });
 
   it('persists settings and allows an explicitly unredacted export', async () => {

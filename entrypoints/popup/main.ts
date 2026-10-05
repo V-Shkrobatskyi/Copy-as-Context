@@ -132,7 +132,15 @@ const semanticTextFormat = document.querySelector<HTMLInputElement>('#format-sem
 const markdownFormat = document.querySelector<HTMLInputElement>('#format-markdown')!;
 const copyButton = document.querySelector<HTMLButtonElement>('.primary-action')!;
 const saveButton = document.querySelector<HTMLButtonElement>('.secondary-action')!;
-const canSave = typeof browser.downloads?.download === 'function';
+const firefox = import.meta.env.BROWSER === 'firefox';
+let canSave = !firefox && typeof browser.downloads?.download === 'function';
+function updateSaveAvailability(): void {
+  saveButton.disabled = exportPending || !canSave;
+  saveButton.textContent = canSave ? 'Save to file' : 'Save unavailable';
+  saveButton.title = canSave && firefox
+    ? 'Firefox asks for download permission the first time you save a file.'
+    : canSave ? '' : 'Saving files is unavailable in this browser. Use Copy page context.';
+}
 if (!canSave) {
   saveButton.disabled = true;
   saveButton.textContent = 'Save unavailable';
@@ -242,6 +250,18 @@ async function exportPageContext(action: ExportAction): Promise<void> {
   setPending(true, action);
   let destinationStarted = false;
   try {
+    // Request from the click handler before awaiting capture, preserving the user gesture.
+    if (action === 'save' && firefox) {
+      const granted = await browser.permissions.request({ permissions: ['downloads'] });
+      if (!granted) {
+        showFeedback('Download permission was not granted. Use Copy or try Save again.');
+        return;
+      }
+      if (typeof browser.downloads?.download !== 'function') {
+        showFeedback('Saving files is unavailable in this browser. Use Copy page context.');
+        return;
+      }
+    }
     const exportFormat = selectedFormat(markdownFormat.checked ? 'markdown' : 'semantic-text');
     const request: CaptureActiveTabRequest = {
       type: CAPTURE_ACTIVE_TAB_MESSAGE,
@@ -298,3 +318,25 @@ compression.addEventListener('input', updateCompressionDescription);
 saveSettingsButton.addEventListener('click', () => void saveSettings());
 updateCompressionDescription();
 void loadSettings();
+
+async function initializeFirefoxPlatform(): Promise<void> {
+  if (!firefox) return;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const platform = await Promise.race([
+      browser.runtime.getPlatformInfo(),
+      new Promise<undefined>((resolve) => { timer = setTimeout(() => resolve(undefined), 1000); }),
+    ]);
+    const android = platform?.os === 'android' || /Android/u.test(navigator.userAgent);
+    document.body.dataset.platform = android ? 'android' : 'desktop';
+    canSave = !android && ['mac', 'win', 'linux', 'cros', 'openbsd'].includes(platform?.os ?? '')
+      && typeof browser.permissions?.request === 'function';
+  } catch {
+    // Copy remains available if local platform detection fails.
+    document.body.dataset.platform = /Android/u.test(navigator.userAgent) ? 'android' : 'desktop';
+  } finally {
+    clearTimeout(timer);
+    updateSaveAvailability();
+  }
+}
+void initializeFirefoxPlatform();

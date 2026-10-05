@@ -13,7 +13,7 @@ const fixture = await readFile('tests/fixtures/quality/desktop-holdout.html', 'u
 const collector = await readFile('.output/firefox-mv3/dom-capture.js', 'utf8');
 const firefoxManifest = JSON.parse(await readFile('.output/firefox-mv3/manifest.json', 'utf8'));
 assert.ok(['desktop', 'android'].includes(options['popup-layout']), 'Unknown popup layout');
-const popupAssets = options['popup-layout'] === 'android' ? '.output/firefox-mv3-android/assets' : '.output/firefox-mv3/assets';
+const popupAssets = '.output/firefox-mv3/assets';
 const popupCssName = (await readdir(popupAssets)).find((name) => name.startsWith('popup-') && name.endsWith('.css'));
 const popupCss = await readFile(`${popupAssets}/${popupCssName}`, 'utf8');
 const fixtureExtensionUuid = '11111111-2222-4333-8444-555555555555';
@@ -182,6 +182,7 @@ try {
               document.body.append(frame);
               await loaded;
               const doc = frame.contentDocument;
+              doc.body.dataset.platform = ${JSON.stringify(options['popup-layout'] === 'android' ? 'android' : 'desktop')};
               doc.querySelector('.feedback').hidden = false;
               doc.querySelector('.metrics').textContent = ${JSON.stringify(options['popup-layout'] === 'android' ? 'SyntheticLongMetric'.repeat(30) : '100 characters · ~25 tokens · 0 redactions')};
               const layout = { width: frame.contentWindow.innerWidth, scrollWidth: doc.documentElement.scrollWidth, buttonHeight: doc.querySelector('.primary-action').getBoundingClientRect().height, popupWidth: doc.querySelector('.popup').getBoundingClientRect().width, rangeHeight: doc.querySelector('input[type=range]').getBoundingClientRect().height };
@@ -197,8 +198,11 @@ try {
             }
             viewports.push(layout);
           }
+          // WebDriver cannot provide trusted input in this privileged extension tab.
+          // A fresh profile has no optional downloads grant; never modify the manifest to bypass it.
+          const downloadsGranted = await extensionEvaluate('browser.permissions.contains({ permissions: ["downloads"] })');
           const savedDownloads = [];
-          for (const format of ['semantic-text', 'markdown']) {
+          for (const format of downloadsGranted ? ['semantic-text', 'markdown'] : []) {
             const content = 'Synthetic download context 🙂 東京 Україна & % , +\n'.repeat(2000);
             const mime = format === 'markdown' ? 'text/markdown' : 'text/plain';
             const blobUrl = await extensionEvaluate(`URL.createObjectURL(new Blob([${JSON.stringify(content)}], { type: ${JSON.stringify(`${mime};charset=utf-8`)} }))`);
@@ -223,7 +227,7 @@ try {
           }
           await protocol.send('browsingContext.close', { context: popup });
           await protocol.send('webExtension.uninstall', { extension });
-          return { temporaryInstall: true, popupDocument: true, missingActiveTabGrant: 'injection-rejected', tabDocumentSenderRejected: true, reloadAndStorage: true, popupLayout: options['popup-layout'], viewports, savedDownloads };
+          return { temporaryInstall: true, popupDocument: true, missingActiveTabGrant: 'injection-rejected', tabDocumentSenderRejected: true, reloadAndStorage: true, popupLayout: options['popup-layout'], viewports, optionalDownloadsGranted: downloadsGranted, downloadsProbe: downloadsGranted ? 'completed' : 'requires-manual-permission-grant', savedDownloads };
         };
         evaluate = async (expression) => {
           const response = await protocol.send('script.evaluate', { expression, target: { context, sandbox: 'copy-as-context-quality' }, awaitPromise: true });

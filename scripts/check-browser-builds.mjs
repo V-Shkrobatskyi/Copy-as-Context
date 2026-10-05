@@ -13,10 +13,9 @@ async function javascript(directory) {
   return contents.join('\n');
 }
 
-for (const target of ['chrome', 'firefox', 'firefox-android']) {
-  const android = target === 'firefox-android';
+for (const target of ['chrome', 'firefox']) {
   const firefox = target.startsWith('firefox');
-  const build = android ? 'firefox-mv3-android' : `${target}-mv3`;
+  const build = `${target}-mv3`;
   const directory = new URL(`../.output/${build}/`, import.meta.url);
   const manifest = JSON.parse(await readFile(new URL('manifest.json', directory), 'utf8'));
   assert.equal(manifest.manifest_version, 3);
@@ -26,12 +25,13 @@ for (const target of ['chrome', 'firefox', 'firefox-android']) {
   const source = await javascript(fileURLToPath(directory));
   assert.ok(!/\bimport\s*\(/u.test(await readFile(new URL('background.js', directory), 'utf8')), 'Background requires runtime dynamic imports');
   if (firefox) {
-    assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 'clipboardWrite', 'storage', ...(!android ? ['downloads'] : [])].sort());
+    assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 'clipboardWrite', 'storage'].sort());
+    assert.deepEqual(manifest.optional_permissions, ['downloads']);
     assert.ok(manifest.background.scripts?.length);
     assert.equal(manifest.background.service_worker, undefined);
     assert.ok(manifest.browser_specific_settings.gecko.id);
     assert.equal(manifest.browser_specific_settings.gecko.strict_min_version, '140.0');
-    assert.deepEqual(manifest.browser_specific_settings.gecko_android, android ? { strict_min_version: '142.0' } : undefined, 'Incorrect Firefox target compatibility');
+    assert.deepEqual(manifest.browser_specific_settings.gecko_android, { strict_min_version: '142.0' }, 'Incorrect Firefox target compatibility');
     assert.deepEqual(manifest.browser_specific_settings.gecko.data_collection_permissions.required, ['none']);
     assert.ok(!source.includes('Accessibility.getFullAXTree'), 'Firefox includes Chrome AX capture');
     assert.ok(!source.includes('debugger.attach'), 'Firefox includes debugger attach');

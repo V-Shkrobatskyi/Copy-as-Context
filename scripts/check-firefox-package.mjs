@@ -4,13 +4,11 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import JSZip from 'jszip';
 
-assert.ok(process.argv.slice(2).every((argument) => argument === '--android'), 'Unknown package-check argument');
-const android = process.argv.includes('--android');
-const suffix = android ? '-android' : '';
-const buildDirectory = android ? '.output/firefox-mv3-android' : '.output/firefox-mv3';
+assert.equal(process.argv.length, 2, 'This checker accepts only the shared Firefox package');
+const buildDirectory = '.output/firefox-mv3';
 const pkg = JSON.parse(await readFile('package.json', 'utf8'));
-const archiveName = `.output/${pkg.name}-${pkg.version}-firefox${suffix}.zip`;
-const sourceName = `.output/${pkg.name}-${pkg.version}-sources${suffix}.zip`;
+const archiveName = `.output/${pkg.name}-${pkg.version}-firefox.zip`;
+const sourceName = `.output/${pkg.name}-${pkg.version}-sources.zip`;
 const extension = await JSZip.loadAsync(await readFile(archiveName));
 const source = await JSZip.loadAsync(await readFile(sourceName));
 const paths = (zip) => Object.values(zip.files).filter((file) => !file.dir).map((file) => file.name).sort();
@@ -42,12 +40,13 @@ for (const path of paths(extension)) {
 }
 const manifest = JSON.parse(await extension.file('manifest.json').async('string'));
 assert.equal(manifest.version, pkg.version);
-assert.deepEqual(manifest.browser_specific_settings.gecko_android, android ? { strict_min_version: '142.0' } : undefined);
-assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 'clipboardWrite', 'storage', ...(!android ? ['downloads'] : [])].sort());
+assert.deepEqual(manifest.browser_specific_settings.gecko_android, { strict_min_version: '142.0' });
+assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 'clipboardWrite', 'storage'].sort());
+assert.deepEqual(manifest.optional_permissions, ['downloads']);
 assert.deepEqual(manifest.browser_specific_settings.gecko.data_collection_permissions.required, ['none']);
 assert.ok(!manifest.host_permissions?.length && !manifest.content_scripts?.length);
 assert.equal(await extension.file('LICENSE').async('string'), await readFile('LICENSE', 'utf8'));
 assert.ok(extension.file('THIRD_PARTY_NOTICES.txt'));
 assert.equal(await extension.file('privacy.html').async('string'), await readFile('public/privacy.html', 'utf8'));
 for (const name of [archiveName, sourceName]) console.log(`${name}: SHA-256 ${createHash('sha256').update(await readFile(name)).digest('hex')}`);
-console.log(`Unsigned ${android ? 'Android' : 'Desktop'} package: ${paths(extension).length} matching files; reviewer source: ${paths(source).length} allowlisted files; local plans/reports excluded`);
+console.log(`Unsigned shared Desktop/Android package: ${paths(extension).length} matching files; reviewer source: ${paths(source).length} allowlisted files; local plans/reports excluded`);
