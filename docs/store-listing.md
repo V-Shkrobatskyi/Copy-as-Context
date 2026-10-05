@@ -1,6 +1,6 @@
-# Store listing drafts for 1.0.0
+# Store listing drafts for Firefox 1.0.1
 
-These English drafts describe the prepared implementation. Review them against the final submitted package. No listing has been created by this preparation.
+These drafts describe the shared Firefox 1.0.1 package. Chrome 1.0.0 has already been submitted for review. No Firefox listing has been submitted by this preparation.
 
 ## Shared metadata
 
@@ -22,11 +22,11 @@ Turn the current page into useful context for an AI conversation or local notes.
 
 Choose Without, Detailed, Compact, or Maximum compression. Optional credential redaction is enabled by default. Save preferences for your next export and see character counts, rough token estimates, and context reduction.
 
-Chrome Desktop and Firefox Desktop builds support clipboard export and local UTF-8 downloads. The Firefox Android build supports clipboard export; file downloads are unavailable. Use only the platform claims matching the submitted package.
+Firefox Desktop supports clipboard export and local UTF-8 downloads. Firefox Android supports clipboard export; file downloads are unavailable. Both platforms use the same extension package. Desktop asks for download permission the first time Save is clicked.
 
 There is no LLM service, capture backend, analytics, or advertising integration. The extension does not upload captured page content to the developer. You decide whether to share the exported text with another application.
 
-Chrome uses an accessibility-tree snapshot and briefly attaches a debugger after you request an export. Firefox approximates HTML/ARIA semantics in the main document and supported open web components. Browser-internal and protected pages may deny access. Capture does not perform OCR or guarantee complete page coverage.
+Firefox approximates HTML/ARIA semantics in the main document and supported open web components. Browser-internal and protected pages may deny access. Capture does not perform OCR or guarantee complete page coverage.
 
 Firefox always omits password input values. Credential redaction is heuristic and may miss sensitive information. Review exports before sharing them; page text can include untrusted instructions aimed at AI assistants. Token estimates are not model-specific tokenization.
 
@@ -40,7 +40,7 @@ Voluntary developer-support links do not unlock functionality or affect export b
 | activeTab (Firefox) | Grants temporary access to the active page when the user opens the extension action. |
 | scripting (Firefox) | Injects the bounded HTML/ARIA collector into the active top-level document for a requested export. |
 | clipboardWrite | Writes the user-requested context export to the clipboard. |
-| downloads (Desktop) | Saves the user-requested export as a local UTF-8 text or Markdown file. |
+| downloads (Firefox optional; Chrome required) | Saves the requested export as a local UTF-8 text or Markdown file. Firefox requests it only from the Desktop Save button; Android never requests it. |
 | storage | Persists compression, format, and privacy preferences locally when requested. |
 
 No broad persistent host permissions or remotely hosted executable code are used.
@@ -53,10 +53,20 @@ Open a regular page containing a heading, list, and form controls. Open the exte
 
 For synthetic fixtures, serve tests/manual/firefox-dom-quality.html or tests/fixtures/quality/desktop-holdout.html locally as documented in the verification guides. Do not use personal browsing profiles for automated probes.
 
-Firefox Desktop lint currently reports KEY_FIREFOX_ANDROID_UNSUPPORTED_BY_MIN_VERSION because its Desktop minimum is 140 and data_collection_permissions requires Android 142. That package does not declare Android availability. The separate Android package declares 142, has no downloads permission, and supports Copy only.
+The manifest declares Firefox Desktop 140+ and Firefox Android 142+ under one
+add-on ID. Download permission is optional and requested before capture only when
+the user clicks Save on Desktop. Declining permission starts no capture or
+download and leaves Copy usable. Android never requests downloads permission and
+keeps Save unavailable, including if the runtime exposes a downloads stub.
 
-Manual Desktop and Android verification was confirmed by the maintainer on 2026-10-04. Exact device/browser versions are not recorded; this does not claim store approval.
+Manual checks of the separate 1.0.0 packages were confirmed by the maintainer on
+2026-10-04. The shared 1.0.1 package needs a fresh Desktop and Android smoke check.
+Record the final lint warnings and device results before submission; do not claim
+that automated checks certify physical-device behavior.
 
 ## Launch materials still needed
 
-Capture final screenshots in the actual browser with synthetic content, prepare the Chrome promotional tile, verify public privacy/support URLs after merge, and resolve the Firefox shared-listing/package strategy described in releasing.md. Do not claim that two packages with the same add-on ID are independently updatable products.
+Prepare Firefox Desktop and Android screenshots, verify public privacy/support
+URLs, and complete the shared-package manual checks before AMO submission. Chrome
+screenshots and the promotional tile were prepared by the maintainer for its
+separate 1.0.0 submission. No screenshots are generated by this preparation.

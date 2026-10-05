@@ -5,6 +5,8 @@ on 2026-10-04. Firefox Desktop support starts at 140. Exact browser/device versi
 and per-scenario results were not supplied, so this confirmation does not claim
 that every minimum/ESR or lifecycle scenario below was individually verified.
 The checklist remains the regression procedure for subsequent changes.
+The shared 1.0.1 package and its optional download prompt require a fresh smoke
+check; the earlier confirmation applies to 1.0.0.
 
 ## Automated gate
 
@@ -13,7 +15,7 @@ npm ci
 npm run check
 ```
 
-CI runs type checking, the shared and browser-specific unit suites, all three production
+CI runs type checking, the shared and browser-specific unit suites, Chrome and shared Firefox production
 builds, manifest/bundle checks and Firefox package lint. The bundle check executes
 the production DOM collector in jsdom and guards against password value reads.
 
@@ -62,12 +64,15 @@ capture. No host permissions are added to make the probe pass.
 
 The native Firefox probe also renders the built popup markup/CSS in a same-origin
 376px iframe, checking the original Desktop popup width, 18px range and compact
-buttons. The separate `--popup-layout android` probe checks Android build CSS at
-280/320/376px; these are Gecko layout checks, not Android touch tests. It
-downloads synthetic UTF-8 text/Markdown into its disposable profile, closes the
-initiating extension document, waits for completion and verifies exact file bytes.
-This API probe bypasses the real Save As picker and does not exercise toolbar
-capture followed by a destination.
+buttons. The separate `--popup-layout android` probe checks the shared Firefox CSS in Android mode at
+280/320/376px; these are Gecko layout checks, not Android touch tests. On a fresh profile the optional downloads permission is not granted. WebDriver
+cannot activate trusted input in this privileged extension tab, so the probe
+records `downloadsProbe: requires-manual-permission-grant` and skips file writes.
+It never changes the manifest or silently grants permissions to make the probe
+pass. If a grant is already present, the API probe verifies synthetic UTF-8 bytes
+for both formats after closing the initiating extension document. Permission
+approval, denial, retry, and the real Save As picker require the toolbar checklist
+below; popup unit tests cover the permission flow with mocked APIs.
 
 Performance samples cover 20, 200 and 1,000 resource rows, five measured captures
 after a warmup at each size, and all eight profile/format exports per sample. Reports
@@ -103,6 +108,10 @@ Keep local reports and exported synthetic examples outside tracked source.
    Use the toolbar popup, not `popup.html` in a tab. Check Copy and Save for each
    profile and both formats with redaction on and off. Verify boundaries only for
    Copy, filename/extension, metrics, Unicode and the persisted preferences.
+   On a fresh Firefox installation, decline the first Save permission prompt:
+   no capture or download should start, and Copy must remain usable. Retry Save,
+   grant downloads permission, and verify completion. Revoke downloads permission
+   in Add-ons Manager and verify the next Save requests it again.
 3. Check the critical controls and their named ancestors described above. Change
    the workspace value, switch tabs and open Advanced options. Capture again:
    live values/selected/expanded states must match, and Rotate credentials must

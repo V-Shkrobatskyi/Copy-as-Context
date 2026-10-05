@@ -14,7 +14,7 @@ For synthetic manual checks, serve the repository locally with `python3 -m http.
 
 The Desktop quality gate also compares critical semantics with Chrome AX on an independent synthetic holdout. See [Firefox Desktop verification](firefox-desktop-testing.md) for native-browser probes, performance/retention checks, the support evidence required for minimum/ESR versions, and toolbar/lifecycle smoke tests. Manual Desktop and Android checks have been confirmed by the maintainer; the checklists remain available for future regression testing.
 
-The default Firefox package is prepared for Desktop and does not declare Android availability. The supported `npm run build:firefox:android` produces a separate copy-only Android 142+ build with Android availability declared; Android Save is unavailable because its downloads API is unsupported. See [Android verification](firefox-android-testing.md). For unsigned ZIP/source archives, licenses and reproducible builds, see [release preparation](firefox-release.md) and [BUILDING.md](../BUILDING.md).
+The default Firefox package supports Desktop 140+ and Android 142+ using one add-on ID. Use `npm run build:firefox` on both platforms. Desktop requests the optional downloads permission when Save is clicked; Android keeps Save unavailable. See [Android verification](firefox-android-testing.md), [release preparation](firefox-release.md), and [BUILDING.md](../BUILDING.md).
 
 ## Chrome capture
 

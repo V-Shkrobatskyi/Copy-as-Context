@@ -22,7 +22,7 @@ This shortened example illustrates the structure; actual output includes extensi
 
 ## Installation
 
-Version **1.0.0** is prepared for submission. Chrome Web Store and Firefox Add-ons links will be added after publication; no store listing is claimed here.
+Chrome **1.0.0** has been submitted to Chrome Web Store and is awaiting review. Version **1.0.1** prepares one Firefox package for Desktop and Android. Store links will be added after publication.
 
 For local installation, use Node.js 24.10.0 and npm 11.6.0:
 
@@ -30,12 +30,11 @@ For local installation, use Node.js 24.10.0 and npm 11.6.0:
 npm ci
 npm run build
 npm run build:firefox
-npm run build:firefox:android
 ```
 
 - **Chrome:** open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select `.output/chrome-mv3`.
 - **Firefox Desktop:** open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `.output/firefox-mv3/manifest.json`. Temporary installation ends when Firefox closes.
-- **Firefox Android:** use `.output/firefox-mv3-android` with the [device installation instructions](docs/firefox-android-testing.md). Store installation will become available after AMO publication.
+- **Firefox Android:** use `.output/firefox-mv3` with the [device installation instructions](docs/firefox-android-testing.md). Store installation will become available after AMO publication.
 
 ## Supported browsers
 
@@ -45,13 +44,15 @@ npm run build:firefox:android
 | Firefox Desktop | HTML/ARIA semantics | Copy and Save | Firefox 140 |
 | Firefox Android | HTML/ARIA semantics | Copy; Save unavailable | Firefox Android 142 |
 
-The maintainer confirmed successful manual Desktop and Android checks on 2026-10-04. Exact tested versions and device details are not recorded. Desktop and Android have separate Firefox build variants; the default Firefox ZIP is Desktop-only.
+The default Firefox ZIP supports Desktop and Android with one add-on ID. Desktop requests optional download permission when Save is clicked; Android is Copy-only.
+
+The maintainer confirmed manual checks of the separate 1.0.0 builds on 2026-10-04. The shared 1.0.1 package needs a new Desktop/Android smoke check before submission.
 
 ## Quick start
 
 1. Open the page you want to export, then open the extension from the browser toolbar or Android extensions menu.
 2. Choose **Semantic Text** or **Markdown**, a compression level, and the privacy setting.
-3. Click **Copy page context**, then paste into your conversation or notes. On Desktop, **Save to file** exports a local UTF-8 file.
+3. Click **Copy page context**, then paste into your conversation or notes. On Desktop, **Save to file** exports a local UTF-8 file. Firefox asks for download permission the first time.
 
 **Save preferences** keeps your choices for the next popup session.
 
@@ -84,7 +85,7 @@ npm run dev
 npm run check
 ```
 
-`npm run check` runs TypeScript, unit tests, three browser builds, bundle checks, and Firefox lint. Native browser probes and manual regression procedures are documented separately.
+`npm run check` runs TypeScript, unit tests, Chrome and shared Firefox builds, bundle checks, and Firefox lint. Native browser probes and manual regression procedures are documented separately.
 
 - [Contributor workflow](CONTRIBUTING.md)
 - [Reproducible package builds](BUILDING.md)
