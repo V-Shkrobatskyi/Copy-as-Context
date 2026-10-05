@@ -11,7 +11,8 @@ describe('browser capabilities', () => {
 
   it('uses on-demand Firefox capabilities without debugger or broad host access', () => {
     const manifest = browserManifest('firefox');
-    expect(manifest.permissions).toEqual(['activeTab', 'scripting', 'clipboardWrite', 'storage', 'downloads']);
+    expect(manifest.permissions).toEqual(['activeTab', 'scripting', 'clipboardWrite', 'storage']);
+    expect(manifest.optional_permissions).toEqual(['downloads']);
     expect(manifest.host_permissions).toBeUndefined();
     expect(manifest.content_scripts).toBeUndefined();
     expect(manifest.browser_specific_settings?.gecko).toEqual({
@@ -19,14 +20,7 @@ describe('browser capabilities', () => {
       strict_min_version: '140.0',
       data_collection_permissions: { required: ['none'] },
     });
-    expect(manifest.browser_specific_settings?.gecko_android).toBeUndefined();
+    expect(manifest.browser_specific_settings?.gecko_android).toEqual({ strict_min_version: '142.0' });
   });
 
-  it('enables Android only in the production copy-only build without unsupported downloads permission', () => {
-    const manifest = browserManifest('firefox', true);
-    expect(manifest.browser_specific_settings?.gecko_android).toEqual({ strict_min_version: '142.0' });
-    expect(manifest.permissions).toEqual(['activeTab', 'scripting', 'clipboardWrite', 'storage']);
-    expect(manifest.host_permissions).toBeUndefined();
-    expect(manifest.content_scripts).toBeUndefined();
-  });
 });

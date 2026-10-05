@@ -1,10 +1,11 @@
 # Firefox Android verification
 
 The maintainer confirmed successful manual browser checks on Desktop and Android
-on 2026-10-04. Android is supported as a copy-only build for Firefox Android 142+.
+on 2026-10-04. The earlier Android build supported Copy on Firefox Android 142+.
 Exact device/browser versions and per-scenario results were not supplied. This
 records the maintainer confirmation, not a claim that every scenario below passed
-on every supported version. The instructions remain available for regressions.
+on every supported version. The instructions remain available for regressions. The shared 1.0.1 package
+requires a new device smoke check before submission.
 
 ## Compatibility decision
 
@@ -14,27 +15,27 @@ requires critical-path device testing before declaring compatibility. The curren
 records removal of the downloads API from Firefox Android starting at version 79;
 `saveAs` is unsupported. Changing only `saveAs` cannot provide a working Save path.
 
-The Android production build omits the unsupported downloads permission. The popup
-keeps Copy available and disables Save when the downloads API is absent, including
-after an export completes. Save is outside the supported Android scope; its absence
-does not block the copy-only release. Capture, formats, compression and privacy
-settings use the same pipeline as Desktop.
+The shared Firefox package lists downloads only as an optional permission for
+Desktop Save. Android never requests that permission or calls downloads APIs.
+The popup explicitly detects Android and keeps Save unavailable even if a
+browser exposes a downloads stub. Copy, formats, compression and privacy settings
+use the same pipeline as Desktop.
 
-## Separate popup layout
+## Shared popup layout
 
-Desktop uses `entrypoints/popup/style.css` with the original 376px popup and 18px
-range control. Only `build:firefox:android` selects `android.css`, which imports
-the base styles and adds responsive sizing and touch targets. WXT chooses the CSS
-at build time; Desktop does not respond to narrow-screen/touch media queries from
-the Android stylesheet. Export/preferences logic stays shared.
+The Firefox package uses `entrypoints/popup/firefox.css`, which imports the base
+styles. Local platform detection adds `data-platform="android"` to the popup body
+on Android. Only that platform gets responsive width, wrapped feedback, and 44px
+touch targets; Desktop retains its original 376px popup and 18px range control.
 
-After building both targets, an optional Desktop Gecko supporting layout probe is:
+An optional Desktop Gecko supporting layout probe is:
 
 ```sh
 npm run check:desktop-runtime -- --targets firefox --popup-layout android
 ```
 
-It uses Android built CSS in fixture iframes, not a physical Android browser.
+It uses shared Firefox CSS in Android mode inside fixture iframes, not a physical
+Android browser. Device testing remains necessary.
 
 ## Device setup and probe
 
@@ -47,14 +48,14 @@ serial numbers and exported page text are not needed in tracked reports.
 
 ```sh
 adb devices
-npm run build:firefox:android
+npm run build:firefox
 ```
 
 Follow the [web-ext command reference](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/)
 to run the temporary installation of the Android build on the connected device:
 
 ```sh
-npx web-ext run --target firefox-android --source-dir .output/firefox-mv3-android --android-device YOUR_DEVICE --firefox-apk org.mozilla.firefox
+npx web-ext run --target firefox-android --source-dir .output/firefox-mv3 --android-device YOUR_DEVICE --firefox-apk org.mozilla.firefox
 ```
 
 Use `org.mozilla.firefox_beta` or `org.mozilla.fenix` only when testing the installed
@@ -89,9 +90,12 @@ adb reverse --remove tcp:8765
 
 ## Release scope
 
-Package with `npm run zip:firefox:android` and verify with
-`npm run check:firefox-android-package` and `npm run lint:firefox:android`.
-The Android manifest declares `gecko_android.strict_min_version: 142.0`.
-Document Copy-only support in the store listing; Desktop also supports Save.
+Package once with `npm run zip:firefox` and verify with
+`npm run check:firefox-package` and `npm run lint:firefox`.
+The manifest declares `gecko_android.strict_min_version: 142.0`.
+Submit the same Firefox ZIP and matching source ZIP for Desktop and Android on
+one AMO listing. Document Copy-only Android support; Desktop supports Save after
+optional permission approval. Android must never show a download permission
+prompt, including after Copy, reopening the popup, and changing settings.
 Store submission and signing are separate from successful manual browser checks.
 Any future Android file-export implementation needs its own device verification.

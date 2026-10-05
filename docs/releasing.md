@@ -1,10 +1,10 @@
 # Releasing Copy as Context
 
-Version 1.0.0 is prepared locally for store submission. This document does not claim that the version is signed, approved, or published.
+Chrome 1.0.0 has been submitted for review and has a draft GitHub Release. Version 1.0.1 prepares a shared Firefox Desktop/Android package locally; it has not been submitted or signed.
 
 ## 1. Prepare the source
 
-Use a focused branch and a pull request into `main`; do not commit directly to `main`. For this preparation, the maintainer requested no commits or push, so leave the changes uncommitted until that instruction is changed.
+Use a focused branch and a pull request into `main`; do not commit directly to `main`. Preserve the v1.0.0 tag and the exact Chrome ZIP already submitted.
 
 Use Node.js 24.10.0 (`.nvmrc`) and npm 11.6.0. From a fresh checkout:
 
@@ -19,7 +19,7 @@ Confirm that README, the offline guide, privacy policy, and store descriptions a
 
 ## 2. Verify browser behavior
 
-The maintainer confirmed successful manual Desktop and Android checks on 2026-10-04. Exact tested browser/device versions and per-scenario results were not supplied; do not invent them or represent automated checks as device evidence.
+The maintainer confirmed successful manual checks of the separate 1.0.0 builds on 2026-10-04. Exact tested browser/device versions and per-scenario results were not supplied. The shared 1.0.1 package needs fresh Desktop and Android checks, including Desktop download permission approval, denial, and retry. Android must not request download permission. Do not represent automated checks as device evidence.
 
 Use the [Desktop checklist](firefox-desktop-testing.md) and [Android checklist](firefox-android-testing.md) for later regressions. Cover clipboard destinations, Desktop Save As, both formats, all profiles, Unicode, redaction, preferences, protected pages, navigation during capture, popup closure, repeated actions, and background recovery. On Chrome, verify debugger detach. On Android, Save must remain unavailable.
 
@@ -31,19 +31,22 @@ After a behavior change, repeat the affected manual checks. Optional native prob
 npm run zip
 npm run zip:firefox
 npm run check:firefox-package
-npm run zip:firefox:android
-npm run check:firefox-android-package
 ```
 
 | Target | Extension ZIP | Matching reviewer source ZIP |
 | --- | --- | --- |
-| Chrome Desktop | `.output/copy-as-context-1.0.0-chrome.zip` | Not normally uploaded to Chrome Web Store |
-| Firefox Desktop | `.output/copy-as-context-1.0.0-firefox.zip` | `.output/copy-as-context-1.0.0-sources.zip` |
-| Firefox Android | `.output/copy-as-context-1.0.0-firefox-android.zip` | `.output/copy-as-context-1.0.0-sources-android.zip` |
+| Chrome Desktop | `.output/copy-as-context-1.0.1-chrome.zip` | Not normally uploaded to Chrome Web Store |
+| Firefox Desktop and Android | `.output/copy-as-context-1.0.1-firefox.zip` | `.output/copy-as-context-1.0.1-sources.zip` |
 
-Verify each final manifest version is 1.0.0. Desktop Firefox intentionally omits gecko_android; Android declares Firefox Android 142+ and omits downloads. Android and Desktop use the same add-on ID, so they are variants of one add-on, not separately installable products.
+Verify each new manifest version is 1.0.1. The Firefox manifest declares Desktop
+140+ and Android 142+, with downloads optional. Upload the shared Firefox ZIP
+once to one AMO listing and select Desktop and Android compatibility. Do not use
+legacy 1.0.0 platform-specific ZIPs for this submission.
 
-AMO platform availability applies to the submitted version/package. Do not upload these two different Firefox ZIPs as interchangeable versions or assume they can independently update one listing. Before publishing both platforms, settle the AMO packaging plan: a shared package must preserve the intended platform behavior, or separately listed products need separate stable IDs. The current separate build artifacts are ready for review; a combined Desktop/Android store-update strategy has not been implemented.
+The Chrome 1.0.0 ZIP already submitted is separate release evidence. Do not
+replace it with a 1.0.1 rebuild or update the Chrome submission as a side effect
+of Firefox preparation. A Chrome 1.0.1 artifact is only for regression checks
+unless a Chrome update is separately authorized.
 
 Firefox package checks compare uncompressed files with the build, inspect required source files and license/privacy notices, and print SHA-256 hashes. Extract each submitted source ZIP into a clean directory, run `npm ci`, then follow BUILDING.md and compare rebuilt extension paths and bytes. ZIP timestamps do not need to match. Mozilla requires matching readable sources and reproducible instructions for bundled/minified code on every submitted version: [source submission](https://extensionworkshop.com/documentation/publish/source-code-submission/).
 
@@ -63,7 +66,7 @@ Do not blindly mark all data fields as absent: distinguish locally processed pag
 
 ## 5. Submit and publish
 
-Resolve the Firefox packaging plan above, review final listings and artifacts, then use the owner's store accounts to submit. Signing, store submission, and publication require an explicit instruction; keep credentials out of source, archives, and logs.
+Complete the shared-package browser checks, review final listings and artifacts, then use the owner's store accounts to submit. Signing, store submission, and publication require an explicit instruction; keep credentials out of source, archives, and logs.
 
 - Chrome: upload the Chrome ZIP, complete listing/privacy/distribution fields, submit for review, and use deferred publication if coordinating launch timing. See [Chrome publication](https://developer.chrome.com/docs/webstore/publish/).
 - Firefox: choose AMO listed distribution, upload the selected package and matching sources, set compatible platforms, supply reviewer notes, and follow validation/review/signing. See [AMO submission](https://extensionworkshop.com/documentation/publish/submitting-an-add-on/).
@@ -72,6 +75,16 @@ Store review and signing are not implied by local build success. Renaming an uns
 
 ## 6. Record the released version
 
-After the reviewed preparation PR merges and publication is authorized, build from the exact merged revision. Create tag `v1.0.0` on that revision and a GitHub Release with the changelog and selected packages. This preparation does not create a tag, commit, push, PR, or GitHub Release.
+After Chrome approval, publish the existing v1.0.0 draft with its original Chrome
+ZIP and verified store URL. Do not move the tag or replace that ZIP with a later
+build. Record the actual publication date without claiming Firefox 1.0.0 was
+published.
 
-Add verified store URLs to README, record actual publication dates, and keep package hashes and the submitted source archives with the release evidence. For later releases, increment the version and update the existing store listings rather than creating new listings.
+For Firefox 1.0.1, merge the reviewed PR only after authorization, build the exact
+merged revision, and submit the shared package and its matching reviewer sources.
+Create v1.0.1 and its GitHub Release after release authorization. Store signing, submission, and publication are separate from committing and
+pushing source changes.
+
+Add verified store URLs to README, record actual publication dates, and retain
+package hashes and submitted source archives. Later releases update the existing
+store listings and preserve the Firefox add-on ID.

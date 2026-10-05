@@ -7,20 +7,20 @@ import { fileURLToPath } from 'node:url';
 // noinspection JSUnusedGlobalSymbols
 export default defineConfig({
   manifestVersion: 3,
-  // Select popup styles at build time so mobile sizing cannot affect Desktop.
-  vite: ({ browser, mode }) => ({
+  // Firefox uses platform-scoped responsive styles in one Desktop/Android package.
+  vite: ({ browser }) => ({
     resolve: {
       alias: {
         '@popup-style.css': fileURLToPath(new URL(
-          browser === 'firefox' && mode === 'android'
-            ? './entrypoints/popup/android.css'
+          browser === 'firefox'
+            ? './entrypoints/popup/firefox.css'
             : './entrypoints/popup/style.css',
           import.meta.url,
         )),
       },
     },
   }),
-  manifest: ({ browser, mode }) => browserManifest(browser, mode === 'android'),
+  manifest: ({ browser }) => browserManifest(browser),
   zip: {
     includeSources: [
       'package.json', 'package-lock.json', 'wxt.config.ts', 'tsconfig.json', 'vitest.config.ts',

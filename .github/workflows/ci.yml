@@ -18,15 +18,9 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run build:firefox
-      - run: npm run build:firefox:android
       - run: npm run check:browser-builds
       - run: npm run lint:firefox
         env:
           NO_UPDATE_NOTIFIER: '1'
-      - run: npm run lint:firefox:android
-        env:
-          NO_UPDATE_NOTIFIER: '1'
       - run: npm run zip:firefox
       - run: npm run check:firefox-package
-      - run: npm run zip:firefox:android
-      - run: npm run check:firefox-android-package

@@ -1,8 +1,20 @@
 # Changelog
 
-## 1.0.0 — prepared for submission
+## 1.0.1 — unreleased
 
-First release candidate for Chrome Desktop, Firefox Desktop 140+, and Firefox Android 142+. This entry describes the prepared package; store publication has not occurred.
+- Keep Firefox Save files available after the Save As dialog closes the popup.
+
+- Use one Firefox package and stable add-on ID for Desktop 140+ and Android 142+.
+- Request optional download permission only when Save is clicked on Firefox Desktop.
+- Keep Android Copy-only and select responsive controls at runtime.
+- Remove separate Android build and package commands.
+- Update AMO source-package, submission, and manual verification instructions.
+
+The shared package requires fresh manual browser checks before AMO submission.
+
+## 1.0.0 — Chrome review pending
+
+Chrome Desktop 1.0.0 was submitted to Chrome Web Store. Firefox Desktop 140+ and Android 142+ were prepared as separate builds but were not submitted to AMO.
 
 ### Features
 

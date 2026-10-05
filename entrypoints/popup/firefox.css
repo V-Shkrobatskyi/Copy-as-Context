@@ -1,0 +1,12 @@
+@import './style.css';
+
+/* The same package preserves Desktop sizing and adapts only on Android. */
+body[data-platform="android"] { min-width: 0; width: 376px; max-width: 100vw; }
+body[data-platform="android"] .popup { width: 100%; }
+body[data-platform="android"] .status,
+body[data-platform="android"] .metrics { overflow-wrap: anywhere; }
+body[data-platform="android"] button,
+body[data-platform="android"] .format-option,
+body[data-platform="android"] .privacy-toggle { min-height: 44px; }
+body[data-platform="android"] input[type="range"] { height: 32px; }
+body[data-platform="android"] .save-settings.is-pressed:not(:disabled) { background: var(--selected); border-color: var(--accent); }

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Copy as Context — Privacy policy</title><style>body{max-width:760px;margin:40px auto;padding:0 20px;font:16px/1.6 system-ui,sans-serif;color:#1b2942;background:#f7f9fc}h1{line-height:1.2}h2{margin-top:32px}a{color:#365ed7}li{margin:8px 0}</style></head><body><main>
 <h1>Privacy policy for Copy as Context</h1>
-<p>Last updated: 2026-10-04. Applies to version 1.0.0.</p>
+<p>Last updated: 2026-10-05. Applies to versions 1.0.0 and 1.0.1.</p>
 <h2>Purpose and local processing</h2>
 <p>Copy as Context exports semantic content from the active page for your AI conversations or notes. Capture, compression, credential redaction, and serialization run locally on your device after you request an export. The extension has no capture backend, analytics, advertising SDK, or LLM API integration.</p>
 <h2>Information processed</h2>
@@ -16,7 +16,7 @@
 <p>Help, project, contact, and voluntary donation links are opened only when you choose them. GitHub, your email provider, and the payment provider may receive normal navigation/contact/payment information under their own privacy policies. Capture data is not attached to these links.</p>
 <p>If you email a bug report or post a GitHub issue, the recipient/service receives the information you provide and may retain it for support. Do not include passwords, tokens, or private page content. Contact the developer to request deletion of information you sent directly; public GitHub content is also governed by GitHub&#x27;s controls and policies.</p>
 <h2>Permissions</h2>
-<ul><li>Chrome debugger: briefly reads the active page&#x27;s accessibility tree after an export action and detaches afterward.</li><li>Firefox activeTab and scripting: obtain temporary page access and run on-demand semantic extraction.</li><li>clipboardWrite: writes the export you request to your clipboard.</li><li>downloads (Desktop only): saves the export you request as a local file.</li><li>storage: persists export preferences locally.</li></ul>
+<ul><li>Chrome debugger: briefly reads the active page&#x27;s accessibility tree after an export action and detaches afterward.</li><li>Firefox activeTab and scripting: obtain temporary page access and run on-demand semantic extraction.</li><li>clipboardWrite: writes the export you request to your clipboard.</li><li>downloads (Desktop only): saves the export you request as a local file. In Firefox 1.0.1, this permission is optional and requested when you click Save; Android never requests it.</li><li>storage: persists export preferences locally.</li></ul>
 <p>The extension does not request persistent access to all websites.</p>
 <h2>Security and redaction</h2>
 <p>Credential redaction is enabled by default and replaces detected credential patterns before export. It is heuristic and cannot guarantee that all credentials or personal information are removed. Disabling redaction can expose original values. Review the output before sharing it. Page content is untrusted; the extension does not guarantee removal of instructions aimed at AI assistants.</p>
