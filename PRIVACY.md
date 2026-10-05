@@ -1,6 +1,6 @@
 # Privacy policy for Copy as Context
 
-Last updated: 2026-10-04. Applies to version 1.0.0.
+Last updated: 2026-10-05. Applies to versions 1.0.0 and 1.0.1.
 
 ## Purpose and local processing
 
@@ -33,7 +33,7 @@ If you email a bug report or post a GitHub issue, the recipient/service receives
 - Chrome debugger: briefly reads the active page's accessibility tree after an export action and detaches afterward.
 - Firefox activeTab and scripting: obtain temporary page access and run on-demand semantic extraction.
 - clipboardWrite: writes the export you request to your clipboard.
-- downloads (Desktop only): saves the export you request as a local file.
+- downloads (Desktop only): saves the export you request as a local file. In Firefox 1.0.1, this permission is optional and requested when you click Save; Android never requests it.
 - storage: persists export preferences locally.
 
 The extension does not request persistent access to all websites.
