@@ -1,4 +1,5 @@
 import { openFirefoxSave } from '@/src/firefox-save';
+import { installTouchButtonFeedback } from '@/src/touch-button-feedback';
 import '@popup-style.css';
 import { browser } from 'wxt/browser';
 
@@ -157,6 +158,7 @@ const feedback = document.querySelector<HTMLElement>('.feedback')!;
 const guideLink = document.querySelector<HTMLAnchorElement>('#guide-link')!;
 const redactSensitiveData = document.querySelector<HTMLInputElement>('#redact-sensitive-data')!;
 const saveSettingsButton = document.querySelector<HTMLButtonElement>('#save-settings')!;
+installTouchButtonFeedback(saveSettingsButton, () => document.body.dataset.platform === 'android');
 const controls = [
   compression, semanticTextFormat, markdownFormat, redactSensitiveData,
   saveSettingsButton, copyButton, saveButton,
@@ -320,7 +322,9 @@ async function exportPageContext(action: ExportAction): Promise<void> {
 copyButton.addEventListener('click', () => void exportPageContext('copy'));
 saveButton.addEventListener('click', () => void exportPageContext('save'));
 compression.addEventListener('input', updateCompressionDescription);
-saveSettingsButton.addEventListener('click', () => void saveSettings());
+saveSettingsButton.addEventListener('click', () => {
+  void saveSettings();
+});
 updateCompressionDescription();
 void loadSettings();
 
