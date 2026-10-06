@@ -1,12 +1,9 @@
 # Firefox Desktop verification
 
-The maintainer confirmed manual smoke checks of the shared 1.0.1 package on
-2026-10-05, including Firefox Desktop Save after the popup-lifetime fix and button
-press feedback. The separate 1.0.0 builds were checked on 2026-10-04. The tested
-Desktop browser version and complete per-scenario results were not supplied.
-These confirmations do not certify every minimum/ESR or lifecycle scenario below.
-Keep this checklist for regressions; optional download permission denial,
-revocation and retry still need explicit verification before submission.
+Use this checklist when changing capture, export, permissions or popup behavior.
+Run the relevant checks on the browser versions you support, including the declared
+minimum or ESR when evaluating compatibility. Keep browser versions, build revision
+and per-scenario results in the release PR or a separate verification report.
 
 ## Automated gate
 
@@ -96,7 +93,7 @@ captures and results from 30 rejected captures are collectible with exposed GC.
 It records sampled heap and durations, without a fragile machine-specific heap
 threshold. It does not measure Gecko heap or prove event-page cleanup.
 
-## Toolbar smoke and release evidence
+## Manual browser checklist
 
 Run these on the installed current Firefox, the selected minimum/ESR, and Chrome.
 Record the exact browser version, OS, hardware, build revision and test date.
@@ -137,7 +134,3 @@ Keep local reports and exported synthetic examples outside tracked source.
 8. Repeat captures on the large table and observe popup response and browser memory.
    For Chrome, verify debugger release and retry after a competing debugger is
    detached. Node/native probes do not cover `chrome.debugger` permission UX.
-
-Manual browser verification is confirmed by the maintainer. For future changes,
-repeat the applicable checks and record exact versions and per-scenario results.
-Store submission and signing remain separate release steps.

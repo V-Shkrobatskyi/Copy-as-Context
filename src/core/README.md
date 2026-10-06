@@ -35,7 +35,7 @@ The serializer preserves explicit `false` and `mixed` states and returns a
 
 `serializeMarkdown(tree)` uses the same already-transformed tree and emits a
 stable nested-list representation. JSON and raw-debug exports are intentionally
-not exposed in the MVP popup.
+not exposed in the popup.
 
 ## Privacy and export preparation
 
@@ -45,20 +45,20 @@ normalized text field before serialization. It returns only a replacement count
 and never retains matched secret values. This is not a general PII or DLP
 solution; adapters and UI must not claim it catches every secret.
 
-`prepareExport(tree, compressionLevel, format)` is the only core orchestration
+`prepareExport(tree, compressionLevel, format, redactSensitiveData)` is the only core orchestration
 entry point for supported user exports. Its required order is:
 
 ```text
-compress → redact → serialize
+compress → redact (when enabled) → serialize
 ```
 
-It currently supports `semantic-text` and `markdown`, and returns exact
+It supports `semantic-text` and `markdown`, and returns exact
 character count, `ceil(characters / 4)` approximate token count, a reduction
 ratio against the redacted Without output in the same format, and a redaction
-count. It contains no browser APIs. Clipboard and file-download code belongs in
-the popup and must consume only the already prepared serialized content.
+count. It contains no browser APIs. Clipboard code belongs in the popup; Firefox file-download code runs in a
+separate save entrypoint. Both consume only the already prepared serialized content.
 
-The browser background entrypoint now prepares the export and sends only final
+The browser background entrypoint prepares the export and sends only final
 content and counters to the popup. The popup does not receive the semantic tree
 or run transforms. Browser-specific capture and message validation remain outside
 the core; future browser adapters can call the same `prepareExport` function.
@@ -129,7 +129,3 @@ Inline groups allow at most 128 nodes and 4,096 encoded characters. Limit overfl
 uses literal fragments or Compact fallback without truncation. New analysis limits
 do not expand the existing capture/transform/legacy serializer depth contract.
 All maps and cost caches belong to one export and are discarded afterwards.
-
-Local Stage 13 verification lives in ignored `dev_notes/info/S1/p1/stage12_test`
-per the user's test-location instruction; it is not included in CI or public PRs.
-It includes independent expansion, holdout/token reports and legacy comparisons.

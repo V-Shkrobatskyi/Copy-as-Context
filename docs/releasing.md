@@ -1,31 +1,52 @@
-# Releasing Copy as Context
+# Release guide
 
-Chrome 1.0.0 has been submitted for review and has a draft GitHub Release. Version 1.0.1 provides a shared Firefox Desktop/Android package with maintainer-confirmed smoke checks; it has not been submitted or signed.
+Use this checklist for each release. Build instructions belong in
+[BUILDING.md](../BUILDING.md), store text in [store-listing.md](store-listing.md),
+and Firefox submission details in [firefox-release.md](firefox-release.md).
+Keep submission status, browser verification results, artifact hashes and reviewer
+correspondence in the release PR or GitHub Release rather than repeating them in
+user documentation.
 
-## 1. Prepare the source
+## 1. Prepare the version
 
-Use a focused branch and a pull request into `main`; do not commit directly to `main`. Preserve the v1.0.0 tag and the exact Chrome ZIP already submitted.
+Work on a focused branch and merge changes through a PR into `main`.
+`package.json` is the version source for WXT manifests and export attribution.
+For a new package version:
 
-Use Node.js 24.10.0 (`.nvmrc`) and npm 11.6.0. From a fresh checkout:
+```sh
+npm version X.Y.Z --no-git-tag-version
+```
+
+This updates package metadata without creating a Git commit or tag. Update the
+changelog with user-visible changes. Documentation corrections alone do not need
+a version bump; rebuild the matching source archive if they precede submission.
+Use a higher version for an update to an already published package.
+
+Check that README, the offline guide, privacy policy and store descriptions agree
+with the implementation. Preserve previously submitted packages and release tags;
+release history must identify the code and files actually distributed.
+
+## 2. Verify the release
+
+Use the Node/npm versions in [BUILDING.md](../BUILDING.md), then run:
 
 ```sh
 npm ci
 npm run check
 ```
 
-For future releases, update the package version with `npm version X.Y.Z --no-git-tag-version`; update CHANGELOG.md and the build examples. WXT obtains manifest versions from package.json, and exports include that version. Keep the lockfile in sync. Store packages use numeric versions such as 1.0.0, 1.0.1, and 1.1.0.
+Follow the [Desktop](firefox-desktop-testing.md) and
+[Android](firefox-android-testing.md) checklists for affected behavior. Cover Copy,
+Desktop Save, both formats, all profiles, Unicode, redaction, settings, restricted
+pages and navigation during capture. On Chrome, check debugger detach. On Firefox
+Desktop, check download permission approval, denial and retry and the separate
+save tab. Android must remain Copy-only without download permission prompts.
+Record actual browser/device versions and results in the release PR. Repeat
+relevant checks after further code changes.
 
-Confirm that README, the offline guide, privacy policy, and store descriptions agree on capabilities and data handling. Replace the changelog's preparation status with the actual publication date after release.
+## 3. Build the final packages
 
-## 2. Verify browser behavior
-
-The maintainer confirmed shared 1.0.1 smoke checks on 2026-10-05, including Firefox Desktop Save, Android Copy and preferences, and popup press feedback. The supplied Android capture identifies Firefox Android 157.0. Desktop browser and Android device/OS versions and a complete per-scenario report were not supplied. The earlier separate 1.0.0 builds were checked on 2026-10-04. Verify remaining scenarios before submission, particularly Desktop download permission denial, revocation and retry and the absence of Android download permission requests. Do not represent this smoke confirmation as a complete checklist or minimum-version certification.
-
-Use the [Desktop checklist](firefox-desktop-testing.md) and [Android checklist](firefox-android-testing.md) for later regressions. Cover clipboard destinations, Desktop Save As, both formats, all profiles, Unicode, redaction, preferences, protected pages, navigation during capture, popup closure, repeated actions, and background recovery. On Chrome, verify debugger detach. On Android, Save must remain unavailable.
-
-After a behavior change, repeat the affected manual checks. Optional native probes are documented in the Desktop checklist and use disposable browser profiles.
-
-## 3. Generate and verify artifacts
+Build from the intended merged revision with a clean working tree:
 
 ```sh
 npm run zip
@@ -33,58 +54,55 @@ npm run zip:firefox
 npm run check:firefox-package
 ```
 
-| Target | Extension ZIP | Matching reviewer source ZIP |
+Archive names follow the version in `package.json`:
+
+| Target | Extension ZIP | Reviewer sources |
 | --- | --- | --- |
-| Chrome Desktop | `.output/copy-as-context-1.0.1-chrome.zip` | Not normally uploaded to Chrome Web Store |
-| Firefox Desktop and Android | `.output/copy-as-context-1.0.1-firefox.zip` | `.output/copy-as-context-1.0.1-sources.zip` |
+| Chrome Desktop | `.output/copy-as-context-X.Y.Z-chrome.zip` | Not normally uploaded to Chrome Web Store |
+| Firefox Desktop and Android | `.output/copy-as-context-X.Y.Z-firefox.zip` | `.output/copy-as-context-X.Y.Z-sources.zip` |
 
-Verify each new manifest version is 1.0.1. The Firefox manifest declares Desktop
-140+ and Android 142+, with downloads optional. Upload the shared Firefox ZIP
-once to one AMO listing and select Desktop and Android compatibility. Do not use
-legacy 1.0.0 platform-specific ZIPs for this submission.
+Verify manifest versions, permissions and target platforms. Upload the Firefox
+ZIP once for Desktop and Android. Create extension and source ZIPs from the same
+source revision, without edits between them. The Firefox package checker compares
+uncompressed files with the build and prints hashes.
 
-The Chrome 1.0.0 ZIP already submitted is separate release evidence. Do not
-replace it with a 1.0.1 rebuild or update the Chrome submission as a side effect
-of Firefox preparation. A Chrome 1.0.1 artifact is only for regression checks
-unless a Chrome update is separately authorized.
+Rebuild a submitted source archive from a clean directory following BUILDING.md
+and compare paths and bytes with the extension ZIP. ZIP timestamps do not need
+to match. The reviewer archive omits unit tests, so use the build commands rather
+than the full contributor suite for this reproduction.
 
-Firefox package checks compare uncompressed files with the build, inspect required source files and license/privacy notices, and print SHA-256 hashes. Extract each submitted source ZIP into a clean directory, run `npm ci`, then follow BUILDING.md and compare rebuilt extension paths and bytes. ZIP timestamps do not need to match. Mozilla requires matching readable sources and reproducible instructions for bundled/minified code on every submitted version: [source submission](https://extensionworkshop.com/documentation/publish/source-code-submission/).
+## 4. Prepare the listing
 
-Do not modify source between creating the extension package and its matching source archive. Use BUILDING.md rather than the full contributor test suite when rebuilding from the reviewer archive, which omits unit tests.
+Use [store-listing.md](store-listing.md) for descriptions, permissions and support
+information. Capture screenshots in the actual target browser using synthetic or
+public content without personal account details.
 
-## 4. Prepare store listings
+- Chrome Web Store: prepare the developer account, Chrome ZIP, listing assets,
+  privacy declarations and permission explanations. Check the current
+  [image requirements](https://developer.chrome.com/docs/webstore/images).
+- Mozilla Add-ons: prepare the Mozilla account, shared Firefox ZIP, matching
+  sources, Desktop/Android compatibility, MIT license and reviewer notes.
 
-Use [store-listing.md](store-listing.md) for English descriptions, permissions justifications, support details, and reviewer notes. Provide real screenshots from synthetic content, avoiding private pages. The README currently uses the packaged icon. The maintainer will prepare popup and store screenshots separately; screenshot generation is outside this preparation.
-
-Chrome Web Store needs a developer account, the Chrome extension ZIP, listing metadata, privacy declarations, and permission explanations. Prepare a 128×128 icon, a 440×280 promotional image, and at least one 1280×800 or 640×400 screenshot. Check the [current image requirements](https://developer.chrome.com/docs/webstore/images) before upload. Store-sized promotional artwork and final in-browser screenshots are not generated by this preparation.
-
-Mozilla Add-ons needs a Mozilla account, the selected Firefox extension ZIP and matching source ZIP, compatible-platform metadata, support information, license, and reviewer notes. The project license is MIT. Preserve the add-on ID for updates to the same listing.
-
-The privacy policy is [PRIVACY.md](../PRIVACY.md) and is packaged offline as `privacy.html`. Its intended public URL is `https://github.com/V-Shkrobatskyi/Copy-as-Context/blob/main/PRIVACY.md`. Verify anonymous access before using it in either dashboard. Local-only processing still requires disclosure under the [Chrome privacy requirements](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq).
-
-Do not blindly mark all data fields as absent: distinguish locally processed page content from information transmitted to the developer, and answer the dashboard's exact definitions. The Firefox manifest declares required data-collection permissions as none because there is no capture-data transmission; explain the local capture feature accurately.
+The privacy policy is [PRIVACY.md](../PRIVACY.md), included offline as
+`privacy.html`. Its public URL is
+`https://github.com/V-Shkrobatskyi/Copy-as-Context/blob/main/PRIVACY.md`.
+Verify anonymous access to privacy and support links before submission.
+Describe local page processing accurately when completing data-handling forms;
+see the [Chrome privacy guidance](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)
+and the Firefox manifest's data-collection declaration.
 
 ## 5. Submit and publish
 
-Complete any remaining shared-package browser checks, review final listings and artifacts, then use the owner's store accounts to submit. Signing, store submission, and publication require an explicit instruction; keep credentials out of source, archives, and logs.
+Upload the appropriate package to the existing listing for an update, or create
+a listing for the first release. Follow the store's validation and review steps:
+[Chrome publication](https://developer.chrome.com/docs/webstore/publish/) and
+[Firefox submission](https://extensionworkshop.com/documentation/publish/submitting-an-add-on/).
+Keep the Firefox add-on ID unchanged across updates. Build commands do not sign
+or publish packages; renaming an unsigned ZIP to XPI does not sign it.
 
-- Chrome: upload the Chrome ZIP, complete listing/privacy/distribution fields, submit for review, and use deferred publication if coordinating launch timing. See [Chrome publication](https://developer.chrome.com/docs/webstore/publish/).
-- Firefox: choose AMO listed distribution, upload the selected package and matching sources, set compatible platforms, supply reviewer notes, and follow validation/review/signing. See [AMO submission](https://extensionworkshop.com/documentation/publish/submitting-an-add-on/).
-
-Store review and signing are not implied by local build success. Renaming an unsigned ZIP to XPI does not sign it. Android availability requires gecko_android and appropriate AMO settings.
-
-## 6. Record the released version
-
-After Chrome approval, publish the existing v1.0.0 draft with its original Chrome
-ZIP and verified store URL. Do not move the tag or replace that ZIP with a later
-build. Record the actual publication date without claiming Firefox 1.0.0 was
-published.
-
-For Firefox 1.0.1, merge the reviewed PR only after authorization, build the exact
-merged revision, and submit the shared package and its matching reviewer sources.
-Create v1.0.1 and its GitHub Release after release authorization. Store signing, submission, and publication are separate from committing and
-pushing source changes.
-
-Add verified store URLs to README, record actual publication dates, and retain
-package hashes and submitted source archives. Later releases update the existing
-store listings and preserve the Firefox add-on ID.
+After publication, install from the store on each listed platform and check the
+main export flows. Add verified store links to README. Record the publication
+date and platform in the GitHub Release, attach the distributed packages and
+matching sources, and tag the source revision as `vX.Y.Z`. Preserve existing tags
+and artifacts when publishing a release that was prepared earlier. Update the
+changelog's unreleased heading when the version is released.

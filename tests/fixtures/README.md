@@ -1,8 +1,8 @@
 # Regression fixtures
 
-Each scenario has a small, hand-authored `raw-ax` fixture and its expected normalized `semantic` tree. Raw fixtures intentionally resemble the subset of Chromium CDP Accessibility data that the future adapter consumes; semantic fixtures contain only browser-independent core fields.
+Each scenario has a small, hand-authored `raw-ax` fixture and its expected normalized `semantic` tree. Raw fixtures intentionally resemble the subset of Chromium CDP Accessibility data that the Chrome adapter consumes; semantic fixtures contain only browser-independent core fields.
 
-Fixtures are synthetic and must remain free of personal data, real credentials, private URLs, and production page content. They define normalization expectations only. Compression/pruning expectations belong to the stage 3 test corpus.
+Fixtures are synthetic and must remain free of personal data, real credentials, private URLs, and production page content. They define normalization expectations only. Compression expectations are defined in the compression fixtures below.
 
 `quality/desktop-holdout.html` is an independent DOM/Chrome AX quality fixture.
 `tests/helpers/desktop-quality.ts` specifies required controls, states, named
@@ -21,7 +21,7 @@ for the local credential-redaction heuristic. The values resemble secrets only
 for regression coverage; they are not valid credentials.
 
 `quality/chrome-mvp-representative.json` is a browser-independent, synthetic
-end-to-end quality corpus for the Chrome MVP. It covers dashboard, settings
+end-to-end quality corpus for Chrome. It covers dashboard, settings
 form, tabs, collapsed content, table, dialog, menu, article, and privacy
 boundaries. `tests/manual/chrome-mvp-quality.html` is its local browser smoke
 test companion. Neither fixture may contain real page captures or credentials.
