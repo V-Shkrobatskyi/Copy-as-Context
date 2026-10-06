@@ -4,7 +4,7 @@ This source archive builds the unsigned Chrome and Firefox packages with public,
 open-source tooling. It includes the exact npm lockfile. No account, API key,
 signing credential, Android SDK or external backend is needed to build it.
 
-Use Node.js **24.10.0** and npm **11.6.0** to match the local verification environment.
+Use Node.js **24.10.0** and npm **11.6.0** for reproducible builds.
 CI reads Node 24.10.0 from `.nvmrc`; package engines require Node 24 and npm 11.
 Use `npm ci` with the supplied lockfile to keep dependencies fixed.
 Use a normal Linux, macOS or Windows shell with npm available. Build prerequisites
@@ -39,7 +39,8 @@ Project MIT license and third-party notices are copied into every browser build.
 The source ZIP uses an explicit allowlist. It excludes local plans and reports
 in `dev_notes/`, `.git`, `.agents`, `.codex`, environment files, credentials,
 `node_modules` and generated output. The archive is taken from the current local
-source, including authorized uncommitted implementation files. WXT omits unit
+source, including uncommitted files. Build submission artifacts from the intended release
+revision with a clean working tree. WXT omits unit
 test files from its reviewer archive; the build does not require those files.
 Full contributor checks run from the repository with `npm run check`.
 
@@ -65,14 +66,9 @@ Desktop requests the optional `downloads` permission when the user clicks Save;
 Android never requests it and keeps Save unavailable. Local platform detection
 failure also keeps Save unavailable while leaving Copy usable.
 
-## Distribution status
+## Loading and publishing
 
-Version `1.0.1` is prepared locally for Firefox submission. The shared package
-needs a fresh manual Desktop and Android smoke check, especially Desktop download
-permission approval, denial, and retry. Earlier maintainer checks covered the
-separate 1.0.0 packages and do not certify the changed 1.0.1 package.
-
-Chrome 1.0.0 has been submitted for review. Preserve its original ZIP and release
-tag; building this branch generates 1.0.1 artifacts and does not update that
-submission. No signing or store submission is performed by these build commands.
-See `docs/firefox-release.md` and `docs/firefox-android-testing.md`.
+Load a development build using the [README installation steps](README.md).
+Build commands produce unsigned packages. Publishing and signing are covered in
+[the release guide](docs/releasing.md); Firefox-specific metadata is documented
+[in the AMO guide](docs/firefox-release.md).
