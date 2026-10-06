@@ -1,11 +1,12 @@
 # Firefox Android verification
 
-The maintainer confirmed successful manual browser checks on Desktop and Android
-on 2026-10-04. The earlier Android build supported Copy on Firefox Android 142+.
-Exact device/browser versions and per-scenario results were not supplied. This
-records the maintainer confirmation, not a claim that every scenario below passed
-on every supported version. The instructions remain available for regressions. The shared 1.0.1 package
-requires a new device smoke check before submission.
+The maintainer confirmed manual smoke checks of the shared 1.0.1 package on
+2026-10-05, including Copy, saved preferences and immediate button feedback after
+Compression changes. The supplied capture identifies Firefox Android 157.0.
+Device model, Android version and a complete per-scenario report were not supplied.
+The earlier separate 1.0.0 builds were checked on 2026-10-04. These confirmations
+do not certify every minimum-version or lifecycle scenario below; keep this
+checklist for regressions and verify any remaining submission scenarios.
 
 ## Compatibility decision
 
@@ -27,6 +28,9 @@ The Firefox package uses `entrypoints/popup/firefox.css`, which imports the base
 styles. Local platform detection adds `data-platform="android"` to the popup body
 on Android. Only that platform gets responsive width, wrapped feedback, and 44px
 touch targets; Desktop retains its original 376px popup and 18px range control.
+Hover styles apply only to fine pointers with hover support. Android Save
+preferences uses explicit touch press/release feedback, without a post-click
+timer, to avoid suppressed native active styling after slider changes.
 
 An optional Desktop Gecko supporting layout probe is:
 
@@ -55,8 +59,14 @@ Follow the [web-ext command reference](https://extensionworkshop.com/documentati
 to run the temporary installation of the Android build on the connected device:
 
 ```sh
-npx web-ext run --target firefox-android --source-dir .output/firefox-mv3 --android-device YOUR_DEVICE --firefox-apk org.mozilla.firefox
+npx --no-install web-ext run --target firefox-android --source-dir .output/firefox-mv3 --android-device YOUR_DEVICE --firefox-apk org.mozilla.firefox
 ```
+
+If ADB is downloaded but not in PATH, pass its executable explicitly, for example
+`--adb-bin "$HOME/Downloads/platform-tools/adb"`. Replace that path with the actual
+location. After code or style changes, rebuild with `npm run build:firefox`;
+web-ext watches the built directory. Reopen the popup, or restart web-ext if the
+installed extension has not refreshed.
 
 Use `org.mozilla.firefox_beta` or `org.mozilla.fenix` only when testing the installed
 Beta or Nightly application respectively. Confirm the actual installed package
@@ -79,7 +89,9 @@ slots, scope warnings and clear errors on restricted pages. Save must be shown a
 unavailable rather than reporting a nonexistent saved file.
 
 Test portrait/landscape, large system fonts, touch selection of every Compression
-stop, scroll, focus, keyboard, popup dismissal, double taps, navigation/tab closure,
+stop, then immediately press Save preferences. Check that feedback begins on
+contact and ends on release without sticking or a delayed flash. Also check
+scroll, focus, keyboard, popup dismissal, double taps, navigation/tab closure,
 app switch and reopening after background/low-memory termination. Record actual
 Copy destination bytes and latency; Desktop headless results do not substitute.
 Stop the server and remove the port mapping afterwards:
