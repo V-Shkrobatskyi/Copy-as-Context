@@ -22,7 +22,7 @@ This shortened example illustrates the structure; actual output includes extensi
 
 ## Installation
 
-Chrome **1.0.0** has been submitted to Chrome Web Store and is awaiting review. Version **1.0.1** prepares one Firefox package for Desktop and Android. Store links will be added after publication.
+Chrome **1.0.0** has been submitted to Chrome Web Store and is awaiting review. Version **1.0.1** provides one Firefox package for Desktop and Android and is awaiting AMO submission. Store links will be added after publication.
 
 For local installation, use Node.js 24.10.0 and npm 11.6.0:
 
@@ -46,7 +46,7 @@ npm run build:firefox
 
 The default Firefox ZIP supports Desktop and Android with one add-on ID. Desktop requests optional download permission when Save is clicked; Android is Copy-only.
 
-The maintainer confirmed manual checks of the separate 1.0.0 builds on 2026-10-04. The shared 1.0.1 package needs a new Desktop/Android smoke check before submission.
+The maintainer confirmed manual smoke checks of the shared 1.0.1 package on 2026-10-05: Firefox Desktop Copy and Save, and Android Copy, preferences, and button feedback. The Android sample was captured with Firefox Android 157.0. Detailed verification notes and regression checklists are linked below.
 
 ## Quick start
 
@@ -54,7 +54,7 @@ The maintainer confirmed manual checks of the separate 1.0.0 builds on 2026-10-0
 2. Choose **Semantic Text** or **Markdown**, a compression level, and the privacy setting.
 3. Click **Copy page context**, then paste into your conversation or notes. On Desktop, **Save to file** exports a local UTF-8 file. Firefox asks for download permission the first time. Its Save action opens a separate extension tab; keep it open until saving finishes. It closes after success.
 
-**Save preferences** keeps your choices for the next popup session.
+**Save preferences** keeps your choices for the next popup session. Buttons show feedback while pressed and return to their normal state on release. Android touch feedback also works immediately after changing Compression.
 
 | Compression | Behavior |
 | --- | --- |
@@ -85,7 +85,7 @@ npm run dev
 npm run check
 ```
 
-`npm run check` runs TypeScript, unit tests, Chrome and shared Firefox builds, bundle checks, and Firefox lint. Native browser probes and manual regression procedures are documented separately.
+`npm run check` runs TypeScript, unit tests, Chrome and shared Firefox builds, bundle checks, and Firefox lint. Native browser probes and manual regression procedures are documented separately. After changing shared popup code or styles, rebuild both browser targets and reload each installed development extension.
 
 - [Contributor workflow](CONTRIBUTING.md)
 - [Reproducible package builds](BUILDING.md)
