@@ -11,11 +11,7 @@
 - Remove separate Android build and package commands.
 - Update AMO source-package, submission, and manual verification instructions.
 
-The maintainer confirmed shared 1.0.1 smoke checks on Firefox Desktop and Android on 2026-10-05, including the Save and popup-feedback fixes. The Android sample identifies Firefox Android 157.0. Full checklist coverage and minimum-version checks are not claimed; AMO submission and signing are pending.
-
-## 1.0.0 — Chrome review pending
-
-Chrome Desktop 1.0.0 was submitted to Chrome Web Store. Firefox Desktop 140+ and Android 142+ were prepared as separate builds but were not submitted to AMO.
+## 1.0.0
 
 ### Features
 
@@ -31,7 +27,3 @@ Chrome Desktop 1.0.0 was submitted to Chrome Web Store. Firefox Desktop 140+ and
 - Firefox capture approximates accessible names and excludes embedded frames, closed shadow roots, canvas pixels, CSS-generated content, and unmounted virtualized UI.
 - Browser-internal and protected pages may reject capture; Chrome capture can conflict with another debugger connection.
 - Redaction is heuristic; token counts are estimates. Review page content before sharing it with another service.
-
-### Verification
-
-The maintainer confirmed successful manual Desktop and Android checks on 2026-10-04. Exact device/browser versions and per-scenario reports are not recorded. Store review and signing are separate steps.
