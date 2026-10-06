@@ -1,20 +1,15 @@
 # Firefox Android verification
 
-The maintainer confirmed manual smoke checks of the shared 1.0.1 package on
-2026-10-05, including Copy, saved preferences and immediate button feedback after
-Compression changes. The supplied capture identifies Firefox Android 157.0.
-Device model, Android version and a complete per-scenario report were not supplied.
-The earlier separate 1.0.0 builds were checked on 2026-10-04. These confirmations
-do not certify every minimum-version or lifecycle scenario below; keep this
-checklist for regressions and verify any remaining submission scenarios.
+Build and temporarily install the shared Firefox package on a connected Android
+device, then use the checklist below to verify Copy, settings and popup usability.
+Record the browser and Android versions, device model, build revision and results
+in the release PR or a separate verification report.
 
-## Compatibility decision
+## Supported behavior
 
-The official [Android development guide](https://extensionworkshop.com/documentation/develop/developing-extensions-for-firefox-for-android/)
-requires critical-path device testing before declaring compatibility. The current
-[MDN downloads compatibility data](https://github.com/mdn/browser-compat-data/blob/main/webextensions/api/downloads.json)
-records removal of the downloads API from Firefox Android starting at version 79;
-`saveAs` is unsupported. Changing only `saveAs` cannot provide a working Save path.
+Firefox Android supports Copy only; Save is unavailable because its downloads API
+is unsupported. Platform setup and compatibility are described in Mozilla's
+[Android development guide](https://extensionworkshop.com/documentation/develop/developing-extensions-for-firefox-for-android/).
 
 The shared Firefox package lists downloads only as an optional permission for
 Desktop Save. Android never requests that permission or calls downloads APIs.
@@ -100,14 +95,8 @@ Stop the server and remove the port mapping afterwards:
 adb reverse --remove tcp:8765
 ```
 
-## Release scope
+## Packaging
 
-Package once with `npm run zip:firefox` and verify with
-`npm run check:firefox-package` and `npm run lint:firefox`.
-The manifest declares `gecko_android.strict_min_version: 142.0`.
-Submit the same Firefox ZIP and matching source ZIP for Desktop and Android on
-one AMO listing. Document Copy-only Android support; Desktop supports Save after
-optional permission approval. Android must never show a download permission
-prompt, including after Copy, reopening the popup, and changing settings.
-Store submission and signing are separate from successful manual browser checks.
-Any future Android file-export implementation needs its own device verification.
+Desktop and Android use one Firefox ZIP, one matching source ZIP and one AMO
+listing. Follow [BUILDING.md](../BUILDING.md) for packaging and
+[the Firefox publication guide](firefox-release.md) for AMO submission.

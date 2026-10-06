@@ -9,7 +9,7 @@ and report options. It checks 30 successful and 30 rejected results with WeakRef
 and forced GC in Node/jsdom. Native Firefox/Chrome semantics and capture timings
 are measured separately with `npm run check:desktop-runtime` after building.
 See [Desktop verification](../../docs/firefox-desktop-testing.md) for scope,
-binary selection, metrics and remaining toolbar/lifecycle smoke checks.
+binary selection, metrics and manual toolbar/lifecycle checks.
 
 ```sh
 PERFORMANCE_REPORT=/tmp/performance-after.json npx vitest run --config tests/performance/vitest.config.ts

@@ -11,13 +11,19 @@ npm ci
 npm run dev
 ```
 
-Before opening a pull request, run:
+For code or shared popup changes, run the checks for both browser targets:
 
 ```bash
-npm run compile
-npm test
-npm run build
+npm run check
 ```
+
+For documentation-only changes, check relative links, commands and consistency
+with the implementation. If the offline guide changes, rebuild the browser
+packages to verify that it is included. See [BUILDING.md](BUILDING.md) for packaging.
+
+Use `npm run dev:firefox` when developing the Firefox build. After rebuilding,
+reload the development extension in the browser and reopen its popup. Android
+setup is described in the [device guide](docs/firefox-android-testing.md).
 
 ## Git workflow
 
@@ -25,7 +31,7 @@ npm run build
 
 ```bash
 git switch main
-git pull
+git pull --ff-only
 git switch -c feature/short-description
 ```
 
