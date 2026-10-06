@@ -1,6 +1,6 @@
 # Releasing Copy as Context
 
-Chrome 1.0.0 has been submitted for review and has a draft GitHub Release. Version 1.0.1 prepares a shared Firefox Desktop/Android package locally; it has not been submitted or signed.
+Chrome 1.0.0 has been submitted for review and has a draft GitHub Release. Version 1.0.1 provides a shared Firefox Desktop/Android package with maintainer-confirmed smoke checks; it has not been submitted or signed.
 
 ## 1. Prepare the source
 
@@ -19,7 +19,7 @@ Confirm that README, the offline guide, privacy policy, and store descriptions a
 
 ## 2. Verify browser behavior
 
-The maintainer confirmed successful manual checks of the separate 1.0.0 builds on 2026-10-04. Exact tested browser/device versions and per-scenario results were not supplied. The shared 1.0.1 package needs fresh Desktop and Android checks, including Desktop download permission approval, denial, and retry. Android must not request download permission. Do not represent automated checks as device evidence.
+The maintainer confirmed shared 1.0.1 smoke checks on 2026-10-05, including Firefox Desktop Save, Android Copy and preferences, and popup press feedback. The supplied Android capture identifies Firefox Android 157.0. Desktop browser and Android device/OS versions and a complete per-scenario report were not supplied. The earlier separate 1.0.0 builds were checked on 2026-10-04. Verify remaining scenarios before submission, particularly Desktop download permission denial, revocation and retry and the absence of Android download permission requests. Do not represent this smoke confirmation as a complete checklist or minimum-version certification.
 
 Use the [Desktop checklist](firefox-desktop-testing.md) and [Android checklist](firefox-android-testing.md) for later regressions. Cover clipboard destinations, Desktop Save As, both formats, all profiles, Unicode, redaction, preferences, protected pages, navigation during capture, popup closure, repeated actions, and background recovery. On Chrome, verify debugger detach. On Android, Save must remain unavailable.
 
@@ -60,13 +60,13 @@ Chrome Web Store needs a developer account, the Chrome extension ZIP, listing me
 
 Mozilla Add-ons needs a Mozilla account, the selected Firefox extension ZIP and matching source ZIP, compatible-platform metadata, support information, license, and reviewer notes. The project license is MIT. Preserve the add-on ID for updates to the same listing.
 
-The privacy policy is [PRIVACY.md](../PRIVACY.md) and is packaged offline as `privacy.html`. Its intended public URL is `https://github.com/V-Shkrobatskyi/Copy-as-Context/blob/main/PRIVACY.md`; it will only exist there after these changes merge. Verify anonymous access before using it in either dashboard. Local-only processing still requires disclosure under the [Chrome privacy requirements](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq).
+The privacy policy is [PRIVACY.md](../PRIVACY.md) and is packaged offline as `privacy.html`. Its intended public URL is `https://github.com/V-Shkrobatskyi/Copy-as-Context/blob/main/PRIVACY.md`. Verify anonymous access before using it in either dashboard. Local-only processing still requires disclosure under the [Chrome privacy requirements](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq).
 
 Do not blindly mark all data fields as absent: distinguish locally processed page content from information transmitted to the developer, and answer the dashboard's exact definitions. The Firefox manifest declares required data-collection permissions as none because there is no capture-data transmission; explain the local capture feature accurately.
 
 ## 5. Submit and publish
 
-Complete the shared-package browser checks, review final listings and artifacts, then use the owner's store accounts to submit. Signing, store submission, and publication require an explicit instruction; keep credentials out of source, archives, and logs.
+Complete any remaining shared-package browser checks, review final listings and artifacts, then use the owner's store accounts to submit. Signing, store submission, and publication require an explicit instruction; keep credentials out of source, archives, and logs.
 
 - Chrome: upload the Chrome ZIP, complete listing/privacy/distribution fields, submit for review, and use deferred publication if coordinating launch timing. See [Chrome publication](https://developer.chrome.com/docs/webstore/publish/).
 - Firefox: choose AMO listed distribution, upload the selected package and matching sources, set compatible platforms, supply reviewer notes, and follow validation/review/signing. See [AMO submission](https://extensionworkshop.com/documentation/publish/submitting-an-add-on/).

@@ -3,14 +3,15 @@
 ## 1.0.1 — unreleased
 
 - Keep Firefox Save files available after the Save As dialog closes the popup.
-
+- Prevent sticky touch hover and show immediate button feedback after Android Compression changes.
+- Show pressed button borders on Desktop without delaying release feedback.
 - Use one Firefox package and stable add-on ID for Desktop 140+ and Android 142+.
 - Request optional download permission only when Save is clicked on Firefox Desktop.
 - Keep Android Copy-only and select responsive controls at runtime.
 - Remove separate Android build and package commands.
 - Update AMO source-package, submission, and manual verification instructions.
 
-The shared package requires fresh manual browser checks before AMO submission.
+The maintainer confirmed shared 1.0.1 smoke checks on Firefox Desktop and Android on 2026-10-05, including the Save and popup-feedback fixes. The Android sample identifies Firefox Android 157.0. Full checklist coverage and minimum-version checks are not claimed; AMO submission and signing are pending.
 
 ## 1.0.0 — Chrome review pending
 

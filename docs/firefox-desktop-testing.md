@@ -1,12 +1,12 @@
 # Firefox Desktop verification
 
-The maintainer confirmed successful manual browser checks on Desktop and Android
-on 2026-10-04. Firefox Desktop support starts at 140. Exact browser/device versions
-and per-scenario results were not supplied, so this confirmation does not claim
-that every minimum/ESR or lifecycle scenario below was individually verified.
-The checklist remains the regression procedure for subsequent changes.
-The shared 1.0.1 package and its optional download prompt require a fresh smoke
-check; the earlier confirmation applies to 1.0.0.
+The maintainer confirmed manual smoke checks of the shared 1.0.1 package on
+2026-10-05, including Firefox Desktop Save after the popup-lifetime fix and button
+press feedback. The separate 1.0.0 builds were checked on 2026-10-04. The tested
+Desktop browser version and complete per-scenario results were not supplied.
+These confirmations do not certify every minimum/ESR or lifecycle scenario below.
+Keep this checklist for regressions; optional download permission denial,
+revocation and retry still need explicit verification before submission.
 
 ## Automated gate
 

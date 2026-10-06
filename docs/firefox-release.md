@@ -1,10 +1,11 @@
 # Firefox release preparation
 
-The maintainer confirmed successful manual browser checks on Desktop and Android
-on 2026-10-04. Desktop supports Copy and Save; Android support is Copy-only.
-Exact tested browser/device versions and per-scenario reports were not supplied.
-Local artifacts remain unsigned; browser verification does not imply store
-submission, signing or approval.
+The maintainer confirmed manual smoke checks of the shared 1.0.1 package on
+2026-10-05, including Firefox Desktop Save and Android Copy, preferences and button
+feedback. The supplied capture identifies Firefox Android 157.0; Desktop browser
+and Android device/OS versions and a full per-scenario report were not supplied.
+The earlier separate 1.0.0 builds were checked on 2026-10-04. Local artifacts remain
+unsigned; browser verification does not imply store submission, signing or approval.
 
 ## Build and archives
 
@@ -28,9 +29,10 @@ The package retains the existing add-on ID, declares Desktop 140+ and Android
 142+, and lists downloads only as an optional permission. Upload it once to AMO
 and select both platform groups. Do not submit legacy separate 1.0.0 variants.
 
-The earlier manual confirmation applies to 1.0.0. Before submission, recheck the
-shared package on Desktop and Android, including permission denial and retry on
-Desktop and the absence of download prompts on Android.
+Shared-package smoke checks are confirmed. Before submission, verify remaining
+checklist scenarios, including permission denial, revocation and retry on Desktop
+and the absence of download prompts on Android. Minimum-version coverage is not
+claimed by the reported smoke checks.
 
 ## Metadata and owner decisions
 
@@ -39,8 +41,8 @@ Desktop and the absence of download prompts on Android.
 | Name | Copy as Context | Confirm final listing |
 | Version | 1.0.1, prepared locally | Verify final manifest/package before signing |
 | Add-on ID | {e97aa566-cac0-4e2c-81f7-0ab664bf86ce} | AMO uniqueness/account ownership checked on first submission |
-| Desktop minimum | Firefox 140.0 | Shared 1.0.1 smoke check required |
-| Android | Shared package, Firefox Android 142+, Copy-only | Shared 1.0.1 device check required |
+| Desktop minimum | Firefox 140.0 | Smoke check confirmed; minimum/ESR not certified |
+| Android | Shared package, Firefox Android 142+, Copy-only | Smoke check confirmed on Android 157.0; minimum not certified |
 | Permissions | activeTab, scripting, clipboardWrite, storage; downloads optional | Explain on listing; no debugger or broad host access |
 | Data collection | required: [none] | Reconfirm final package matches local-only implementation |
 | Channel | Listed AMO | Submit one package with Desktop and Android compatibility |
@@ -105,8 +107,8 @@ screenshots and verification rather than private real pages.
 
 ## Signing and publication gate
 
-Manual checks of 1.0.0 were confirmed by the maintainer; the shared 1.0.1 needs
-fresh platform checks. Keep
+Shared 1.0.1 smoke checks were confirmed by the maintainer on 2026-10-05. Complete
+any remaining scenarios and keep
 [Desktop](firefox-desktop-testing.md) and [Android](firefox-android-testing.md)
 checklists for future regressions and record actual versions when available.
 Confirm the release version and distribution channel, regenerate matching archives,
