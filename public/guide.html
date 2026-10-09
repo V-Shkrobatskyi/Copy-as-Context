@@ -37,7 +37,7 @@
         <h2 id="settings-heading">Choose the right amount of context</h2>
         <div class="settings">
           <div class="setting"><h3>Without</h3><p>Keeps every captured semantic node, not all HTML text on the page. Use it when completeness of the captured context matters more than length.</p></div>
-          <div class="setting"><h3>Detailed</h3><p>Removes only empty presentation wrappers for readable, careful review.</p></div>
+          <div class="setting"><h3>Detailed</h3><p>Removes unnamed wrappers without semantic attributes, preserving text, links and states for careful review.</p></div>
           <div class="setting"><h3>Compact</h3><p>Removes repeated accessibility noise while retaining meaningful controls. This is the default.</p></div>
           <div class="setting"><h3>Maximum</h3><p>Preserves Compact context using selective abbreviations and repeated text or structures. A short legend explains the output; pages fall back to Compact when packing adds overhead. Token savings depend on the page and model.</p></div>
           <div class="setting"><h3>Export format</h3><p>Choose Semantic Text for a concise outline or Markdown when you want formatting in your notes or AI chat.</p></div>
@@ -50,7 +50,7 @@
         <p>The Firefox build reads the current page's HTML and ARIA semantics. It captures the main document and supported open web components; embedded frames, closed web components, canvas pixels, and content that has not loaded are outside its scope. Frame and canvas warnings appear with the export metrics.</p>
         <p>Password input values are always omitted in Firefox, including when redaction is off. Hidden labels can still contribute to control names. Collapsed content is not automatically opened or included.</p>
         <p>If capture exceeds a page-size or time limit, or the page changes during capture, wait for the page to finish loading and try again. Browser pages and protected websites may deny access. Firefox capture does not need a debugger connection.</p>
-        <p>Open the extension from the browser toolbar to grant access to the current page. Reopen it after navigating to another site. Firefox Desktop supports Copy and Save. The same Firefox package supports Copy on Android; Save is unavailable. Without and Detailed can match when there are no presentation wrappers, and Maximum can match Compact when additional encoding would not save enough space.</p>
+        <p>Open the extension from the browser toolbar to grant access to the current page. Reopen it after navigating to another site. Firefox Desktop supports Copy and Save. The same Firefox package supports Copy on Android; Save is unavailable. Without and Detailed can match when there are no removable wrappers, and Maximum can match Compact when additional encoding would not save enough space.</p>
         <p>Firefox Desktop asks for download permission when you first choose Save to file. If you decline, Copy remains available. Firefox Save opens a separate extension tab to keep the file available when the file picker closes the popup. Keep that tab open until saving finishes; it closes after success and shows an error if saving fails or is cancelled. Chrome confirms completion while its popup remains open; otherwise check the browser download manager. If this browser does not support file downloads, Save is unavailable and you can use Copy page context.</p>
       </section>
 

@@ -8,8 +8,17 @@ Adapters convert browser-specific data to this contract. UI and browser entrypoi
 
 `compressSemanticTree(tree, level)` is the pure entry point for compression
 profiles. It returns a new tree and never mutates its input. `without` is an
-unpruned normalized clone; `detailed` additionally removes only empty `none`
-presentation wrappers. `compact` removes only regression-tested noise: `InlineTextBox`,
+unpruned normalized clone; `detailed` additionally flattens only attribute-free
+`generic` and `none`
+wrappers, preserving child order, text, URLs and explicit states. The root is always
+retained. Defined names/values/hrefs (including empty strings), levels and nonempty
+states protect wrappers; empty state objects are normalized away. Adapter IDs alone
+do not protect wrappers. Unnamed HTML form/section, Shadow DOM host/slot and empty
+iframe/canvas placeholders may normalize to `generic` and be removed if they have
+no semantic attributes. Focusable frame placeholders are retained. Capture warnings
+remain available independently of compression.
+
+`compact` removes only regression-tested noise: `InlineTextBox`,
 empty or ancestor-duplicated `StaticText`/`image`, attribute-free `generic` or
 `none` presentation wrappers, and selected empty structural leaves. `maximum` shares
 the conservative `compact` structural policy; its export encoding follows redaction.

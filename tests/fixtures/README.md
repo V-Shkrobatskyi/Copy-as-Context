@@ -11,7 +11,8 @@ by both the DOM unit suite and opt-in native browser probe; allowed summary-role
 differences are explicit. Native results are not compared byte-for-byte.
 
 `compression-input/` contains browser-independent trees before compression.
-`compression-expected/detailed/` is their lossless baseline, while
+`compression-expected/detailed/` preserves semantic content while flattening
+attribute-free `generic`/`none` wrappers, while
 `compression-expected/compact/` records the intentional removals and
 preservation guarantees for Compact. `semantic-text/` contains golden output
 from the pure compression → serializer pipeline.
