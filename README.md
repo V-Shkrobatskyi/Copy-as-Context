@@ -59,7 +59,7 @@ The default Firefox ZIP supports Desktop and Android with one add-on ID. Desktop
 | Compression | Behavior |
 | --- | --- |
 | Without | Keeps every captured semantic node, rather than all page HTML |
-| Detailed | Removes empty presentation wrappers |
+| Detailed | Removes unnamed wrappers without semantic attributes; preserves text, links and states |
 | Compact (default) | Removes repeated accessibility noise while retaining meaningful controls |
 | Maximum | Packs Compact output with selective abbreviations and repeated structures; falls back when packing would add overhead |
 

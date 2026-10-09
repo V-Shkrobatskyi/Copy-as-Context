@@ -29,7 +29,7 @@ export function canFlattenPresentationWrapper(node: SemanticNode): boolean {
 }
 
 export function canFlattenDetailedWrapper(node: SemanticNode): boolean {
-  return node.role === 'none' && !hasSemanticAttributes(node);
+  return canFlattenPresentationWrapper(node);
 }
 
 export function canRemoveEmptyStructuralLeaf(node: SemanticNode): boolean {

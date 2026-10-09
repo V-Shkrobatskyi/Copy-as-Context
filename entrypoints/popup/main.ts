@@ -176,7 +176,7 @@ function selectedRangeCompression(value: string): CompressionLevel {
 function updateCompressionDescription(): void {
   const descriptions: Record<CompressionLevel, string> = {
     without: 'Keeps every captured semantic node. Sensitive values are still redacted.',
-    detailed: 'Removes only empty presentation wrappers for readable inspection.',
+    detailed: 'Removes unnamed wrappers without semantic attributes, preserving text, links and states.',
     compact: 'Removes repeated accessibility noise while retaining meaningful controls.',
     maximum: 'Packs Compact context with selective abbreviations and repeated text or structures; falls back when overhead is too high.',
   };
