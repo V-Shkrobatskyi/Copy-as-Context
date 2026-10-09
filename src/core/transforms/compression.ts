@@ -10,7 +10,8 @@ import {
 /**
  * Returns an independent tree for the requested compression profile.
  *
- * Without is an unpruned normalized clone. Detailed removes only empty presentation wrappers.
+ * Without is an unpruned normalized clone. Detailed flattens attribute-free
+ * generic/none wrappers, preserving all text and states.
  * Compact removes explicitly tested structural and duplicate noise; maximum currently shares
  * Compact's conservative structural policy. Maximum encoding is applied after redaction.
  */

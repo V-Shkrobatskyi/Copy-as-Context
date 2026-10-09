@@ -22,7 +22,7 @@ function named(node: SemanticNode, role: string, name: string): SemanticNode | u
 }
 
 describe('compression profile contracts', () => {
-  it('keeps Without unpruned while Detailed removes only empty none wrappers', async () => {
+  it('keeps Without unpruned while Detailed flattens attribute-free presentation wrappers', async () => {
     const tree = await profileTree();
     const without = compressSemanticTree(tree, 'without');
     const detailed = compressSemanticTree(tree, 'detailed');
@@ -30,7 +30,7 @@ describe('compression profile contracts', () => {
     expect(without).toEqual(tree);
     expect(nodes(without.root).some((node) => node.role === 'none')).toBe(true);
     expect(nodes(detailed.root).some((node) => node.role === 'none')).toBe(false);
-    expect(nodes(detailed.root).some((node) => node.role === 'generic')).toBe(true);
+    expect(nodes(detailed.root).some((node) => node.role === 'generic')).toBe(false);
     expect(named(detailed.root, 'InlineTextBox', 'Demo Organization')).toBeDefined();
     expect(named(detailed.root, 'link', 'Secrets')?.href).toBe('https://example.test/project/secrets');
     expect(named(detailed.root, 'textbox', 'Secret value')?.states).toMatchObject({

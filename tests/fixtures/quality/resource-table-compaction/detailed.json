@@ -8,19 +8,14 @@
         "name": "Demo Organization",
         "children": [
           {
-            "role": "generic",
-            "children": [
-              {
-                "role": "StaticText",
-                "name": "Demo",
-                "children": []
-              },
-              {
-                "role": "StaticText",
-                "name": "Organization",
-                "children": []
-              }
-            ]
+            "role": "StaticText",
+            "name": "Demo",
+            "children": []
+          },
+          {
+            "role": "StaticText",
+            "name": "Organization",
+            "children": []
           }
         ]
       },
@@ -29,19 +24,14 @@
         "name": "Sample Project Project",
         "children": [
           {
-            "role": "generic",
-            "children": [
-              {
-                "role": "StaticText",
-                "name": "Sample Project",
-                "children": []
-              },
-              {
-                "role": "StaticText",
-                "name": "Project",
-                "children": []
-              }
-            ]
+            "role": "StaticText",
+            "name": "Sample Project",
+            "children": []
+          },
+          {
+            "role": "StaticText",
+            "name": "Project",
+            "children": []
           }
         ]
       },
@@ -188,14 +178,9 @@
                         },
                         "children": [
                           {
-                            "role": "generic",
-                            "children": [
-                              {
-                                "role": "StaticText",
-                                "name": "••••••••",
-                                "children": []
-                              }
-                            ]
+                            "role": "StaticText",
+                            "name": "••••••••",
+                            "children": []
                           }
                         ]
                       },
@@ -247,14 +232,9 @@
                         },
                         "children": [
                           {
-                            "role": "generic",
-                            "children": [
-                              {
-                                "role": "StaticText",
-                                "name": "••••••••",
-                                "children": []
-                              }
-                            ]
+                            "role": "StaticText",
+                            "name": "••••••••",
+                            "children": []
                           }
                         ]
                       },
@@ -306,14 +286,9 @@
                         },
                         "children": [
                           {
-                            "role": "generic",
-                            "children": [
-                              {
-                                "role": "StaticText",
-                                "name": "••••••••",
-                                "children": []
-                              }
-                            ]
+                            "role": "StaticText",
+                            "name": "••••••••",
+                            "children": []
                           }
                         ]
                       },
@@ -365,14 +340,9 @@
                         },
                         "children": [
                           {
-                            "role": "generic",
-                            "children": [
-                              {
-                                "role": "StaticText",
-                                "name": "••••••••",
-                                "children": []
-                              }
-                            ]
+                            "role": "StaticText",
+                            "name": "••••••••",
+                            "children": []
                           }
                         ]
                       },
@@ -424,14 +394,9 @@
                         },
                         "children": [
                           {
-                            "role": "generic",
-                            "children": [
-                              {
-                                "role": "StaticText",
-                                "name": "••••••••",
-                                "children": []
-                              }
-                            ]
+                            "role": "StaticText",
+                            "name": "••••••••",
+                            "children": []
                           }
                         ]
                       },

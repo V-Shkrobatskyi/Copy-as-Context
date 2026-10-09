@@ -23,7 +23,9 @@ describe('Compact local text coverage', () => {
     const original = structuredClone(input);
     expect(compact(input)).toEqual({ role, name: 'Demo Organization', states: { expanded: false }, children: [] });
     expect(input).toEqual(original);
-    expect(compressSemanticTree(treeWith(input), 'detailed').root.children[0]?.children).toEqual(input.children);
+    expect(compressSemanticTree(treeWith(input), 'detailed').root.children[0]?.children).toEqual([
+      ...input.children[0]!.children, input.children[1]!,
+    ]);
   });
 
   it.each([

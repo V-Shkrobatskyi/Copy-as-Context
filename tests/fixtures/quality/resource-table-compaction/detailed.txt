@@ -1,12 +1,10 @@
 page
   button "Demo Organization"
-    generic
-      StaticText "Demo"
-      StaticText "Organization"
+    StaticText "Demo"
+    StaticText "Organization"
   link "Sample Project Project"
-    generic
-      StaticText "Sample Project"
-      StaticText "Project"
+    StaticText "Sample Project"
+    StaticText "Project"
   navigation "breadcrumb"
     list
       listitem [level=1]
@@ -33,8 +31,7 @@ page
           textbox "Resource name" [value="SAMPLE_KEY_1"]
         cell
           textbox "Secret value" [value="••••••••", readonly=true]
-            generic
-              StaticText "••••••••"
+            StaticText "••••••••"
           button "Copy value"
           button "More actions" [expanded=false]
       row
@@ -43,8 +40,7 @@ page
           textbox "Resource name" [value="SAMPLE_KEY_2"]
         cell
           textbox "Secret value" [value="••••••••", readonly=true]
-            generic
-              StaticText "••••••••"
+            StaticText "••••••••"
           button "Copy value"
           button "More actions" [expanded=false]
       row
@@ -53,8 +49,7 @@ page
           textbox "Resource name" [value="SAMPLE_KEY_3"]
         cell
           textbox "Secret value" [value="••••••••", readonly=true]
-            generic
-              StaticText "••••••••"
+            StaticText "••••••••"
           button "Copy value"
           button "More actions" [expanded=false]
       row
@@ -63,8 +58,7 @@ page
           textbox "Resource name" [value="SAMPLE_KEY_4"]
         cell
           textbox "Secret value" [value="••••••••", readonly=true]
-            generic
-              StaticText "••••••••"
+            StaticText "••••••••"
           button "Copy value"
           button "More actions" [expanded=false]
       row
@@ -73,8 +67,7 @@ page
           textbox "Resource name" [value="SAMPLE_KEY_5"]
         cell
           textbox "Secret value" [value="••••••••", readonly=true]
-            generic
-              StaticText "••••••••"
+            StaticText "••••••••"
           button "Copy value"
           button "More actions" [expanded=false]
       row

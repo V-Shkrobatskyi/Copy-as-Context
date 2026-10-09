@@ -4,20 +4,15 @@
     "role": "page",
     "children": [
       {
-        "role": "generic",
+        "role": "button",
+        "name": "Search",
         "children": [
-          {
-            "role": "button",
-            "name": "Search",
-            "children": [
-              { "role": "StaticText", "name": "Search", "children": [] },
-              { "role": "InlineTextBox", "name": "Search", "children": [] },
-              { "role": "image", "name": "Search icon", "children": [] }
-            ]
-          },
-          { "role": "custom-widget", "name": "Results", "children": [] }
+          { "role": "StaticText", "name": "Search", "children": [] },
+          { "role": "InlineTextBox", "name": "Search", "children": [] },
+          { "role": "image", "name": "Search icon", "children": [] }
         ]
-      }
+      },
+      { "role": "custom-widget", "name": "Results", "children": [] }
     ]
   }
 }
