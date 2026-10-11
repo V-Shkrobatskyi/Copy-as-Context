@@ -21,3 +21,11 @@ use a flaky heap-size threshold, measure peak RAM, check every internal temporar
 object, or detect native Chrome/CDP/DOM memory leaks. Objects legitimately owned
 by a pending browser callback are checked after that callback is delivered and
 released. Existing opt-in allocation benchmarks remain in `tests/performance`.
+
+Firefox coordinator coverage also checks fresh frame envelopes, local and merged
+semantic nodes, exports, tab listeners and repeated use of the same coordinator.
+Scenarios include success, denied child access, main document change and a
+capture timeout followed by late delivery. Each caller invocation returns before
+GC checks, so the test itself does not retain its last result in an async frame.
+The content helper separately has a structural lease TTL; DOM lifetime and
+Android process termination still require browser/device checks.

@@ -1,6 +1,6 @@
 import type { UserManifest } from 'wxt';
 
-/** Keep browser capabilities separate without requesting persistent site access. */
+/** Keep browser capabilities separate with optional site access in Firefox. */
 export function browserManifest(target: string): UserManifest {
   return {
     name: 'Copy as Context',
@@ -11,6 +11,7 @@ export function browserManifest(target: string): UserManifest {
     ...(target === 'firefox' ? {} : { minimum_chrome_version: '125' }),
     ...(target === 'firefox' ? {
       optional_permissions: ['downloads'],
+      optional_host_permissions: ['http://*/*', 'https://*/*'],
       browser_specific_settings: {
         gecko: {
           id: '{e97aa566-cac0-4e2c-81f7-0ab664bf86ce}',

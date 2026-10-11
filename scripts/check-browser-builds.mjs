@@ -28,6 +28,8 @@ for (const target of ['chrome', 'firefox']) {
     assert.equal(manifest.minimum_chrome_version, undefined);
     assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 'clipboardWrite', 'storage'].sort());
     assert.deepEqual(manifest.optional_permissions, ['downloads']);
+    assert.deepEqual(manifest.optional_host_permissions, ['http://*/*', 'https://*/*']);
+    assert.ok((await readFile(new URL('frame-capture.js', directory), 'utf8')).includes('__copyAsContextFrames'), 'Missing isolated frame helper');
     assert.ok(manifest.background.scripts?.length);
     assert.equal(manifest.background.service_worker, undefined);
     assert.ok(manifest.browser_specific_settings.gecko.id);
@@ -52,6 +54,10 @@ for (const target of ['chrome', 'firefox']) {
       assert.equal(fixture.window.domCapture, undefined, 'Collector retains capture data globally');
     } finally { fixture.window.close(); }
   } else {
+    assert.equal(manifest.optional_host_permissions, undefined);
+    assert.ok(!source.includes('getFrameId'), 'Chrome includes Firefox frame API');
+    assert.ok(!source.includes('Include frames from other sites'), 'Chrome includes Firefox site access UI');
+    assert.ok(!source.includes('Other-site frames enabled'), 'Chrome includes Firefox permission controller');
     assert.equal(manifest.minimum_chrome_version, '125');
     assert.deepEqual([...manifest.permissions].sort(), ['debugger', 'clipboardWrite', 'downloads', 'storage'].sort());
     assert.ok(manifest.background.service_worker);
