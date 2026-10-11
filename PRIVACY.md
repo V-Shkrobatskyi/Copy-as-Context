@@ -1,6 +1,6 @@
 # Privacy policy for Copy as Context
 
-Last updated: 2026-10-05. Applies to versions 1.0.0 and 1.0.1.
+Last updated: 2026-10-11. Applies to version 1.1.0.
 
 ## Purpose and local processing
 
@@ -31,12 +31,13 @@ If you email a bug report or post a GitHub issue, the recipient/service receives
 ## Permissions
 
 - Chrome debugger: briefly reads the active page and eligible embedded documents after an export action, checks frame visibility and password input types, and detaches afterward.
-- Firefox activeTab and scripting: obtain temporary page access and run on-demand semantic extraction.
+- Firefox activeTab and scripting: obtain temporary page access and capture the current page and permitted embedded documents on demand.
+- Firefox optional site access: Include frames from other sites is off by default. Enabling it requests access to all HTTP/HTTPS websites in one browser prompt. The permission persists across tabs and browser restarts; turning the option off removes site access, including earlier individual host grants. Capture runs only after Copy or Desktop Save. Protected frames may remain unavailable.
 - clipboardWrite: writes the export you request to your clipboard.
-- downloads (Desktop only): saves the export you request as a local file. In Firefox 1.0.1, this permission is optional and requested when you click Save; Android never requests it.
+- downloads (Desktop only): saves the export you request as a local file. In Firefox, this permission is optional and requested when you click Save; Android never requests it.
 - storage: persists export preferences locally.
 
-The extension does not request persistent access to all websites.
+Persistent access to all HTTP/HTTPS websites is optional and requested only when you enable Include frames from other sites in Firefox.
 
 ## Security and redaction
 

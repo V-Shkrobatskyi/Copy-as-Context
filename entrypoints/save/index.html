@@ -2,13 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="manifest.include" content='["firefox"]' />
   <title>Save file — Copy as Context</title>
 </head>
 <body>
-  <h1>Save file</h1>
-  <p id="status" role="status">Preparing your export. Keep this tab open until saving finishes.</p>
-  <button id="close" type="button">Close tab</button>
+  <main>
+    <header class="brand">
+      <img src="/icon/48.png" width="40" height="40" alt="" aria-hidden="true" />
+      <p>Copy as Context</p>
+    </header>
+    <h1>Save file</h1>
+    <p class="lede">Save your page context as a local file.</p>
+    <section class="save-card" aria-label="File export status">
+      <p id="status" role="status" aria-live="polite" aria-atomic="true">Preparing your export. Keep this tab open until saving finishes.</p>
+      <button id="close" type="button">Close tab</button>
+    </section>
+    <p class="note">This tab closes automatically after a successful save.</p>
+    <footer>Need help? <a href="/guide.html" target="_blank" rel="noopener">View the quick guide</a></footer>
+  </main>
   <script type="module" src="./main.ts"></script>
 </body>
 </html>

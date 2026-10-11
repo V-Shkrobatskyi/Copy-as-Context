@@ -14,6 +14,7 @@ describe('browser capabilities', () => {
     const manifest = browserManifest('firefox');
     expect(manifest.permissions).toEqual(['activeTab', 'scripting', 'clipboardWrite', 'storage']);
     expect(manifest.optional_permissions).toEqual(['downloads']);
+    expect(manifest.optional_host_permissions).toEqual(['http://*/*', 'https://*/*']);
     expect(manifest.host_permissions).toBeUndefined();
     expect(manifest.content_scripts).toBeUndefined();
     expect(manifest.minimum_chrome_version).toBeUndefined();

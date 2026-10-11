@@ -19,6 +19,8 @@ class FakeElement {
     this.listeners.set(type, listener);
   }
 
+  change(): void { this.listeners.get('change')?.(); }
+
   click(): void {
     this.listeners.get('click')?.();
   }
@@ -31,6 +33,7 @@ interface PopupHarness {
   markdown: FakeElement;
   redactSensitiveData: FakeElement;
   saveSettings: FakeElement;
+  otherSiteFrames: FakeElement;
   copy: FakeElement;
   save: FakeElement;
   status: FakeElement;
@@ -81,6 +84,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const guideLink = new FakeElement();
   const redactSensitiveData = new FakeElement();
   const saveSettings = new FakeElement();
+  const otherSiteFrames = new FakeElement();
   compression.value = '2';
   semanticTextFormat.value = 'semantic-text';
   semanticTextFormat.checked = true;
@@ -92,6 +96,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
     ['.primary-action', copy], ['.secondary-action', save], ['.status', status], ['.metrics', metrics],
     ['.feedback', feedback], ['#compression-description', compressionDescription], ['#guide-link', guideLink],
     ['#redact-sensitive-data', redactSensitiveData], ['#save-settings', saveSettings],
+    ['#include-other-site-frames', otherSiteFrames],
   ]);
   const clipboardWrite = vi.fn().mockImplementation(async () => {
     if (options?.clipboardError) throw new Error('clipboard denied');
@@ -118,6 +123,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
     querySelector: <T extends Element>(selector: string): T | null =>
       (elements.get(selector) as unknown as T | undefined) ?? null,
   });
+  vi.stubGlobal('window', { addEventListener: vi.fn() });
   vi.stubGlobal('navigator', { clipboard: { writeText: clipboardWrite }, userAgent: options?.android ? 'Firefox Android' : 'Firefox Desktop' });
   const extensionApi = {
     tabs: { create: vi.fn().mockResolvedValue({ id: 2 }), remove: vi.fn().mockResolvedValue(undefined) },
@@ -138,7 +144,9 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   vi.stubGlobal('chrome', extensionApi);
   const firefoxApi = {
       ...extensionApi,
-      permissions: { request: requestPermission },
+      permissions: { request: requestPermission, contains: vi.fn().mockResolvedValue(false),
+        getAll: vi.fn().mockResolvedValue({ origins: [] }), remove: vi.fn().mockResolvedValue(true),
+        onAdded: { addListener: vi.fn(), removeListener: vi.fn() }, onRemoved: { addListener: vi.fn(), removeListener: vi.fn() } },
       runtime: {
         id: 'synthetic-firefox-id',
         getPlatformInfo: options?.platformError
@@ -159,7 +167,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   await import('@/entrypoints/popup/main');
   await settle();
   return {
-    app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings,
+    app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings, otherSiteFrames,
     copy, save, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission,
   };
 }
@@ -176,6 +184,22 @@ afterEach(() => {
 });
 
 describe('popup export flow', () => {
+  it('exposes broad frame access only in Firefox and does not export when permission is denied', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true, permissionDenied: true });
+    expect(popup.app.innerHTML).toContain('Include frames from other sites');
+    expect(popup.app.innerHTML).not.toContain('Embedded site access');
+    popup.otherSiteFrames.checked = true; popup.otherSiteFrames.change();
+    expect(popup.requestPermission).toHaveBeenCalledExactlyOnceWith({ origins: ['http://*/*', 'https://*/*'] });
+    expect(popup.copy.disabled).toBe(true);
+    await settle();
+    expect(popup.otherSiteFrames.checked).toBe(false); expect(popup.copy.disabled).toBe(false);
+    expect(popup.sendMessage).not.toHaveBeenCalled(); expect(popup.clipboardWrite).not.toHaveBeenCalled();
+  });
+  it('omits the Firefox frame access checkbox from Chrome', async () => {
+    const popup = await loadPopup(successfulCapture());
+    expect(popup.app.innerHTML).not.toContain('Include frames from other sites');
+  });
+
   it('shows validated scope warnings after a successful export and blocks concurrent actions', async () => {
     const result = successfulCapture();
     if (!result.ok) throw new Error('Expected fixture');

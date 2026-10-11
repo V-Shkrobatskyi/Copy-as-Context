@@ -43,6 +43,7 @@ assert.equal(manifest.version, pkg.version);
 assert.deepEqual(manifest.browser_specific_settings.gecko_android, { strict_min_version: '142.0' });
 assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 'clipboardWrite', 'storage'].sort());
 assert.deepEqual(manifest.optional_permissions, ['downloads']);
+assert.deepEqual(manifest.optional_host_permissions, ['http://*/*', 'https://*/*']);
 assert.deepEqual(manifest.browser_specific_settings.gecko.data_collection_permissions.required, ['none']);
 assert.ok(!manifest.host_permissions?.length && !manifest.content_scripts?.length);
 assert.equal(await extension.file('LICENSE').async('string'), await readFile('LICENSE', 'utf8'));

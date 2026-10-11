@@ -18,7 +18,7 @@ Use the filenames generated for the version in `package.json`.
 | Desktop minimum | Firefox 140.0 |
 | Android minimum | Firefox Android 142.0 |
 | Required permissions | activeTab, scripting, clipboardWrite, storage |
-| Optional permission | downloads, requested only for Desktop Save |
+| Optional permissions | downloads for Desktop Save; all HTTP/HTTPS hosts only when Include frames from other sites is enabled |
 | Data collection | `browser_specific_settings.gecko.data_collection_permissions.required: ["none"]` |
 | License | MIT |
 

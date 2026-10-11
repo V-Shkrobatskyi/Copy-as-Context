@@ -7,6 +7,6 @@ export const DOM_CAPTURE_LIMITS = {
   maxPayloadCharacters: 6_500_000,
 } as const;
 
-export type DomCaptureLimits = { [Key in keyof typeof DOM_CAPTURE_LIMITS]: number };
+export type DomCaptureLimits = { -readonly [Key in keyof typeof DOM_CAPTURE_LIMITS]: number };
 
 export class CaptureLimitError extends Error {}

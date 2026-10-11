@@ -26,6 +26,7 @@ async function loadBackground(target = 'chrome') {
       ok: true, tree: { schemaVersion: 1, title: 'Synthetic Firefox', sourceUrl: 'https://example.test/', root: { role: 'page', children: [{ role: 'button', name: 'Save', children: [] }] } }, warnings: ['embedded-frames'],
     } }]) },
   };
+  if (target === 'firefox') vi.doMock('../../src/adapters/firefox/capture', () => ({ captureFirefoxPage: async () => (await firefoxApi.scripting.executeScript())[0]!.result }));
   vi.doMock('wxt/browser', () => ({ browser: target === 'firefox' ? firefoxApi : chromeApi }));
   vi.stubEnv('BROWSER', target);
   if (target === 'firefox') {

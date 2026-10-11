@@ -7,8 +7,16 @@ import { allowsContentName, composedChildren, elementStates, isPassword, roleFor
 const OMIT_TAGS = new Set(['script', 'style', 'template', 'noscript', 'head']);
 const clean = (value: string): string => value.replace(/\s+/gu, ' ').trim();
 
+export interface DomCaptureWork { nodes: number; visited: number; nameWork: number; characters: number; milliseconds: number }
+export interface DomCaptureOptions {
+  embedded?: boolean;
+  includeFrame?: (element: Element) => boolean;
+  onFrame?: (element: Element, node: SemanticNode) => void;
+  reportWork?: (work: DomCaptureWork) => void;
+}
+
 /** A bounded HTML/ARIA approximation, not the browser's computed AX tree. */
-export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAPTURE_LIMITS): CaptureOutcome {
+export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAPTURE_LIMITS, options: DomCaptureOptions = {}): CaptureOutcome {
   const started = performance.now();
   let visitedCount = 0;
   let outputCount = 1;
@@ -124,6 +132,8 @@ export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAP
       if (node.nodeType !== 1) continue;
       const element = node as Element;
       if (pruned(element)) continue;
+      const frame = element.localName === 'iframe' || element.localName === 'frame';
+      if (frame && options.includeFrame && !options.includeFrame(element)) continue;
       const hidden = style(element).visibility === 'hidden' || style(element).visibility === 'collapse';
       const role = roleForElement(element);
       const nextListLevel = listLevel + Number(role === 'list');
@@ -153,7 +163,14 @@ export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAP
           } catch { /* Invalid links are omitted without exposing their raw value. */ }
         }
         parent.children.push(output); container = output;
-        if (element.localName === 'iframe' || element.localName === 'frame') warnings.add('embedded-frames');
+        if (frame) {
+          if (options.onFrame) {
+            output.role = text('embedded-document');
+            output.value = 'Not captured: unavailable';
+            options.onFrame(element, output);
+            text(output.value);
+          } else warnings.add('embedded-frames');
+        }
         if (element.localName === 'canvas') warnings.add('canvas-content');
       }
       if (element.localName === 'iframe' || element.localName === 'frame' || element.localName === 'canvas') continue;
@@ -162,7 +179,8 @@ export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAP
       if (visitedCount + stack.length + children.length > limits.maxVisited) throw new CaptureLimitError();
       for (let i = children.length - 1; i >= 0; i--) stack.push({ node: children[i]!, parent: container, depth: depth + 1, listLevel: nextListLevel });
     }
-    const tree = { schemaVersion: 1 as const, title: text(doc.title || 'Untitled page'), sourceUrl: text(doc.location.href), root };
+    const tree = { schemaVersion: 1 as const, title: text(doc.title || (options.embedded ? '' : 'Untitled page')),
+      ...(!options.embedded ? { sourceUrl: text(doc.location.href) } : {}), root };
     const result: CaptureOutcome = { ok: true, tree, ...(warnings.size ? { warnings: [...warnings] } : {}) };
     if (JSON.stringify(result).length > limits.maxPayloadCharacters) throw new CaptureLimitError();
     return result;
@@ -171,5 +189,7 @@ export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAP
       code: error instanceof CaptureLimitError ? 'capture-limit' : 'capture-failed',
       message: error instanceof CaptureLimitError ? 'This page exceeds the capture limits.' : 'Unable to read this page’s semantic structure.',
     } };
+  } finally {
+    options.reportWork?.({ nodes: outputCount, visited: visitedCount, nameWork, characters, milliseconds: performance.now() - started });
   }
 }

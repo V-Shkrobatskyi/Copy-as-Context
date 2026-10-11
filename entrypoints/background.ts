@@ -78,7 +78,7 @@ export default defineBackground(() => {
         });
       }
       const response: CaptureActiveTabResponse = result.ok
-        ? { ok: true, export: prepareExport(result.tree, message.compression, message.format, message.redactSensitiveData), ...(result.warnings?.length ? { warnings: result.warnings } : {}) }
+        ? { ok: true, export: prepareExport(result.tree, message.compression, message.format, message.redactSensitiveData), ...(result.warnings?.length ? { warnings: result.warnings } : {}), ...(result.frameAccess?.length ? { frameAccess: result.frameAccess } : {}) }
         : result;
       sendResponse(response);
     })().catch(() => {

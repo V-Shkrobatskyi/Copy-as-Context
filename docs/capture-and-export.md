@@ -4,9 +4,9 @@
 
 Run `npm run build:firefox`, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `.output/firefox-mv3/manifest.json`. The Desktop minimum is Firefox 140+. Reload the temporary add-on after rebuilding.
 
-On Desktop, Copy and Save capture the active top-level document on demand. Firefox Desktop requests `activeTab` and `scripting` instead of `debugger`, plus `clipboardWrite` and `storage`. Desktop requests the optional `downloads` permission when you choose Save. It does not request persistent access to all sites. Capture excludes password input values even with redaction disabled. Other values follow the selected privacy setting.
+On Desktop, Copy and Save capture the active top-level document on demand. Firefox Desktop requests `activeTab` and `scripting` instead of `debugger`, plus `clipboardWrite` and `storage`. Desktop requests the optional `downloads` permission when you choose Save. It requests persistent access to all HTTP/HTTPS sites only when you enable Include frames from other sites. Capture excludes password input values even with redaction disabled. Other values follow the selected privacy setting.
 
-The DOM adapter preserves supported HTML/ARIA roles, labels, live form values and states, tables, lists, open Shadow DOM and slots. It approximates accessible names; it is not Gecko's native accessibility tree or a complete implementation of the Accessible Name specification. Closed shadow roots, embedded frames, canvas pixels, CSS-generated content, unmounted virtualized UI and `aria-owns` reordering are not captured. Embedded-frame/canvas warnings appear next to export metrics. Hidden/inert content is excluded, but explicitly referenced hidden labels can contribute to accessible names. Collapsed details retain their summary and expanded state.
+The DOM adapter preserves supported HTML/ARIA roles, labels, live form values and states, tables, lists, open Shadow DOM and slots. It approximates accessible names; it is not Gecko's native accessibility tree or a complete implementation of the Accessible Name specification. Eligible embedded documents are captured in their owner positions using Firefox frame IDs and isolated scripts. Same-origin access uses activeTab. Cross-origin capture is off by default; Include frames from other sites requests optional access to all HTTP/HTTPS sites in one prompt. Hidden and technical frames are skipped before reading child content; unavailable or changing frames have placeholders and a partial warning. Closed shadow roots, canvas pixels, CSS-generated content, unmounted virtualized UI and `aria-owns` reordering are not captured. Partial-frame/canvas warnings appear next to export metrics. Hidden/inert content is excluded, but explicitly referenced hidden labels can contribute to accessible names. Collapsed details retain their summary and expanded state.
 
 Capture has explicit node, depth, text and time limits; overflow produces an error rather than a silent partial export. Navigation during capture discards the result. Some browser pages and protected websites cannot be injected into.
 
@@ -28,7 +28,7 @@ The popup supports **Semantic Text** (default) and **Markdown**. `Compact` is th
 
 Export headers include `Browser:` between `URL:` and `Captured:` in both formats and every compression profile. It records the browser name, Desktop or Android platform when known, and the available version. Firefox uses runtime metadata; Chromium uses local browser hints with a User-Agent fallback. A reduced version is shown as its major version; unavailable versions are omitted, and missing metadata appears as `Unavailable`. This adds no permissions or network requests.
 
-Export attribution includes the installed extension version and a settings digit, for example `1.0.1/7 (created by V. Shkrobatskyi)` (illustrative version). The codes are Without `0`, Detailed `2`, Compact `4`, Maximum `6`; add `1` when **Redact sensitive data** is enabled. The digit records the selected profile even when Maximum falls back to Compact, and the privacy option rather than a guarantee that every sensitive value was found.
+Export attribution includes the installed extension version and a settings digit, for example `1.1.0/7 (created by V. Shkrobatskyi)` (illustrative version). The codes are Without `0`, Detailed `2`, Compact `4`, Maximum `6`; add `1` when **Redact sensitive data** is enabled. The digit records the selected profile even when Maximum falls back to Compact, and the privacy option rather than a guarantee that every sensitive value was found.
 
 The popup shows the exact JavaScript character count (including boundaries for Copy), a rough token estimate (`ceil(characters / 4)`), and context reduction relative to Without output with the same format and privacy setting. Boundaries are excluded from the reduction ratio. The estimate is not model-specific tokenization. Maximum uses a separate local cost heuristic for packing; it does not bundle a tokenizer or guarantee savings for every model.
 
@@ -51,3 +51,16 @@ Visible or hidden page text can also contain instructions aimed at an AI assista
 - Review consequential actions, such as sending information or changing data, before allowing them.
 
 Local processing, credential redaction, compression, and export boundaries do not detect or guarantee removal of malicious instructions. The review steps above can help reduce risk, but they do not guarantee protection.
+
+Firefox uses one sequential capture budget for the main document and its selected
+frames. Document boundaries remain in every compression profile and export format.
+Include frames from other sites is a Firefox-only checkbox, off by default.
+Enabling it requests all HTTP/HTTPS host access from that user gesture in a single
+browser prompt. The checkbox reflects the browser permission, so no Save preferences
+click is required. Denial leaves it off; external revocation updates its state.
+Disabling it removes all site grants, including earlier individual grants, without
+removing Desktop downloads permission. Re-enabling after revocation requests consent
+again. Access is global across tabs and persists across browser restarts, but capture
+runs only after Copy or Desktop Save. Capture remains limited to same-origin children
+when broad access is absent, even if an individual host grant remains. Protected-page
+restrictions still apply. Desktop and Android share this path; Android remains Copy-only.

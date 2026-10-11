@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Firefox iframe capture fixture</title>
+<style>iframe{width:360px;height:150px} .hidden{display:none} .transparent{opacity:0} .pixel{width:1px;height:1px;border:0}</style>
+<h1>Firefox iframe capture fixture</h1>
+<p>Start with scripts/probe-firefox-iframes.mjs --serve. Root content comes before the first embedded document.</p>
+<iframe id="same" title="Same-origin document" src="/child"></iframe>
+<p>Root content between documents.</p>
+<iframe id="cross" title="Cross-origin document" src="http://localhost:__PORT__/child"></iframe>
+<iframe id="duplicate" title="Second document with the same URL" src="/child"></iframe>
+<iframe id="srcdoc" title="Source document" srcdoc="<p>SRCDOC_MARKER</p><input type='password' value='SYNTHETIC_PASSWORD'>"></iframe>
+<iframe id="blank" title="Intentionally blank document"></iframe>
+<iframe id="sandbox" title="Sandbox document" sandbox="allow-scripts" srcdoc="<p>SANDBOX_MARKER</p>"></iframe>
+<iframe id="hidden" class="hidden" title="Hidden document" src="/hidden"></iframe>
+<div class="transparent"><iframe id="transparent" title="Transparent document" src="/hidden"></iframe></div>
+<iframe id="pixel" class="pixel" title="Tracking pixel" src="/hidden"></iframe>
+<div id="shadow"></div>
+<div style="height:1000px">Scrollable content above the final document.</div>
+<iframe id="below" title="Below viewport" src="/below"></iframe>
+<p>Root content after the final document.</p>
+<script>
+const shadow = document.querySelector('#shadow').attachShadow({mode:'open'});
+shadow.innerHTML = '<iframe title="Shadow document" style="width:360px;height:150px" src="/shadow"></iframe>';
+</script>
+</html>
