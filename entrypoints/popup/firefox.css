@@ -1,10 +1,21 @@
 @import './style.css';
 
+/* Let a vertical scrollbar shrink the content instead of causing horizontal overflow. */
+body { min-width: 0; width: 376px; max-width: 100%; }
+.popup { width: 100%; }
+.frame-access-setting { margin-top: 8px; }
+.status, .metrics { overflow-wrap: anywhere; }
+
+/* Leave room for export feedback within the Desktop popup's height limit. */
+body:not([data-platform="android"]) .popup { padding-top: 8px; padding-bottom: 8px; }
+body:not([data-platform="android"]) .settings-panel { padding: 10px; }
+body:not([data-platform="android"]) .popup-header { margin-bottom: 10px; }
+body:not([data-platform="android"]) .action-section { margin-top: 8px; }
+body:not([data-platform="android"]) .help { margin-top: 6px; padding-top: 6px; }
+
+
 /* The same package preserves Desktop sizing and adapts only on Android. */
-body[data-platform="android"] { min-width: 0; width: 376px; max-width: 100vw; }
-body[data-platform="android"] .popup { width: 100%; }
-body[data-platform="android"] .status,
-body[data-platform="android"] .metrics { overflow-wrap: anywhere; }
+body[data-platform="android"] { max-width: 100%; }
 body[data-platform="android"] button,
 body[data-platform="android"] .format-option,
 body[data-platform="android"] .privacy-toggle { min-height: 44px; }

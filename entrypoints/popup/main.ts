@@ -11,6 +11,7 @@ import {
 import { CAPTURE_ACTIVE_TAB_MESSAGE, isCaptureActiveTabResponse, type CaptureActiveTabRequest } from '@/src/capture-message';
 import { wrapClipboardContext } from '@/src/clipboard-context';
 import { contextBlob, contextDownloadOptions } from '@/src/download-context';
+import { installFrameAccessToggle, type FrameAccessToggle } from '@/src/firefox-frame-access';
 
 type ExportAction = 'copy' | 'save';
 type StoredPopupSettings = {
@@ -119,6 +120,10 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       </fieldset>
       <button id="save-settings" class="save-settings" type="button">Save preferences</button>
     </section>
+    ${import.meta.env.BROWSER === 'firefox' ? `<section class="privacy-setting frame-access-setting" aria-label="Site access">
+      <label class="privacy-toggle"><input id="include-other-site-frames" type="checkbox" disabled aria-describedby="other-site-frames-note" /> <span>Include frames from other sites</span></label>
+      <p id="other-site-frames-note">Applies immediately. Requires access to all sites; off revokes it.</p>
+    </section>` : ''}
     <section class="action-section" aria-label="Export page context">
       <div class="actions">
         <button class="primary-action" type="button">Copy page context</button>
@@ -130,6 +135,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <p class="metrics" aria-live="polite"></p>
     </section>
     <footer class="help"><span>New here?</span> <a id="guide-link" target="_blank" rel="noopener">View the quick guide</a></footer>
+
   </main>
 `;
 
@@ -178,7 +184,9 @@ function updateCompressionDescription(): void {
     without: 'Keeps every captured semantic node. Sensitive values are still redacted.',
     detailed: 'Removes unnamed wrappers without semantic attributes, preserving text, links and states.',
     compact: 'Removes repeated accessibility noise while retaining meaningful controls.',
-    maximum: 'Packs Compact context with selective abbreviations and repeated text or structures; falls back when overhead is too high.',
+    maximum: firefox
+      ? 'Packs Compact context with abbreviations and shared structures when they save space.'
+      : 'Packs Compact context with selective abbreviations and repeated text or structures; falls back when overhead is too high.',
   };
   const minimum = Number.parseFloat(compression.min);
   const maximum = Number.parseFloat(compression.max);
@@ -246,14 +254,21 @@ function setPending(pending: boolean, action?: ExportAction): void {
 }
 
 let exportPending = false;
+let frameAccessToggle: FrameAccessToggle | undefined;
+const otherSiteFrames = firefox ? document.querySelector<HTMLInputElement>('#include-other-site-frames') : null;
+if (otherSiteFrames) frameAccessToggle = installFrameAccessToggle(otherSiteFrames, showFeedback, pending => {
+  for (const control of controls) control.disabled = pending || exportPending;
+  saveButton.disabled = pending || exportPending || !canSave;
+});
 
 async function exportPageContext(action: ExportAction): Promise<void> {
   if (action === 'save' && !canSave) {
     showFeedback('Saving files is unavailable in this browser. Use Copy page context.');
     return;
   }
-  if (exportPending) return;
+  if (exportPending || frameAccessToggle?.pending) return;
   exportPending = true;
+  frameAccessToggle?.setPending(true);
   setPending(true, action);
   let destinationStarted = false;
   try {
@@ -316,6 +331,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
     ]!);
   } finally {
     exportPending = false;
+    frameAccessToggle?.setPending(false);
     setPending(false);
   }
 }
