@@ -100,3 +100,25 @@ adb reverse --remove tcp:8765
 Desktop and Android use one Firefox ZIP, one matching source ZIP and one AMO
 listing. Follow [BUILDING.md](../BUILDING.md) for packaging and
 [the Firefox publication guide](firefox-release.md) for AMO submission.
+
+## Embedded documents
+
+The Firefox package uses the same iframe coordinator on Desktop and Android.
+Device verification remains manual. Serve the iframe fixture with
+`node scripts/probe-firefox-iframes.mjs --serve`, note the printed port, and use
+`adb reverse tcp:PORT tcp:PORT`. On the device, visit the printed fixture URL
+using `127.0.0.1` as the main host and `localhost` for the embedded cross-origin
+host; both names use the forwarded port. Replace PORT with the actual port.
+
+Check nested frames, srcdoc, blank and sandbox documents; below-viewport content;
+hidden/transparent/1×1 exclusions; password omission with privacy on and off;
+all four profiles and both formats. Same-origin capture should work without a
+site prompt. Include frames from other sites must start unchecked, just as on
+Desktop. Enable it and check one prompt for all HTTP/HTTPS websites, deny/cancel,
+popup dismissal and reopening, redirects and repeated copies without another host
+prompt. No Save preferences click is required. Disable it and check that all site
+grants are removed and a fresh copy excludes other-site frames. Re-enabling should
+request consent again. Revoke access in browser settings and reopen the popup.
+Access persists across tabs and browser restarts while enabled. Save must
+remain unavailable. Check app switching, low-memory termination and repeated taps.
+Remove the port mapping and stop the server after testing.

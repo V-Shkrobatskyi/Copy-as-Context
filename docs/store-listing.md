@@ -28,7 +28,7 @@ Firefox Desktop supports clipboard export and local UTF-8 downloads. Firefox And
 
 There is no LLM service, capture backend, analytics, or advertising integration. The extension does not upload captured page content to the developer. You decide whether to share the exported text with another application.
 
-Firefox approximates HTML/ARIA semantics in the main document and supported open web components. Browser-internal and protected pages may deny access. Capture does not perform OCR or guarantee complete page coverage.
+Firefox approximates HTML/ARIA semantics in the main document, supported open web components, and eligible embedded documents. Same-origin frames are captured by default. Include frames from other sites requests optional access to all HTTP/HTTPS websites in one prompt. Turning it off removes site access. Browser-internal and protected pages may deny access. Capture does not perform OCR or guarantee complete page coverage.
 
 Firefox always omits password input values. Credential redaction is heuristic and may miss sensitive information. Review exports before sharing them; page text can include untrusted instructions aimed at AI assistants. Token estimates are not model-specific tokenization.
 
@@ -40,12 +40,13 @@ Voluntary developer-support links do not unlock functionality or affect export b
 | --- | --- |
 | debugger (Chrome) | Reads one Accessibility.getFullAXTree snapshot from the active page after the user requests Copy or Save; detaches after capture. No background browsing-history collection. |
 | activeTab (Firefox) | Grants temporary access to the active page when the user opens the extension action. |
-| scripting (Firefox) | Injects the bounded HTML/ARIA collector into the active top-level document for a requested export. |
+| scripting (Firefox) | Injects bounded HTML/ARIA collectors into the active document and eligible embedded documents for a requested export. |
 | clipboardWrite | Writes the user-requested context export to the clipboard. |
 | downloads (Firefox optional; Chrome required) | Saves the requested export as a local UTF-8 text or Markdown file. Firefox requests it only from the Desktop Save button; Android never requests it. |
+| Optional HTTP/HTTPS site access (Firefox) | Includes frames from other sites after the user enables the option; access is removed when the option is disabled. |
 | storage | Persists compression, format, and privacy preferences locally when requested. |
 
-No broad persistent host permissions or remotely hosted executable code are used.
+Broad persistent HTTP/HTTPS host access is optional, off by default, and requested only from Include frames from other sites. No remotely hosted executable code is used.
 
 ## Reviewer notes
 

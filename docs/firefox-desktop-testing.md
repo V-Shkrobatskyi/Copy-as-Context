@@ -134,3 +134,23 @@ Keep local reports and exported synthetic examples outside tracked source.
 8. Repeat captures on the large table and observe popup response and browser memory.
    For Chrome, verify debugger release and retry after a competing debugger is
    detached. Node/native probes do not cover `chrome.debugger` permission UX.
+
+## Embedded documents
+
+Use `node scripts/probe-firefox-iframes.mjs --serve` to start the synthetic iframe
+fixture. Open the printed URL in Firefox with `.output/firefox-mv3` temporarily
+installed. Test Copy and Save with all profiles/formats. Verify nested document
+positions, srcdoc/blank/sandbox, below-viewport frames, hidden/technical exclusions,
+password omission, partial warnings and repeated exports.
+
+Ordinary Copy/Save must not request site access. Include frames from other sites
+starts unchecked and captures same-origin children only. Enable it and check one
+native prompt for all HTTP/HTTPS websites, grant/deny/cancel, popup dismissal and
+reopening, redirects, and repeated captures without another host prompt. No Save
+preferences click should be needed. Disable it, verify site grants are removed
+(including earlier individual grants), and capture again: other-site children must
+be unavailable. Re-enable and expect a new prompt. Revoke access in Firefox's add-on
+manager and check the checkbox updates. Save downloads permission must be retained. Protected
+pages can remain inaccessible even after grant. Use the same visible markers in
+Chrome to compare document coverage/order, allowing DOM/AX semantic differences.
+The automated probe's temporary fixture grants do not substitute for this UI test.
