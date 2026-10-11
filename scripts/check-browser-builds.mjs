@@ -25,6 +25,7 @@ for (const target of ['chrome', 'firefox']) {
   const source = await javascript(fileURLToPath(directory));
   assert.ok(!/\bimport\s*\(/u.test(await readFile(new URL('background.js', directory), 'utf8')), 'Background requires runtime dynamic imports');
   if (firefox) {
+    assert.equal(manifest.minimum_chrome_version, undefined);
     assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 'clipboardWrite', 'storage'].sort());
     assert.deepEqual(manifest.optional_permissions, ['downloads']);
     assert.ok(manifest.background.scripts?.length);
@@ -51,6 +52,7 @@ for (const target of ['chrome', 'firefox']) {
       assert.equal(fixture.window.domCapture, undefined, 'Collector retains capture data globally');
     } finally { fixture.window.close(); }
   } else {
+    assert.equal(manifest.minimum_chrome_version, '125');
     assert.deepEqual([...manifest.permissions].sort(), ['debugger', 'clipboardWrite', 'downloads', 'storage'].sort());
     assert.ok(manifest.background.service_worker);
     assert.equal(manifest.browser_specific_settings, undefined);

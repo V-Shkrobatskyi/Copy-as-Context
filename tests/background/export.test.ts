@@ -56,6 +56,18 @@ describe('background export boundary', () => {
     expect(response).not.toHaveProperty('tree');
     expect(background.firefoxApi.scripting.executeScript).toHaveBeenCalledOnce();
   });
+  it('preserves Chrome partial-frame warnings through document metadata and serialization', async () => {
+    capture.mockResolvedValue({ ok: true, tree: { schemaVersion: 1, root: { role: 'page', children: [
+      { role: 'embedded-document', name: 'Widget', value: 'Not captured: unavailable', children: [] },
+    ] } }, warnings: ['embedded-frames-partial'] });
+    const background = await loadBackground();
+    const response = await background.request({ type: 'capture-active-tab', compression: 'compact', format: 'semantic-text', redactSensitiveData: true });
+    expect(response.ok).toBe(true);
+    if (response.ok) {
+      expect(response.warnings).toEqual(['embedded-frames-partial']);
+      expect(response.export.serialized.content).toContain('embedded-document');
+    }
+  });
   it('exports even when browser metadata APIs reject', async () => {
     const background = await loadBackground('firefox');
     background.firefoxApi.runtime.getBrowserInfo.mockRejectedValue(Error('Unavailable'));

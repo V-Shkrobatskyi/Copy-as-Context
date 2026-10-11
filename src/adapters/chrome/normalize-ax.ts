@@ -111,7 +111,14 @@ function filterChildReferences(
 }
 
 /** Converts a complete Chrome CDP accessibility response into the browser-neutral core model. */
-export function normalizeChromeAxTree(response: ChromeAxTreeResponse): CaptureResult {
+export function normalizeChromeAxTree(response: ChromeAxTreeResponse, options: {
+  frameId?: string;
+  onNode?: (raw: ChromeAxNode, normalized: SemanticNode) => void;
+} = {}): CaptureResult {
+  if (options.frameId !== undefined && response.nodes.find((node) =>
+    stringValue(node.role) === 'RootWebArea')?.frameId !== options.frameId) {
+    return { ok: false, error: { code: 'invalid-tree', message: 'Chrome returned an unexpected document.' } };
+  }
   const frameNodes = Array.isArray(response.nodes) ? rootFrameNodes(response.nodes) : [];
   // Preserve the existing child-reference filtering only when a root frame is identified.
   const hasRootFrame = frameNodes.some((node) => node.frameId !== undefined && stringValue(node.role) === 'RootWebArea');
@@ -213,6 +220,7 @@ export function normalizeChromeAxTree(response: ChromeAxTreeResponse): CaptureRe
     if (level !== undefined) normalized.level = level;
     if (href !== undefined) normalized.href = href;
     if (states !== undefined) normalized.states = states;
+    options.onNode?.(node, normalized);
     return normalized;
   };
 

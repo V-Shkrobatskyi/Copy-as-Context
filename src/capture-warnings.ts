@@ -1,4 +1,4 @@
-export const CAPTURE_WARNING_CODES = ['embedded-frames', 'canvas-content'] as const;
+export const CAPTURE_WARNING_CODES = ['embedded-frames', 'canvas-content', 'embedded-frames-partial'] as const;
 export type CaptureWarningCode = (typeof CAPTURE_WARNING_CODES)[number];
 
 export function isCaptureWarnings(value: unknown): value is CaptureWarningCode[] {

@@ -7,6 +7,7 @@ describe('browser capabilities', () => {
     expect(manifest.permissions).toEqual(['debugger', 'clipboardWrite', 'downloads', 'storage']);
     expect(manifest.browser_specific_settings).toBeUndefined();
     expect(manifest.host_permissions).toBeUndefined();
+    expect(manifest.minimum_chrome_version).toBe('125');
   });
 
   it('uses on-demand Firefox capabilities without debugger or broad host access', () => {
@@ -15,6 +16,7 @@ describe('browser capabilities', () => {
     expect(manifest.optional_permissions).toEqual(['downloads']);
     expect(manifest.host_permissions).toBeUndefined();
     expect(manifest.content_scripts).toBeUndefined();
+    expect(manifest.minimum_chrome_version).toBeUndefined();
     expect(manifest.browser_specific_settings?.gecko).toEqual({
       id: '{e97aa566-cac0-4e2c-81f7-0ab664bf86ce}',
       strict_min_version: '140.0',

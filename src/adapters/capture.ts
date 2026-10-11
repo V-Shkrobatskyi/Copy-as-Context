@@ -17,6 +17,6 @@ export async function captureActiveTab(tab: CaptureTab, capturedAt: string): Pro
   const { addChromeDocumentMetadata } = await import('./chrome/document-metadata');
   const capture = await captureChromeAccessibilityTree(tab.id);
   return capture.ok
-    ? { ok: true, tree: addChromeDocumentMetadata(capture.tree, tab, capturedAt) }
+    ? { ...capture, tree: addChromeDocumentMetadata(capture.tree, tab, capturedAt) }
     : capture;
 }
