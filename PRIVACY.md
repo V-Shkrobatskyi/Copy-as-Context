@@ -8,7 +8,7 @@ Copy as Context exports semantic content from the active page for your AI conver
 
 ## Information processed
 
-An export can contain page text, title, URL, accessible labels, semantic roles, form values and states, capture time, browser/platform/version metadata when available, and the extension version and selected settings. This information can include personal or sensitive information present on the page. Chrome reads an accessibility-tree snapshot; Firefox reads HTML/ARIA semantics. Firefox always omits password input values.
+An export can contain page text, title, URL, accessible labels, semantic roles, form values and states, capture time, browser/platform/version metadata when available, and the extension version and selected settings. This information can include personal or sensitive information present on the page. Chrome reads accessibility-tree snapshots of the main document and eligible embedded documents; Firefox reads HTML/ARIA semantics. Both browser builds omit password input values, including values in captured embedded documents.
 
 The extension uses this information only to create the export you request. It does not monitor your browsing history in the background or upload captured pages to the developer.
 
@@ -30,7 +30,7 @@ If you email a bug report or post a GitHub issue, the recipient/service receives
 
 ## Permissions
 
-- Chrome debugger: briefly reads the active page's accessibility tree after an export action and detaches afterward.
+- Chrome debugger: briefly reads the active page and eligible embedded documents after an export action, checks frame visibility and password input types, and detaches afterward.
 - Firefox activeTab and scripting: obtain temporary page access and run on-demand semantic extraction.
 - clipboardWrite: writes the export you request to your clipboard.
 - downloads (Desktop only): saves the export you request as a local file. In Firefox 1.0.1, this permission is optional and requested when you click Save; Android never requests it.

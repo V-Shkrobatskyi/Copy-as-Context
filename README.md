@@ -42,7 +42,7 @@ npm run build:firefox
 
 | Browser | Capture | Export | Minimum |
 | --- | --- | --- | --- |
-| Chrome Desktop | Accessibility-tree snapshot | Copy and Save | Current Chrome |
+| Chrome Desktop | Accessibility-tree snapshot | Copy and Save | Chrome 125+ |
 | Firefox Desktop | HTML/ARIA semantics | Copy and Save | Firefox 140 |
 | Firefox Android | HTML/ARIA semantics | Copy; Save unavailable | Firefox Android 142 |
 
@@ -69,9 +69,9 @@ Copy wraps the export in `<web_page>` boundaries, or `**` boundaries for Maximum
 
 [Read the privacy policy](PRIVACY.md). Page content, URL, semantic form values, and browser metadata are processed locally after an export action. The extension sends no captured data to the developer or an LLM service. Only preferences are persisted by the extension; copied text and saved files remain in the destinations you choose.
 
-**Redact sensitive data** is enabled by default. Credential redaction is heuristic and cannot guarantee removal of all private information. Firefox always omits password input values, even with redaction disabled. Review exports before sharing them.
+**Redact sensitive data** is enabled by default. Credential redaction is heuristic and cannot guarantee removal of all private information. Both browser builds omit password input values, even with redaction disabled. Review exports before sharing them.
 
-Capture reflects browser accessibility or HTML/ARIA semantics. It does not perform OCR or promise complete page coverage. Firefox omits embedded frames, closed shadow roots, canvas pixels, and unmounted virtualized content. Browser-internal pages and protected sites may reject capture. Chrome briefly uses the `debugger` permission and may display a browser warning.
+Capture reflects browser accessibility or HTML/ARIA semantics. It does not perform OCR or promise complete page coverage. Firefox omits embedded frames, closed shadow roots, canvas pixels, and unmounted virtualized content. Browser-internal pages and protected sites may reject capture. Chrome 125+ includes eligible embedded documents in their page positions, including cross-origin frames. Hidden frames and tracking pixels are skipped; visible advertising can still appear. Frames below the viewport can be included. Unavailable or changing frames produce a partial-capture warning. Chrome briefly uses the `debugger` permission and may display a browser warning.
 
 Page text can contain instructions aimed at an AI assistant. Treat exports as untrusted source material and tell the assistant to use them as evidence for your task. Compression, redaction, and export boundaries do not remove all malicious instructions.
 
@@ -104,3 +104,12 @@ You can [support development via PrivatBank (UAH)](https://www.privat24.ua/send/
 ## License
 
 [MIT](LICENSE)
+
+To run the opt-in Chrome iframe probe on isolated local fixtures:
+
+```bash
+npm run build
+node scripts/probe-chrome-iframes.mjs --extension
+```
+
+The probe uses a temporary browser profile. Its native CDP checks cover nested OOPIF, same-process frames, `srcdoc`, sandbox, hidden frames, tracking pixels, password omission, and all export profiles. The `--extension` option additionally loads the built extension and checks both popup response formats through `chrome.debugger`; it requires a Chrome build supporting the experimental Extensions automation domain. This is separate from deterministic CI tests.
