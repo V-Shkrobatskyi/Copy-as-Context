@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Chrome iframe capture quality</title>
+<style>iframe { width: 320px; height: 180px; } .below { margin-top: 1800px; }</style>
+<h1>Chrome iframe capture quality</h1>
+<p>Serve using scripts/probe-chrome-iframes.mjs for the native CDP probe. The server replaces the origin placeholders. For an extension smoke test, serve this fixture with equivalent local origins and export from the installed Chrome extension.</p>
+<iframe title="Same-process document" src="__SAME_ORIGIN__/leaf"></iframe>
+<iframe title="Cross-process form" src="__CROSS_ORIGIN__/child"></iframe>
+<iframe title="Source document" srcdoc="<h2>Source document content</h2>"></iframe>
+<iframe title="Sandbox document" sandbox srcdoc="<h2>Sandbox document content</h2>"></iframe>
+<iframe title="Hidden tracking" style="display:none" src="__CROSS_ORIGIN__/technical"></iframe>
+<div style="opacity:0"><iframe title="Transparent tracking" src="__SAME_ORIGIN__/technical"></iframe></div>
+<iframe title="Tracking pixel" style="width:1px;height:1px;border:0" src="__SAME_ORIGIN__/technical"></iframe>
+<iframe title="Below viewport" class="below" src="__SAME_ORIGIN__/leaf"></iframe>
+</html>
