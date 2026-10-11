@@ -1,3 +1,4 @@
+import './style.css';
 import { browser } from 'wxt/browser';
 import { contextBlob, contextDownloadOptions } from '@/src/download-context';
 import { FIREFOX_SAVE_MESSAGE } from '@/src/firefox-save';
