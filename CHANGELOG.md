@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.0.1 — unreleased
+## 1.1.0 — unreleased
+
+- Capture eligible iframe documents in Chrome and Firefox while preserving their page positions and document boundaries.
+- Capture available same-origin iframe documents by default in Firefox Desktop and Android.
+- Add an optional Firefox switch for other-site frames with one request for access to all HTTP/HTTPS websites and access removal when disabled.
+- Skip hidden frames and tracking pixels, apply shared capture limits, and report unavailable or changing documents.
+- Keep Firefox popup content responsive and add extension branding to the file saving page.
 
 - Keep Firefox Save files available after the Save As dialog closes the popup.
 - Prevent sticky touch hover and show immediate button feedback after Android Compression changes.
