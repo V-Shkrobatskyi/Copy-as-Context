@@ -17,6 +17,14 @@ For code or shared popup changes, run the checks for both browser targets:
 npm run check
 ```
 
+This includes `npm run test:memory`, an isolated Node worker with garbage
+collection enabled. It checks that repeated Chrome captures and exports release
+raw snapshots, semantic results, and event listeners after success, partial
+capture, navigation, cleanup failure, and a timeout with a late callback. A
+retained-object control verifies that the test can detect retention. These are
+object-lifetime regression checks, not measurements of Chrome's native memory
+or proof that every possible leak is absent. See [the memory test notes](tests/memory/README.md).
+
 For documentation-only changes, check relative links, commands and consistency
 with the implementation. If the offline guide changes, rebuild the browser
 packages to verify that it is included. See [BUILDING.md](BUILDING.md) for packaging.
@@ -50,6 +58,6 @@ Never commit API keys, tokens, personal data, or local configuration. Local envi
 
 ## Chrome accessibility fixtures
 
-Chrome-specific AX/CDP data belongs in `src/adapters/chrome/`; only its normalized result may enter `src/core/`. The capture adapter performs one `attach → Accessibility.getFullAXTree → detach` sequence per request and must detach in every outcome after a successful attach.
+Chrome-specific AX/CDP data belongs in `src/adapters/chrome/`; only its normalized result may enter `src/core/`. The capture adapter owns one root debugger attachment per request, captures the main document and eligible embedded documents through frame-specific AX requests, and releases child sessions and the root attachment in every outcome. CDP identifiers remain adapter-local; document boundaries and partial-capture statuses use browser-independent semantic nodes.
 
 When adding a raw AX fixture, use a small, hand-reviewed, de-identified sample. Never retain page URLs with query parameters, account names, personal data, or secrets. Pair it with the expected browser-agnostic semantic tree and add regression coverage. Live Chrome checks are manual smoke tests; unit tests must mock the debugger client and remain deterministic in CI.

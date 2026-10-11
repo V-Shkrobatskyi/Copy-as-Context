@@ -16,6 +16,7 @@ jobs:
       - run: npm ci
       - run: npm run compile
       - run: npm test
+      - run: npm run test:memory
       - run: npm run build
       - run: npm run build:firefox
       - run: npm run check:browser-builds

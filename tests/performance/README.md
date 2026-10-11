@@ -4,6 +4,10 @@ These synthetic benchmarks use existing Vitest tooling and never enter the
 extension bundle. Regular `npm test` excludes them. No live page identifiers or
 credentials are required.
 
+Mandatory object-lifetime regression tests are separate: `npm run test:memory`
+runs them as part of `npm run check` and CI. See [memory test notes](../memory/README.md)
+for their scenarios and limits; the benchmarks below remain opt-in.
+
 For Firefox DOM snapshot retention, use `PERFORMANCE_DOM=1` with the same config
 and report options. It checks 30 successful and 30 rejected results with WeakRefs
 and forced GC in Node/jsdom. Native Firefox/Chrome semantics and capture timings

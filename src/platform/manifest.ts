@@ -8,6 +8,7 @@ export function browserManifest(target: string): UserManifest {
     permissions: target === 'firefox'
       ? ['activeTab', 'scripting', 'clipboardWrite', 'storage']
       : ['debugger', 'clipboardWrite', 'downloads', 'storage'],
+    ...(target === 'firefox' ? {} : { minimum_chrome_version: '125' }),
     ...(target === 'firefox' ? {
       optional_permissions: ['downloads'],
       browser_specific_settings: {

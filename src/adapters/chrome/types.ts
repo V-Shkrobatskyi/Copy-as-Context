@@ -16,7 +16,10 @@ export interface ChromeAxNode {
   nodeId: string;
   childIds?: string[];
   frameId?: string;
+  backendDOMNodeId?: number;
+  parentId?: string;
   ignored?: boolean;
+  ignoredReasons?: ChromeAxProperty[];
   role?: ChromeAxValue;
   name?: ChromeAxValue;
   value?: ChromeAxValue;

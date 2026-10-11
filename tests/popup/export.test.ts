@@ -193,6 +193,15 @@ describe('popup export flow', () => {
     expect(popup.copy.disabled).toBe(false);
   });
 
+  it('describes Chrome partial iframe capture without the Firefox omission warning', async () => {
+    const result = successfulCapture();
+    if (!result.ok) throw new Error('Expected fixture');
+    const popup = await loadPopup({ ok: true, export: prepareExport(result.tree, 'compact', 'semantic-text'), warnings: ['embedded-frames-partial'] });
+    popup.copy.click(); await settle();
+    expect(popup.clipboardWrite).toHaveBeenCalledOnce();
+    expect(popup.metrics.textContent).toContain('Some embedded documents could not be captured.');
+    expect(popup.metrics.textContent).not.toContain('Embedded frames are not included.');
+  });
   it('rejects an unknown warning rather than displaying arbitrary content', async () => {
     const result = successfulCapture();
     if (!result.ok) throw new Error('Expected fixture');

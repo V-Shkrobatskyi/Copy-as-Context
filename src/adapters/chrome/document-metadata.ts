@@ -18,8 +18,8 @@ export function addChromeDocumentMetadata(
 
   return {
     ...tree,
-    title: documentTitle(tab.title, rootTitle),
-    sourceUrl: tab.url ?? rootUrl,
+    title: documentTitle(tree.title ?? tab.title, rootTitle),
+    sourceUrl: tree.sourceUrl ?? tab.url ?? rootUrl,
     capturedAt,
     root: rootWithoutDocumentMetadata,
   };

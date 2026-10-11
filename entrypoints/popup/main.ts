@@ -301,7 +301,8 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       showFeedback(firefox ? 'Saving file in a separate tab.' : `Saved ${FORMAT_LABELS[exportFormat]} file.`);
     }
     const warnings = (response.warnings ?? []).map((code) => code === 'embedded-frames'
-      ? 'Embedded frames are not included.' : 'Canvas content is not included.').join(' ');
+      ? 'Embedded frames are not included.' : code === 'embedded-frames-partial'
+        ? 'Some embedded documents could not be captured.' : 'Canvas content is not included.').join(' ');
     metrics.textContent = formatMetrics(
       characterCount,
       approximateTokenCount,

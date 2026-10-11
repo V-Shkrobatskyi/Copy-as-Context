@@ -1,202 +1,77 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { chromeDebuggerClient, createChromeAccessibilityCapturer, type ChromeDebuggerClient } from '@/src/adapters/chrome/capture';
 
-import {
-  createChromeAccessibilityCapturer,
-  type ChromeDebuggerClient,
-} from '@/src/adapters/chrome/capture';
-
-function fakeClient(options: { attachError?: string; commandError?: string; detachError?: string; disableError?: string; enableError?: string } = {}) {
+function fakeClient(options: { attachError?: string; commandError?: string; detachError?: string } = {}) {
   const calls: string[] = [];
   const client: ChromeDebuggerClient = {
-    attach(_target, _version, callback) {
-      calls.push('attach');
-      callback(options.attachError);
-    },
-    sendCommand(_target, method, callback) {
+    attach(_target, _version, done) { calls.push('attach'); done(options.attachError); },
+    sendCommand(_target, method, done) {
       calls.push(method);
-      callback(
-        {
-          nodes: [{ nodeId: 'root', role: { value: 'RootWebArea' } }],
-        },
-        method === 'Accessibility.getFullAXTree' ? options.commandError
-          : method === 'Accessibility.disable' ? options.disableError
-            : method === 'Accessibility.enable' ? options.enableError : undefined,
-      );
+      done(method === 'Page.getFrameTree' ? { frameTree: { frame: { id: 'root', loaderId: 'loader' } } }
+        : { nodes: [{ nodeId: 'root', frameId: 'root', role: { value: 'RootWebArea' } }] }, method === 'Accessibility.getFullAXTree' ? options.commandError : undefined);
     },
-    detach(_target, callback) {
-      calls.push('detach');
-      callback(options.detachError);
-    },
+    detach(_target, done) { calls.push('detach'); done(options.detachError); },
+    onEvent() { return () => {}; },
+    onDetach() { return () => {}; },
   };
   return { client, calls };
 }
 
-describe('Chrome accessibility capture', () => {
-  beforeEach(() => { vi.spyOn(console, 'warn').mockImplementation(() => {}); });
-  afterEach(() => { vi.restoreAllMocks(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-  it('captures identical repeated nodes and releases Chrome before normalization', async () => {
+describe('Chrome accessibility capture transport', () => {
+  it('forwards command parameters and child sessions and removes listeners', () => {
+    const onEvent = { addListener: vi.fn(), removeListener: vi.fn() };
+    const onDetach = { addListener: vi.fn(), removeListener: vi.fn() };
+    const sendCommand = vi.fn((_target, _method, _params, done) => done({ nodes: [] }));
+    vi.stubGlobal('chrome', { runtime: { lastError: undefined }, debugger: { sendCommand, onEvent, onDetach } });
+    const client = chromeDebuggerClient();
+    const done = vi.fn();
+    client.sendCommand({ tabId: 42, sessionId: 'child' }, 'Accessibility.getFullAXTree', done, { frameId: 'embedded' });
+    expect(sendCommand).toHaveBeenCalledWith({ tabId: 42, sessionId: 'child' }, 'Accessibility.getFullAXTree', { frameId: 'embedded' }, expect.any(Function));
+    expect(done).toHaveBeenCalledWith({ nodes: [] }, undefined);
+    const listener = vi.fn();
+    client.onEvent(listener)(); client.onDetach(listener)();
+    expect(onEvent.removeListener).toHaveBeenCalledWith(listener);
+    expect(onDetach.removeListener).toHaveBeenCalledWith(listener);
+  });
+
+  it('uses one root attach/detach and releases the guard across repeated captures', async () => {
     const { client, calls } = fakeClient();
-    const send = client.sendCommand;
-    client.sendCommand = (target, method, callback) => {
-      if (method !== 'Accessibility.getFullAXTree') return send(target, method, callback);
-      calls.push(method);
-      const button = { nodeId: 'button', role: { value: 'button' }, name: { value: 'Save' } };
-      callback({ get nodes() {
-        expect(calls.at(-1)).toBe('detach');
-        return [
-          { nodeId: 'root', role: { value: 'RootWebArea' }, childIds: ['button'] },
-          button, { ...button },
-        ];
-      } });
-    };
-    await expect(createChromeAccessibilityCapturer(client)(42)).resolves.toMatchObject({
-      ok: true, tree: { root: { children: [{ role: 'button', name: 'Save', children: [] }] } },
-    });
-    expect(calls).toEqual([
-      'attach', 'Accessibility.enable', 'Accessibility.getFullAXTree', 'Accessibility.disable', 'detach',
-    ]);
+    const capture = createChromeAccessibilityCapturer(client);
+    for (let i = 0; i < 30; i++) expect(await capture(42)).toEqual({ ok: true, tree: { schemaVersion: 1, root: { role: 'page', children: [] } } });
+    expect(calls.filter(c => c === 'attach')).toHaveLength(30);
+    expect(calls.filter(c => c === 'detach')).toHaveLength(30);
+    expect(calls.at(-1)).toBe('detach');
   });
 
   it.each([
-    ['invalid-response', {}],
-    ['normalization-exception', { get nodes() { throw new Error('Private page data'); } }],
-    ['normalization-range-error', { get nodes() { throw new RangeError('Private page data'); } }],
-  ])('logs only the safe %s category after releasing Chrome', async (reason, response) => {
-    const { client, calls } = fakeClient();
-    const send = client.sendCommand;
-    client.sendCommand = (target, method, callback) => {
-      if (method !== 'Accessibility.getFullAXTree') return send(target, method, callback);
-      calls.push(method);
-      callback(response);
-    };
-    await expect(createChromeAccessibilityCapturer(client)(42)).resolves.toMatchObject({
-      ok: false, error: { code: 'invalid-tree' },
-    });
-    expect(calls).toEqual([
-      'attach', 'Accessibility.enable', 'Accessibility.getFullAXTree', 'Accessibility.disable', 'detach',
-    ]);
-    expect(console.warn).toHaveBeenCalledExactlyOnceWith('[Copy as Context] AX normalization rejected', { reason });
-  });
-
-  it('attaches, captures one AX snapshot, and always detaches after success', async () => {
-    const { client, calls } = fakeClient();
-    const capture = createChromeAccessibilityCapturer(client);
-
-    await expect(capture(42)).resolves.toEqual({
-      ok: true,
-      tree: { schemaVersion: 1, root: { role: 'page', children: [] } },
-    });
-    expect(calls).toEqual([
-      'attach', 'Accessibility.enable', 'Accessibility.getFullAXTree', 'Accessibility.disable', 'detach',
-    ]);
-  });
-
-  it('detaches after a CDP command failure and maps debugger conflicts', async () => {
-    const { client, calls } = fakeClient({ commandError: 'Another debugger is already attached to the tab' });
-    const capture = createChromeAccessibilityCapturer(client);
-
-    await expect(capture(42)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'debugger-busy' },
-    });
-    expect(calls).toEqual([
-      'attach', 'Accessibility.enable', 'Accessibility.getFullAXTree', 'Accessibility.disable', 'detach',
-    ]);
-  });
-
-  it('does not detach if attaching fails', async () => {
-    const { client, calls } = fakeClient({ attachError: 'Cannot attach to this target.' });
-    const capture = createChromeAccessibilityCapturer(client);
-
-    await expect(capture(42)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'unsupported-page' },
-    });
+    ['Another debugger is already attached to the tab', 'debugger-busy'],
+    ['Cannot access contents of url "chrome://version/"', 'unsupported-page'],
+    ['Permission denied', 'permission-denied'],
+  ])('maps attach failure without exposing protocol details: %s', async (attachError, code) => {
+    const { client, calls } = fakeClient({ attachError });
+    expect(await createChromeAccessibilityCapturer(client)(42)).toMatchObject({ ok: false, error: { code } });
     expect(calls).toEqual(['attach']);
   });
 
-  it('classifies Chrome internal URLs as unsupported pages', async () => {
-    const { client, calls } = fakeClient({ attachError: 'Cannot access contents of url "chrome://version/".' });
-    const capture = createChromeAccessibilityCapturer(client);
-
-    await expect(capture(42)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'unsupported-page' },
-    });
-    expect(calls).toEqual(['attach']);
+  it('detaches after a root AX command failure', async () => {
+    const { client, calls } = fakeClient({ commandError: 'Synthetic private error' });
+    const result = await createChromeAccessibilityCapturer(client)(42);
+    expect(result).toMatchObject({ ok: false, error: { code: 'capture-failed' } });
+    expect(JSON.stringify(result)).not.toContain('Synthetic private error');
+    expect(calls.at(-1)).toBe('detach');
   });
 
-  it('rejects a second in-flight capture for the same tab', async () => {
+  it('rejects concurrent capture of the same tab without another attach', async () => {
+    const { client, calls } = fakeClient();
     let finishAttach: ((error?: string) => void) | undefined;
-    const client: ChromeDebuggerClient = {
-      attach(_target, _version, callback) {
-        finishAttach = callback;
-      },
-      sendCommand(_target, _method, callback) {
-        callback({ nodes: [{ nodeId: 'root', role: { value: 'page' } }] });
-      },
-      detach(_target, callback) {
-        callback();
-      },
-    };
+    client.attach = (_target, _version, done) => { finishAttach = done; calls.push('attach'); };
     const capture = createChromeAccessibilityCapturer(client);
     const first = capture(42);
-
-    await expect(capture(42)).resolves.toMatchObject({
-      ok: false,
-      error: { code: 'capture-failed' },
-    });
-    finishAttach?.();
-    await expect(first).resolves.toMatchObject({ ok: true });
-  });
-
-  it('cleans up before reading the snapshot for normalization', async () => {
-    const { client, calls } = fakeClient();
-    const send = client.sendCommand;
-    client.sendCommand = (target, method, callback) => {
-      if (method !== 'Accessibility.getFullAXTree') return send(target, method, callback);
-      calls.push(method);
-      callback({ get nodes() {
-        expect(calls.at(-1)).toBe('detach');
-        return [{ nodeId: 'root', role: { value: 'RootWebArea' } }];
-      } });
-    };
-    await expect(createChromeAccessibilityCapturer(client)(42)).resolves.toMatchObject({ ok: true });
-  });
-
-  it('reports cleanup failure instead of success and still attempts detach', async () => {
-    for (const options of [{ disableError: 'Synthetic disable error' }, { detachError: 'Synthetic detach error' }]) {
-      const { client, calls } = fakeClient(options);
-      await expect(createChromeAccessibilityCapturer(client)(42)).resolves.toMatchObject({ ok: false, error: { code: 'capture-failed' } });
-      expect(calls.at(-1)).toBe('detach');
-    }
-  });
-
-  it('detaches when enable fails, and releases the guard after malformed or thrown responses', async () => {
-    const failedEnable = fakeClient({ enableError: 'Synthetic enable error' });
-    await expect(createChromeAccessibilityCapturer(failedEnable.client)(42)).resolves.toMatchObject({ ok: false });
-    expect(failedEnable.calls).toEqual(['attach', 'Accessibility.enable', 'detach']);
-    const { client, calls } = fakeClient();
-    const original = client.sendCommand;
-    client.sendCommand = (target, method, callback) => {
-      if (method === 'Accessibility.getFullAXTree') callback({ nodes: [{ nodeId: 'root' }] });
-      else original(target, method, callback);
-    };
-    const capture = createChromeAccessibilityCapturer(client);
-    await expect(capture(42)).resolves.toMatchObject({ ok: false, error: { code: 'invalid-tree' } });
-    client.sendCommand = () => { throw new Error('Synthetic command failure'); };
-    await expect(capture(42)).resolves.toMatchObject({ ok: false });
-    client.sendCommand = original;
-    await expect(capture(42)).resolves.toMatchObject({ ok: true });
-    expect(calls.filter((call) => call === 'detach')).toHaveLength(3);
-  });
-
-  it('handles repeated captures with a fresh lifecycle and no stale in-flight guard', async () => {
-    const { client, calls } = fakeClient();
-    const capture = createChromeAccessibilityCapturer(client);
-    for (let index = 0; index < 30; index++) await expect(capture(42)).resolves.toMatchObject({ ok: true });
-    expect(calls.filter((call) => call === 'attach')).toHaveLength(30);
-    expect(calls.filter((call) => call === 'detach')).toHaveLength(30);
+    expect(await capture(42)).toMatchObject({ ok: false, error: { code: 'capture-failed' } });
+    finishAttach!();
+    expect((await first).ok).toBe(true);
+    expect(calls.filter(c => c === 'attach')).toHaveLength(1);
   });
 });

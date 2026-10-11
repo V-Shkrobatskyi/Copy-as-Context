@@ -27,11 +27,20 @@ interface ChromeApi {
   debugger: {
     attach(target: { tabId: number }, requiredVersion: string, callback: () => void): void;
     sendCommand(
-      target: { tabId: number },
+      target: { tabId: number; sessionId?: string },
       method: string,
+      params: Record<string, unknown>,
       callback: (result: unknown) => void,
     ): void;
     detach(target: { tabId: number }, callback: () => void): void;
+    onEvent: {
+      addListener(listener: (source: { tabId?: number; sessionId?: string }, method: string, params: unknown) => void): void;
+      removeListener(listener: (source: { tabId?: number; sessionId?: string }, method: string, params: unknown) => void): void;
+    };
+    onDetach: {
+      addListener(listener: (source: { tabId?: number }, reason: string) => void): void;
+      removeListener(listener: (source: { tabId?: number }, reason: string) => void): void;
+    };
   };
   tabs: {
     query(queryInfo: { active: boolean; lastFocusedWindow: boolean }): Promise<ChromeTab[]>;

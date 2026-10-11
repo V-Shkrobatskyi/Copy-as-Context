@@ -80,6 +80,7 @@ function compactRoot(root: SemanticNode): SemanticNode {
 }
 
 function compactNode(node: SemanticNode, ancestorLabels: Map<string, number>): SemanticNode[] {
+  if (node.role === 'page' || node.role === 'embedded-document') ancestorLabels = new Map();
   if (node.role === 'InlineTextBox') return [];
 
   const ownLabel = normalizedLabel(node.name);
@@ -148,7 +149,7 @@ function compactStates(states: NonNullable<SemanticNode['states']>): NonNullable
 }
 
 const LINK_SCOPE_ROLES = new Set([
-  'page', 'main', 'navigation', 'list', 'menu', 'menubar', 'tablist', 'toolbar', 'dialog', 'form', 'table', 'row',
+  'page', 'embedded-document', 'main', 'navigation', 'list', 'menu', 'menubar', 'tablist', 'toolbar', 'dialog', 'form', 'table', 'row',
 ]);
 
 /**

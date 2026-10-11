@@ -39,4 +39,11 @@ describe('Chrome document metadata', () => {
     expect(result.title).toBe('Browser title');
     expect(result.sourceUrl).toBe('https://app.example.test/secrets');
   });
+
+  it('preserves metadata verified during capture rather than a stale tab query', () => {
+    const result = addChromeTabDocumentMetadata({ ...tree, title: 'Captured title', sourceUrl: 'https://example.test/current' },
+      { title: 'Old tab title', url: 'https://example.test/old' }, '2026.10.11 12:00:00');
+    expect(result.title).toBe('Captured title');
+    expect(result.sourceUrl).toBe('https://example.test/current');
+  });
 });
