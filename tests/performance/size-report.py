@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Vitalii Shkrobatskyi
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Report uncompressed build and deterministic ZIP sizes without creating a ZIP."""
 import io
 import json

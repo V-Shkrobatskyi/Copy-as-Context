@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { renderExportAttribution } from './attribution';
 import type { NodeStates, SemanticNode, SemanticTree, SerializedContext } from '..';
 import { measureMarkdownEncoding, renderMarkdownHeader, serializeMarkdown } from './markdown';

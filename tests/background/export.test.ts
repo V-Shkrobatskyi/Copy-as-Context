@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 // noinspection ES6PreferShortImport
 // Keep direct module imports in this test; the protocol has no parent barrel.
 

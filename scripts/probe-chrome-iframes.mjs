@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** Opt-in native CDP probe. Uses isolated synthetic pages, not the user's browser profile. */
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';

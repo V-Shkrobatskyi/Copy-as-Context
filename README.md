@@ -103,7 +103,15 @@ You can [support development via PrivatBank (UAH)](https://www.privat24.ua/send/
 
 ## License
 
-[MIT](LICENSE)
+Copyright (c) 2026 Vitalii Shkrobatskyi. Starting with the upcoming 1.1.0 release,
+Copy as Context is licensed under the [GNU General Public License version 3 only](LICENSE)
+(`GPL-3.0-only`). You may use it personally or commercially, modify it, and
+redistribute it under those terms. It comes without warranty.
+
+Previously distributed MIT versions remain available under their original terms.
+Third-party components retain their own notices; see
+[THIRD_PARTY_NOTICES.txt](public/THIRD_PARTY_NOTICES.txt).
+See [licensing details](LICENSING.md) and [source build instructions](BUILDING.md).
 
 To run the opt-in Chrome iframe probe on isolated local fixtures:
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 export type FrameVisibility = 'visible' | 'hidden' | 'technical' | 'unknown';
 
 /** Inspect only the owner and its ancestors before reading an embedded document. */

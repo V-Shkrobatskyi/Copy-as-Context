@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFirefoxCapturer, type FrameInjection } from '@/src/adapters/firefox/capture-frames';
 import type { FrameSnapshot } from '@/src/adapters/firefox/frame-contract';

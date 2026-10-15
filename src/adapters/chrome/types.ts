@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Minimal Chromium DevTools Protocol-shaped input used by the future Chrome adapter.
  * It stays adapter-local so CDP identifiers and properties cannot leak into the core.

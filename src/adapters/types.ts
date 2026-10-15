@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { CaptureError, SemanticTree } from '../core';
 import type { CaptureWarningCode } from '../capture-warnings';
 

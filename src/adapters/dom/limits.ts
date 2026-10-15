@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 export const DOM_CAPTURE_LIMITS = {
   maxNodes: 20_000,
   maxVisited: 100_000,

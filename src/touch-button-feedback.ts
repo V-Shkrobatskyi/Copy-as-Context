@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** Show Android presses independently of Gecko's native CSS :active state. */
 export function installTouchButtonFeedback(button: HTMLButtonElement, isAndroid: () => boolean): void {
   const clear = () => {

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { SupportedExportFormat } from './core';
 
 export function contextBlob(content: string, format: SupportedExportFormat): Blob {

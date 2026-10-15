@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { browser } from 'wxt/browser';
 import { resolveBrowserInfo, type BrowserInfoDependencies } from '../src/platform/browser-info';
 import { captureActiveTab } from '../src/adapters/capture';

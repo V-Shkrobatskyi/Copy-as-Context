@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** A browser-independent state extracted from an accessible UI node. */
 export interface NodeStates {
   checked?: boolean | 'mixed';

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { describe, expect, it } from 'vitest';
 import { wrapClipboardContext } from '@/src/clipboard-context';
 import { prepareExport, type SemanticTree } from '@/src/core';

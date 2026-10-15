@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChromeDebuggerClient } from '@/src/adapters/chrome/capture';
 import { createFrameCapturer } from '@/src/adapters/chrome/capture-frames';

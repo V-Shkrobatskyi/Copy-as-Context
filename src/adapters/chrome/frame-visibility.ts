@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** Executed against the iframe owner, without reading page text or form values. */
 export function inspectFrameOwner(this: Element): 'visible' | 'hidden' | 'technical' | 'unknown' {
   if (!this.isConnected || !this.ownerDocument.defaultView) return 'unknown';

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { SemanticNode } from '../model';
 
 const EMPTY_LEAF_STRUCTURAL_ROLES = new Set(['group', 'log', 'sectionheader']);

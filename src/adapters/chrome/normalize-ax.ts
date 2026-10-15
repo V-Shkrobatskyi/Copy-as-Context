@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { CaptureResult, NodeStates, SemanticNode, SemanticTree } from '../../core';
 
 import type { ChromeAxNode, ChromeAxProperty, ChromeAxTreeResponse, ChromeAxValue } from './types';
