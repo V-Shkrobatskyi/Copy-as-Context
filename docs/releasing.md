@@ -66,7 +66,7 @@ ZIP once for Desktop and Android. Create extension and source ZIPs from the same
 source revision, without edits between them. The Firefox package checker compares
 uncompressed files with the build and prints hashes.
 
-The upcoming 1.1.0 release is the first GPL-3.0-only release. Keep previously
+The upcoming 1.2.0 release is the first GPL-3.0-only release. Keep previously
 distributed MIT artifacts unchanged. Include LICENSE, LICENSING.md and third-party
 notices in sources; verify LICENSE, license.html and THIRD_PARTY_NOTICES.txt in
 both browser packages. Check that license.html contains the actual package version

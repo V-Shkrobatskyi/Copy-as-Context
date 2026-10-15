@@ -1,8 +1,10 @@
 # Changelog
 
-## 1.1.0 — unreleased
+## 1.2.0 — unreleased
 
 - License this release under GPL-3.0-only and add an offline license and source-code page. Previously distributed MIT versions retain their original license; bundled third-party notices are preserved.
+
+## 1.1.0 — draft
 
 - Capture eligible iframe documents in Chrome and Firefox while preserving their page positions and document boundaries.
 - Capture available same-origin iframe documents by default in Firefox Desktop and Android.
