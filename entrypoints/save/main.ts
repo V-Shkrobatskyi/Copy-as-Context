@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import './style.css';
 import { browser } from 'wxt/browser';
 import { contextBlob, contextDownloadOptions } from '@/src/download-context';

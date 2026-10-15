@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import { inspectFrameOwner } from '@/src/adapters/chrome/frame-visibility';

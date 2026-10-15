@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** Conservative local cost model calibrated with cl100k_base/o200k_base (not a tokenizer). */
 export function estimateEncodingCost(text: string): number {
   let cost = 0;

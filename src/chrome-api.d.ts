@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Minimal Chrome extension API surface used by this project. Keeping it local
  * avoids a broad ambient dependency while preserving strict types at the browser

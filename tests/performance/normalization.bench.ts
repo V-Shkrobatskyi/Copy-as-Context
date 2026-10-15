@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { expect, it } from 'vitest';

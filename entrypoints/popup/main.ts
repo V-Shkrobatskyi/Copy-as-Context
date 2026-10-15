@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { openFirefoxSave } from '@/src/firefox-save';
 import { installTouchButtonFeedback } from '@/src/touch-button-feedback';
 import '@popup-style.css';
@@ -134,7 +137,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <p class="status" role="status" aria-live="polite"></p>
       <p class="metrics" aria-live="polite"></p>
     </section>
-    <footer class="help"><span>New here?</span> <a id="guide-link" target="_blank" rel="noopener">View the quick guide</a></footer>
+    <footer class="help"><span>New here?</span> <a id="guide-link" target="_blank" rel="noopener">View the quick guide</a> · <a href="/license.html" target="_blank" rel="noopener">License</a></footer>
 
   </main>
 `;

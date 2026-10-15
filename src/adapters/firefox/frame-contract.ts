@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { CaptureOutcome } from '../types';
 import type { DomCaptureLimits } from '../dom/limits';
 import type { DomCaptureWork } from '../dom/capture';

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -13,14 +16,17 @@ const extension = await JSZip.loadAsync(await readFile(archiveName));
 const source = await JSZip.loadAsync(await readFile(sourceName));
 const paths = (zip) => Object.values(zip.files).filter((file) => !file.dir).map((file) => file.name).sort();
 const safe = (path) => assert.ok(!path.startsWith('/') && !path.includes('\\') && !path.split('/').includes('..'), `Unsafe ZIP path: ${path}`);
-const allowedRoots = new Set(['package.json', 'package-lock.json', 'wxt.config.ts', 'tsconfig.json', 'vitest.config.ts', 'README.md', 'CONTRIBUTING.md', 'LICENSE', 'BUILDING.md', 'CHANGELOG.md', 'PRIVACY.md', '.nvmrc', 'entrypoints', 'src', 'public', 'scripts', 'tests', 'docs']);
+const allowedRoots = new Set(['package.json', 'package-lock.json', 'wxt.config.ts', 'tsconfig.json', 'vitest.config.ts', 'README.md', 'CONTRIBUTING.md', 'LICENSE', 'LICENSING.md', 'BUILDING.md', 'CHANGELOG.md', 'PRIVACY.md', '.nvmrc', 'entrypoints', 'src', 'public', 'scripts', 'tests', 'docs']);
 for (const path of paths(source)) {
   safe(path);
   assert.ok(allowedRoots.has(path.split('/')[0]), `Unapproved source root: ${path}`);
   assert.ok(!/(?:^|\/)(?:dev_notes|node_modules|\.git|\.agents|\.codex|\.wxt|\.output|\.env[^/]*|\.DS_Store)(?:\/|$)/u.test(path), `Private/generated source content: ${path}`);
   assert.ok(!/\.(?:pem|key|p12|pfx|log)$/iu.test(path), `Unexpected private artifact: ${path}`);
 }
-for (const required of ['package.json', 'package-lock.json', 'wxt.config.ts', 'tsconfig.json', 'BUILDING.md', 'LICENSE', 'PRIVACY.md', '.nvmrc', 'src/platform/manifest.ts', 'src/download-context.ts', 'entrypoints/background.ts', 'entrypoints/dom-capture.ts', 'public/THIRD_PARTY_NOTICES.txt']) assert.ok(source.file(required), `Missing reviewer source: ${required}`);
+for (const required of ['package.json', 'package-lock.json', 'wxt.config.ts', 'tsconfig.json', 'BUILDING.md', 'LICENSE', 'LICENSING.md', 'PRIVACY.md', '.nvmrc', 'src/platform/manifest.ts', 'src/download-context.ts', 'entrypoints/background.ts', 'entrypoints/dom-capture.ts', 'public/license.html', 'public/THIRD_PARTY_NOTICES.txt']) assert.ok(source.file(required), `Missing reviewer source: ${required}`);
+for (const required of ['LICENSE', 'LICENSING.md', 'public/THIRD_PARTY_NOTICES.txt']) {
+  assert.equal(await source.file(required).async('string'), await readFile(required, 'utf8'), `Source notice mismatch: ${required}`);
+}
 assert.equal(await source.file('package-lock.json').async('string'), await readFile('package-lock.json', 'utf8'));
 assert.equal(await source.file('package.json').async('string'), await readFile('package.json', 'utf8'));
 

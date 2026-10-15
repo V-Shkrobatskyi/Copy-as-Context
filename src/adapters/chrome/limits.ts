@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** Shared per-capture budgets; AX responses are checked before recursive normalization. */
 export const CHROME_CAPTURE_LIMITS = {
   documents: 32,

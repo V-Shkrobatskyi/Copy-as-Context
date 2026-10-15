@@ -2,6 +2,12 @@
 
 Thanks for contributing.
 
+## License
+
+Original project contributions are accepted under GPL-3.0-only. Only submit work
+you have the right to contribute under those terms, and preserve third-party
+copyright and license notices. See [LICENSING.md](LICENSING.md).
+
 ## Development setup
 
 Use Node.js 24.10.0 (see `.nvmrc`) and npm 11.6.0. CI uses the same Node version:

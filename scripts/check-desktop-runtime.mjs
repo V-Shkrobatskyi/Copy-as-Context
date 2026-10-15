@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import assert from 'node:assert/strict';
 import { spawn, execFile } from 'node:child_process';
 import { mkdtemp, readFile, readdir, rm, mkdir, writeFile } from 'node:fs/promises';

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { setImmediate } from 'node:timers/promises';
 import { describe, expect, it } from 'vitest';
 import type { ChromeDebuggerClient } from '@/src/adapters/chrome/capture';

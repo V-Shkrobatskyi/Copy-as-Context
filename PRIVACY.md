@@ -1,6 +1,6 @@
 # Privacy policy for Copy as Context
 
-Last updated: 2026-10-11. Applies to version 1.1.0.
+Last updated: 2026-10-16. Applies to version 1.2.0.
 
 ## Purpose and local processing
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import type { SemanticTree } from './model';
 
 export const COMPRESSION_LEVELS = ['without', 'detailed', 'compact', 'maximum'] as const;

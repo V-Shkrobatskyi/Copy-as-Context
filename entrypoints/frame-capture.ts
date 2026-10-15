@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { browser } from 'wxt/browser';
 import { createFrameHandler } from '../src/adapters/firefox/frame-helper';
 import type { FrameGlobal } from '../src/adapters/firefox/frame-contract';

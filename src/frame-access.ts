@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 /** Only query-free, exact HTTP(S) host patterns may cross the capture/UI boundary. */
 export function isFrameAccess(value: unknown): value is string[] {
   return Array.isArray(value) && value.length <= 128 && new Set(value).size === value.length && value.every(pattern => {

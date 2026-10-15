@@ -19,8 +19,8 @@ npm run zip:firefox
 ```
 
 The installed extension files are in `.output/firefox-mv3/`. The unsigned archive
-is `.output/copy-as-context-1.1.0-firefox.zip`; the accompanying source archive is
-`.output/copy-as-context-1.1.0-sources.zip`. Filenames use the package version, so
+is `.output/copy-as-context-1.2.0-firefox.zip`; the accompanying source archive is
+`.output/copy-as-context-1.2.0-sources.zip`. Filenames use the package version, so
 they change when the version changes. Compare uncompressed file paths and bytes
 with the submitted extension ZIP; ZIP container timestamps are not build content.
 
@@ -34,7 +34,9 @@ NO_UPDATE_NOTIFIER=1 npm run lint:firefox
 Use the source archive's `package-lock.json` and `npm ci`, without upgrading
 dependencies or running `npm audit fix`. Build and test tools are development
 dependencies; production code includes only the project and small WXT helpers.
-Project MIT license and third-party notices are copied into every browser build.
+Project GPLv3-only license and third-party notices are copied into every browser build.
+The bundled `license.html` links to the matching version's public source tag
+and release archive. See [LICENSING.md](LICENSING.md) for licensing scope.
 
 The source ZIP uses an explicit allowlist. It excludes local plans and reports
 in `dev_notes/`, `.git`, `.agents`, `.codex`, environment files, credentials,
@@ -50,7 +52,7 @@ Full contributor checks run from the repository with `npm run check`.
 npm run zip
 ```
 
-The Chrome package is `.output/copy-as-context-1.1.0-chrome.zip`, built from
+The Chrome package is `.output/copy-as-context-1.2.0-chrome.zip`, built from
 `.output/chrome-mv3/`. Upload the extension ZIP, not the reviewer sources.
 
 ## Shared Firefox Desktop and Android package

@@ -11,7 +11,7 @@ package; adjust browser-specific details when preparing a Chrome listing.
 - Support email: copyascontext@gmail.com
 - Support website: https://github.com/V-Shkrobatskyi/Copy-as-Context/issues
 - Homepage: https://github.com/V-Shkrobatskyi/Copy-as-Context
-- License: MIT
+- License: GNU General Public License v3.0 only (GPL-3.0-only)
 - Privacy policy: https://github.com/V-Shkrobatskyi/Copy-as-Context/blob/main/PRIVACY.md
 
 ## Short description
@@ -33,6 +33,12 @@ Firefox approximates HTML/ARIA semantics in the main document, supported open we
 Firefox always omits password input values. Credential redaction is heuristic and may miss sensitive information. Review exports before sharing them; page text can include untrusted instructions aimed at AI assistants. Token estimates are not model-specific tokenization.
 
 Voluntary developer-support links do not unlock functionality or affect export behavior.
+
+Free software licensed under GNU GPL version 3 only. Personal and commercial use
+are permitted. The extension's License page provides the full terms and links to
+the corresponding source for the installed version. When publishing, add the
+verified public `https://github.com/V-Shkrobatskyi/Copy-as-Context/releases/tag/vX.Y.Z`
+URL for that release; replace X.Y.Z with the submitted version.
 
 ## Permission justifications
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 interface Brand { brand: string; version: string }
 export interface BrowserInfoDependencies {
   getBrowserInfo?: () => Promise<{ name: string; version: string }>;

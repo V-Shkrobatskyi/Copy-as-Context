@@ -1,8 +1,16 @@
+// Copyright (c) 2026 Vitalii Shkrobatskyi
+// SPDX-License-Identifier: GPL-3.0-only
+
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
+
+const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+const projectLicense = await readFile(new URL('../LICENSE', import.meta.url), 'utf8');
+const thirdPartyNotices = await readFile(new URL('../public/THIRD_PARTY_NOTICES.txt', import.meta.url), 'utf8');
+assert.equal(pkg.license, 'GPL-3.0-only');
 
 async function javascript(directory) {
   const contents = await Promise.all((await readdir(directory, { withFileTypes: true })).map(async (entry) => {
@@ -20,6 +28,20 @@ for (const target of ['chrome', 'firefox']) {
   const manifest = JSON.parse(await readFile(new URL('manifest.json', directory), 'utf8'));
   assert.equal(manifest.manifest_version, 3);
   assert.ok(manifest.action.default_popup);
+  assert.equal(await readFile(new URL('LICENSE', directory), 'utf8'), projectLicense);
+  assert.equal(await readFile(new URL('THIRD_PARTY_NOTICES.txt', directory), 'utf8'), thirdPartyNotices);
+  const licensePage = await readFile(new URL('license.html', directory), 'utf8');
+  assert.ok(!licensePage.includes('__EXTENSION_VERSION__'), 'License page has unresolved version placeholders');
+  const licenseDocument = new JSDOM(licensePage);
+  try {
+    const links = [...licenseDocument.window.document.querySelectorAll('a')].map(link => link.getAttribute('href'));
+    assert.ok(links.includes('LICENSE'), 'License page does not link to the bundled license');
+    assert.ok(links.includes('THIRD_PARTY_NOTICES.txt'), 'License page does not link to third-party notices');
+    for (const path of ['releases/tag', 'tree']) {
+      assert.ok(links.includes(`https://github.com/V-Shkrobatskyi/Copy-as-Context/${path}/v${pkg.version}`), 'License page links to the wrong source version');
+    }
+  } finally { licenseDocument.window.close(); }
+  assert.ok((await readFile(new URL(manifest.action.default_popup, directory), 'utf8')).length > 0);
   assert.ok(!manifest.host_permissions?.length);
   assert.ok(!manifest.content_scripts?.length);
   const source = await javascript(fileURLToPath(directory));
