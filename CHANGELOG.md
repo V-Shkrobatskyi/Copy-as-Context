@@ -2,6 +2,8 @@
 
 ## 1.1.0 — unreleased
 
+- License this release under GPL-3.0-only and add an offline license and source-code page. Previously distributed MIT versions retain their original license; bundled third-party notices are preserved.
+
 - Capture eligible iframe documents in Chrome and Firefox while preserving their page positions and document boundaries.
 - Capture available same-origin iframe documents by default in Firefox Desktop and Android.
 - Add an optional Firefox switch for other-site frames with one request for access to all HTTP/HTTPS websites and access removal when disabled.

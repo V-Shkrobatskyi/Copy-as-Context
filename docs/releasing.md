@@ -66,6 +66,20 @@ ZIP once for Desktop and Android. Create extension and source ZIPs from the same
 source revision, without edits between them. The Firefox package checker compares
 uncompressed files with the build and prints hashes.
 
+The upcoming 1.1.0 release is the first GPL-3.0-only release. Keep previously
+distributed MIT artifacts unchanged. Include LICENSE, LICENSING.md and third-party
+notices in sources; verify LICENSE, license.html and THIRD_PARTY_NOTICES.txt in
+both browser packages. Check that license.html contains the actual package version
+and links to its matching `vX.Y.Z` tag and release, with no template placeholders.
+
+Before distributing a GPL build through either store, publish its `vX.Y.Z` tag
+and corresponding-source archive in a public GitHub Release and verify anonymous
+access to both links from the bundled License page. Include the lockfile and all
+files needed by BUILDING.md. Link to that release in each store listing as well.
+Private reviewer sources alone are not sufficient. Chrome users need public
+corresponding sources too. If a version's code or packages change after publishing
+these artifacts, prepare a new version instead of silently replacing old sources.
+
 Rebuild a submitted source archive from a clean directory following BUILDING.md
 and compare paths and bytes with the extension ZIP. ZIP timestamps do not need
 to match. The reviewer archive omits unit tests, so use the build commands rather
@@ -81,7 +95,7 @@ public content without personal account details.
   privacy declarations and permission explanations. Check the current
   [image requirements](https://developer.chrome.com/docs/webstore/images).
 - Mozilla Add-ons: prepare the Mozilla account, shared Firefox ZIP, matching
-  sources, Desktop/Android compatibility, MIT license and reviewer notes.
+  sources, Desktop/Android compatibility, GPLv3-only license and reviewer notes.
 
 The privacy policy is [PRIVACY.md](../PRIVACY.md), included offline as
 `privacy.html`. Its public URL is

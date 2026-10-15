@@ -34,7 +34,9 @@ NO_UPDATE_NOTIFIER=1 npm run lint:firefox
 Use the source archive's `package-lock.json` and `npm ci`, without upgrading
 dependencies or running `npm audit fix`. Build and test tools are development
 dependencies; production code includes only the project and small WXT helpers.
-Project MIT license and third-party notices are copied into every browser build.
+Project GPLv3-only license and third-party notices are copied into every browser build.
+The bundled `license.html` links to the matching version's public source tag
+and release archive. See [LICENSING.md](LICENSING.md) for licensing scope.
 
 The source ZIP uses an explicit allowlist. It excludes local plans and reports
 in `dev_notes/`, `.git`, `.agents`, `.codex`, environment files, credentials,

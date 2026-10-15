@@ -20,7 +20,7 @@ Use the filenames generated for the version in `package.json`.
 | Required permissions | activeTab, scripting, clipboardWrite, storage |
 | Optional permissions | downloads for Desktop Save; all HTTP/HTTPS hosts only when Include frames from other sites is enabled |
 | Data collection | `browser_specific_settings.gecko.data_collection_permissions.required: ["none"]` |
-| License | MIT |
+| License | GNU General Public License v3.0 only (GPL-3.0-only) |
 
 The manifest declarations are defined in `src/platform/manifest.ts`. Desktop
 supports Copy and Save; Android supports Copy only. Local capture and export
@@ -49,5 +49,8 @@ behavior is described in [capture-and-export.md](capture-and-export.md).
 Mozilla documents the current [submission process](https://extensionworkshop.com/documentation/publish/submitting-an-add-on/)
 and [source requirements](https://extensionworkshop.com/documentation/publish/source-code-submission/).
 Attach matching readable sources to each version built with bundling or
-minification. The [built-in data consent guide](https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/)
+minification. Also publish corresponding sources for users as described in the
+[release guide](releasing.md); reviewer-only uploads do not satisfy that step.
+Select the GPL version 3 only license entry, not the "or later" variant.
+The [built-in data consent guide](https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/)
 explains the manifest's declaration for extensions without data transmission.
