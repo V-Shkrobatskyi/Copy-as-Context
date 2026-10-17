@@ -4,6 +4,14 @@ Copy a compact, semantic representation of the current page into an AI conversat
 
 ![Copy as Context icon](public/icon/128.png)
 
+## Demo video
+
+[![Watch the Copy as Context demo on YouTube](https://i.ytimg.com/vi/6NjQ28gr5ZE/hqdefault.jpg)](https://www.youtube.com/watch?v=6NjQ28gr5ZE)
+
+[Watch on YouTube](https://www.youtube.com/watch?v=6NjQ28gr5ZE).
+
+## Example export
+
 Example clipboard export using **Compact Semantic Text** with credential redaction enabled. The page, browser version, timestamp and extension version below are illustrative metadata:
 
 ```text
@@ -24,7 +32,12 @@ The export includes semantic structure and control states. Paste it into an LLM 
 
 ## Installation
 
-Store installation links will be added here when the listings are published. For development or local evaluation, build and load the extension as described below.
+Install Copy as Context from your browser's extension store:
+
+- **Chrome Desktop:** [Chrome Web Store](https://chromewebstore.google.com/detail/copy-as-context/ghkjolcdeccimnjhdebaklffpekfmojd).
+- **Firefox Desktop and Android:** [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/copy-as-context/).
+
+### Local development installation
 
 For local installation, use Node.js 24.10.0 and npm 11.6.0:
 
