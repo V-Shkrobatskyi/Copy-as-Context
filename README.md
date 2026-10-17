@@ -4,6 +4,14 @@ Copy a compact, semantic representation of the current page into an AI conversat
 
 ![Copy as Context icon](public/icon/128.png)
 
+## Demo video
+
+[![Watch the Copy as Context demo on YouTube](https://i.ytimg.com/vi/6NjQ28gr5ZE/hqdefault.jpg)](https://www.youtube.com/watch?v=6NjQ28gr5ZE)
+
+[Watch on YouTube](https://www.youtube.com/watch?v=6NjQ28gr5ZE).
+
+## Example export
+
 Example clipboard export using **Compact Semantic Text** with credential redaction enabled. The page, browser version, timestamp and extension version below are illustrative metadata:
 
 ```text
