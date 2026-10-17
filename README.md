@@ -32,7 +32,12 @@ The export includes semantic structure and control states. Paste it into an LLM 
 
 ## Installation
 
-Store installation links will be added here when the listings are published. For development or local evaluation, build and load the extension as described below.
+Install Copy as Context from your browser's extension store:
+
+- **Chrome Desktop:** [Chrome Web Store](https://chromewebstore.google.com/detail/copy-as-context/ghkjolcdeccimnjhdebaklffpekfmojd).
+- **Firefox Desktop and Android:** [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/copy-as-context/).
+
+### Local development installation
 
 For local installation, use Node.js 24.10.0 and npm 11.6.0:
 
