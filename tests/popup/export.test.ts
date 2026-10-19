@@ -134,7 +134,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
     querySelector: <T extends Element>(selector: string): T | null =>
       (elements.get(selector) as unknown as T | undefined) ?? null,
   });
-  vi.stubGlobal('window', { addEventListener: vi.fn() });
+  vi.stubGlobal('window', { addEventListener: vi.fn(), close: vi.fn() });
   vi.stubGlobal('navigator', { clipboard: { writeText: clipboardWrite }, userAgent: options?.android ? 'Firefox Android' : 'Firefox Desktop' });
   const extensionApi = {
     tabs: { create: vi.fn().mockResolvedValue({ id: 2 }), remove: vi.fn().mockResolvedValue(undefined) },
@@ -196,15 +196,34 @@ afterEach(() => {
 });
 
 describe('popup export flow', () => {
-  it('opens Customize without capturing content or changing privacy preferences', async () => {
-    const popup = await loadPopup(successfulCapture());
+  it.each([{ firefox: false }, { firefox: true }, { firefox: true, android: true }])('opens Customize and dismisses the popup without changing privacy preferences: %j', async options => {
+    const popup = await loadPopup(successfulCapture(), options);
     popup.customize.click(); await settle();
-    expect(popup.createTab).toHaveBeenCalledExactlyOnceWith({ url: expect.stringContaining('/filters.html') });
+    expect(popup.createTab).toHaveBeenCalledExactlyOnceWith({ url: expect.stringContaining('/filters.html'), active: true });
+    expect(window.close).toHaveBeenCalledOnce();
     expect(popup.sendMessage).not.toHaveBeenCalled();
     expect(popup.storageSet).not.toHaveBeenCalled();
     expect(popup.clipboardWrite).not.toHaveBeenCalled();
     expect(popup.app.innerHTML).toContain('Customize');
     expect(popup.app.innerHTML).toContain('Preview &amp; edit');
+  });
+
+  it('waits until the settings tab opens before dismissing the Android popup', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true, android: true });
+    let openTab!: (tab: { id: number }) => void;
+    popup.createTab.mockReturnValueOnce(new Promise(resolve => { openTab = resolve; }));
+    popup.customize.click(); await settle();
+    expect(window.close).not.toHaveBeenCalled();
+    openTab({ id: 2 }); await settle();
+    expect(window.close).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the Android popup open and shows an error if Customize cannot open', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true, android: true });
+    popup.createTab.mockRejectedValueOnce(new Error('tab unavailable'));
+    popup.customize.click(); await settle();
+    expect(window.close).not.toHaveBeenCalled();
+    expect(popup.status.textContent).toContain('Unable to open filter settings. Try again.');
   });
 
   it.each([{ firefox: false }, { firefox: true }, { firefox: true, android: true }])('opens Preview without copying, downloading or requesting permissions: %j', async options => {
@@ -222,10 +241,23 @@ describe('popup export flow', () => {
       redactSensitiveData: true, redactionCount: 1, reductionRatio: expect.any(Number), warnings: [],
     }));
     expect(previewMock.mock.calls[0]![0].content).not.toContain(SECRET);
+    expect(window.close).toHaveBeenCalledOnce();
     expect(popup.clipboardWrite).not.toHaveBeenCalled();
     expect(popup.download).not.toHaveBeenCalled();
     expect(popup.requestPermission).not.toHaveBeenCalled();
     expect(popup.preview.disabled).toBe(false);
+  });
+
+  it('keeps the Android popup open until Preview receives its content and becomes active', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true, android: true });
+    let ready!: () => void;
+    previewMock.mockReturnValueOnce(new Promise<void>(resolve => { ready = resolve; }));
+    popup.preview.click(); await settle();
+    expect(previewMock).toHaveBeenCalledOnce();
+    expect(window.close).not.toHaveBeenCalled();
+    expect(popup.preview.disabled).toBe(true);
+    ready(); await settle();
+    expect(window.close).toHaveBeenCalledOnce();
   });
 
   it('handles a failed preview transfer and allows another attempt', async () => {
@@ -233,6 +265,7 @@ describe('popup export flow', () => {
     previewMock.mockRejectedValueOnce(new Error('synthetic private details'));
     popup.preview.click(); await settle();
     expect(popup.status.textContent).toContain('Unable to open the preview');
+    expect(window.close).not.toHaveBeenCalled();
     expect(popup.status.textContent).not.toContain('synthetic private details');
     expect(popup.preview.disabled).toBe(false);
     popup.preview.click(); await settle();

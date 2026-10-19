@@ -304,6 +304,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
         warnings: response.warnings ?? [],
       });
       showFeedback('Preview opened. Nothing has been copied.');
+      window.close();
       return;
     }
     if (action === 'copy') {
@@ -337,7 +338,9 @@ async function exportPageContext(action: ExportAction): Promise<void> {
 
 customizeButton.addEventListener('click', () => {
   if (exportPending || frameAccessToggle?.pending) return;
-  void browser.tabs.create({ url: browser.runtime.getURL('/filters.html') }).catch(() => showFeedback('Unable to open filter settings. Try again.'));
+  void browser.tabs.create({ url: browser.runtime.getURL('/filters.html'), active: true })
+    .then(() => window.close())
+    .catch(() => showFeedback('Unable to open filter settings. Try again.'));
 });
 previewButton.addEventListener('click', () => void exportPageContext('preview'));
 copyButton.addEventListener('click', () => void exportPageContext('copy'));
