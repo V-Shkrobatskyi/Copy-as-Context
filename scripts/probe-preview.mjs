@@ -142,7 +142,7 @@ try {
       const text=document.querySelector('.custom-rule textarea');
       const label=document.querySelector('#test-field-label');
       const sample=document.querySelector('#test-input');
-      const type=document.querySelector('.custom-rule select');
+      const type=document.querySelector('.custom-rule .rule-type-value select');
       const choose=value=>{type.value=value;type.dispatchEvent(new Event('change'));};
       text.value='pass / private code'; text.dispatchEvent(new Event('input'));
       choose('fieldLabels'); label.value='Pass phrase'; sample.value='short value'; document.querySelector('#test-filters').click();
@@ -160,7 +160,7 @@ try {
       document.querySelector('#add-rule').click();
       const name=document.querySelector('.custom-rule:last-child input[type=text]'); name.value='URL secrets'; name.dispatchEvent(new Event('input'));
       const text=document.querySelector('.custom-rule:last-child textarea'); text.value='client_key / private_token'; text.dispatchEvent(new Event('input'));
-      const type=document.querySelector('.custom-rule:last-child select'); type.value='urlParameters'; type.dispatchEvent(new Event('change'));
+      const type=document.querySelector('.custom-rule:last-child .rule-type-value select'); type.value='urlParameters'; type.dispatchEvent(new Event('change'));
       document.querySelector('#test-input').value='https://example.test/client_key?client_key=abc&private_token=xyz&public=keep';
       document.querySelector('#test-filters').click(); const output=document.querySelector('#test-output').value;
       document.querySelectorAll('.builtin td:first-child input').forEach((input,index)=>{if(input.checked!==states[index])input.click();});
@@ -192,12 +192,12 @@ try {
       try { return JSON.parse(await readFile(resolve(downloads, 'copy-as-context-filters.json'), 'utf8')); }
       catch { return undefined; }
     }, 'downloaded filters file');
-    assert.equal(exported.version, 7);
-    assert.equal(exported.availableRuleTypes.length, 11);
+    assert.equal(exported.version, 13);
+    assert.equal(exported.availableRuleTypes.length, 17);
     assert.ok(exported.availableRuleTypes.some(type => type.id === 'fieldWords' && type.scope === 'fields'));
     assert.ok(exported.filters.every(filter => !('fieldLabels' in filter) && !('urlParameters' in filter)));
     assert.equal(await evaluate(settings.id, 'document.querySelectorAll("thead th").length'), 6);
-    assert.equal(exported.filters.filter(filter => filter.source === 'builtin').length, 8);
+    assert.equal(exported.filters.filter(filter => filter.source === 'builtin').length, 16);
     assert.equal(exported.filters.find(filter => filter.id === 'github').enabled, false);
     assert.equal(exported.filters.find(filter => filter.id === 'aws').caseSensitive, false);
     assert.equal(exported.filters.find(filter => filter.id === 'query-values').type, 'urlParameters');
@@ -233,7 +233,7 @@ try {
     assert.ok(result.status.includes('Filters saved'), result.status);
     assert.equal(result.config.customRules[0].name, 'Imported client');
     assert.equal(result.config.customRules[0].text, 'CLIENT_MARKER');
-    assert.deepEqual(result.config.disabledBuiltins, ['github']);
+    assert.deepEqual(result.config.disabledBuiltins, ['github', 'email-hide', 'phone-numbers', 'personal-fields']);
     assert.deepEqual(result.config.builtinCaseSensitivity, { aws: false });
     assert.equal(result.config.customRules[1].type, 'urlParameters');
     assert.equal(result.config.customRules[2].type, 'authorization');

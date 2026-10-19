@@ -6,7 +6,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Blob as NodeBlob } from 'node:buffer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BUILTIN_FILTERS, RULE_TYPES, customRuleFromBuiltin, defaultRedactionSettings, exportRedactionSettings, validateRedactionSettings } from '@/src/core/privacy/settings';
+import { BUILTIN_FILTERS, RULE_TYPES, CUSTOM_RULE_TYPES, isCustomRuleType, customRuleFromBuiltin, defaultRedactionSettings, exportRedactionSettings, validateRedactionSettings, REDACTION_LIMITS } from '@/src/core/privacy/settings';
+import { isAutomaticType, PERSONAL_FIELD_TERMS } from '@/src/core/privacy/personal-data';
+import { readFilterDemoDraft, writeFilterDemoDraft } from '@/src/filter-demo-draft';
+import { REGEX_EXAMPLES } from '@/src/core/privacy/regex';
 
 const key = 'redaction-filters-v1';
 let stored: unknown;
@@ -16,9 +19,13 @@ let clipboard: ReturnType<typeof vi.fn>;
 let events: Map<string, EventListener>;
 let getCurrentTab: ReturnType<typeof vi.fn>;
 let removeTab: ReturnType<typeof vi.fn>;
+let updateTab: ReturnType<typeof vi.fn>;
+let createTab: ReturnType<typeof vi.fn>;
+let sendRuntime: ReturnType<typeof vi.fn>;
+let demoListeners: Set<any>;
 const get = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 function chooseType(type: string, row = document.querySelector('.custom-rule')!) {
-  const select = row.querySelector<HTMLSelectElement>('select')!; select.value = type; select.dispatchEvent(new Event('change'));
+  const select = row.querySelector<HTMLSelectElement>('.rule-type-value select')!; select.value = type; select.dispatchEvent(new Event('change'));
 }
 const click = (id: string) => get<HTMLButtonElement>(id).click();
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -35,14 +42,16 @@ function selectFile(text: string, size = text.length): void {
 }
 beforeEach(async () => {
   document.body.innerHTML = readFileSync(resolve('entrypoints/filters/index.html'), 'utf8').split('<body>')[1]!.split('</body>')[0]!;
-  stored = undefined;
+  stored = undefined; sessionStorage.clear();
   getStored = vi.fn().mockImplementation(async () => ({ [key]: structuredClone(stored) }));
   setStored = vi.fn().mockImplementation(async value => { stored = structuredClone(value[key]); });
   clipboard = vi.fn().mockResolvedValue(undefined);
   vi.stubGlobal('navigator', { clipboard: { writeText: clipboard } });
   getCurrentTab = vi.fn().mockResolvedValue({ id: 7 });
   removeTab = vi.fn().mockResolvedValue(undefined);
-  vi.doMock('wxt/browser', () => ({ browser: { storage: { local: { get: getStored, set: setStored } }, tabs: { getCurrent: getCurrentTab, remove: removeTab } } }));
+  updateTab = vi.fn().mockResolvedValue({ id: 7 });
+  createTab = vi.fn().mockResolvedValue({ id: 9 }); sendRuntime = vi.fn().mockResolvedValue(undefined); demoListeners = new Set();
+  vi.doMock('wxt/browser', () => ({ browser: { storage: { local: { get: getStored, set: setStored } }, runtime: { id: 'test-extension', getURL: (path: string) => `chrome-extension://test${path}`, sendMessage: sendRuntime, onMessage: { addListener: (listener: any) => demoListeners.add(listener), removeListener: (listener: any) => demoListeners.delete(listener) } }, tabs: { getCurrent: getCurrentTab, remove: removeTab, create: createTab, update: updateTab } } }));
   events = new Map();
   vi.spyOn(window, 'addEventListener').mockImplementation((type: string, listener: any) => { events.set(type, listener); });
   vi.spyOn(window, 'confirm').mockReturnValue(true);
@@ -51,6 +60,111 @@ beforeEach(async () => {
 afterEach(() => { events.get('pagehide')?.(new Event('pagehide')); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.resetModules(); });
 
 describe('Customize filter settings', () => {
+  it('opens Demo in this tab and preserves the entire draft without saving preferences or triggering an unload warning', async () => {
+    addRule('Acme', 'Client'); click('open-demo'); await settle();
+    expect(createTab).not.toHaveBeenCalled(); expect(updateTab).toHaveBeenCalledOnce();
+    expect(updateTab.mock.calls[0]![0]).toBe(7);
+    const url = updateTab.mock.calls[0]![1].url as string;
+    const session = url.split('#')[1]!;
+    expect(readFilterDemoDraft(session)?.settings.customRules[0]).toMatchObject({ name: 'Client', text: 'Acme' });
+    expect(readFilterDemoDraft(session)?.baseline).toBe(JSON.stringify(defaultRedactionSettings()));
+    const event = new Event('beforeunload', { cancelable: true }); events.get('beforeunload')!(event);
+    expect(event.defaultPrevented).toBe(false); expect(setStored).not.toHaveBeenCalled();
+  });
+
+  it('restores the unsaved draft, unfinished disabled rows and conflict baseline after returning from Demo', async () => {
+    events.get('pagehide')!(new Event('pagehide')); vi.resetModules();
+    const draft = { ...defaultRedactionSettings(), customRules: [{ id: 'client', name: 'Client', text: 'Acme', type: 'text' as const, caseSensitive: false, enabled: true }, { id: 'unfinished', name: '', text: '[', type: 'regex' as const, caseSensitive: false, enabled: false }] };
+    writeFilterDemoDraft({ session: 'demo-return', settings: draft, baseline: JSON.stringify(defaultRedactionSettings()) });
+    await import('@/entrypoints/filters/main'); await settle();
+    expect(document.querySelectorAll('.custom-rule')).toHaveLength(2);
+    expect(get('status').textContent).toContain('Unsaved filter changes restored');
+    expect(get<HTMLButtonElement>('save-filters').disabled).toBe(false);
+    expect(setStored).not.toHaveBeenCalled();
+    // Browser Back can restore a BFCache editor; its draft must not reload saved settings.
+    events.get('pageshow')!({ persisted: true } as PageTransitionEvent); await settle();
+    expect(document.querySelectorAll('.custom-rule')).toHaveLength(2);
+  });
+
+  it('keeps the editor usable if navigation fails', async () => {
+    addRule('Acme', 'Client'); updateTab.mockRejectedValue(new Error('unavailable'));
+    click('open-demo'); await settle();
+    expect(get<HTMLButtonElement>('save-filters').disabled).toBe(false);
+    expect(get('status').textContent).toContain('Your filter changes are still here');
+  });
+
+  it('tests page and link contexts without using a stale field label, and examples reset the context', () => {
+    const context = get<HTMLSelectElement>('test-context'); context.value = 'link'; context.dispatchEvent(new Event('change'));
+    expect(get('test-field-context').hidden).toBe(true);
+    input(get<HTMLInputElement>('test-field-label'), 'Password');
+    input(get<HTMLTextAreaElement>('test-input'), 'https://example.test/?token=short'); click('test-filters');
+    expect(get<HTMLTextAreaElement>('test-output').value).toBe('https://example.test/?token=[REDACTED]');
+    expect(get('test-label-result').hidden).toBe(true);
+    click('load-example');
+    expect(context.value).toBe('auto'); expect(get('test-field-context').hidden).toBe(false);
+  });
+
+  it('starts with email masking on and full email hiding off', () => {
+    const rows = [...document.querySelectorAll<HTMLTableRowElement>('.builtin')];
+    expect(rows[8]!.querySelector<HTMLInputElement>('input')!.checked).toBe(true);
+    expect(rows[9]!.querySelector<HTMLInputElement>('input')!.checked).toBe(false);
+    expect(rows[8]!.querySelector('.case-value')!.textContent).toBe('—');
+    expect(rows[8]!.textContent).toContain('ASCII email addresses:');
+  });
+
+  it('offers only configurable custom types and no Duplicate action for automatic built-ins', () => {
+    addRule('Acme');
+    const select = document.querySelector<HTMLSelectElement>('.custom-rule .rule-type-value select')!;
+    expect([...select.options].map(option => option.value)).toEqual(CUSTOM_RULE_TYPES.map(type => type.id));
+    const rows = [...document.querySelectorAll('.builtin')];
+    rows.forEach((row, index) => {
+      expect(!!row.querySelector('[data-duplicate]')).toBe(isCustomRuleType(customRuleFromBuiltin(BUILTIN_FILTERS[index]!.id).type));
+      expect(row.querySelector<HTMLSelectElement>('select')!.options).toHaveLength(1);
+    });
+  });
+
+  it('rejects imported automatic custom types atomically without replacing the editor', async () => {
+    addRule('Keep this draft', 'Existing');
+    const file = JSON.parse(exportRedactionSettings(defaultRedactionSettings()));
+    file.filters.push({ source: 'custom', id: 'forbidden', name: 'Forbidden', type: 'emailHide', matchingRule: '', caseSensitive: false, enabled: false });
+    selectFile(JSON.stringify(file)); await settle();
+    expect(get('status').textContent).toContain('built-in only');
+    expect(document.querySelector<HTMLTextAreaElement>('.custom-rule textarea')!.value).toBe('Keep this draft');
+    expect(setStored).not.toHaveBeenCalled();
+  });
+
+  it('inserts an email Regex example, tests it and saves/reloads the expression', async () => {
+    addRule('', 'Emails'); chooseType('regex');
+    const examples = document.querySelector<HTMLSelectElement>('.custom-rule .regex-examples')!;
+    expect(examples.hidden).toBe(false);
+    examples.value = 'emails'; examples.dispatchEvent(new Event('change'));
+    expect(document.querySelector<HTMLTextAreaElement>('.custom-rule textarea')!.value).toBe(REGEX_EXAMPLES[0].pattern);
+    const select = get<HTMLSelectElement>('test-rule'); select.value = [...select.options].find(option => option.value.startsWith('custom:'))!.value;
+    input(get<HTMLTextAreaElement>('test-input'), 'Write to client@example.test.');
+    click('test-selected'); expect(get<HTMLTextAreaElement>('test-output').value).toBe('Write to [REDACTED].');
+    click('save-filters'); await settle(); click('reload-filters'); await settle();
+    expect(document.querySelector<HTMLTextAreaElement>('.custom-rule textarea')!.value).toBe(REGEX_EXAMPLES[0].pattern);
+    expect(document.querySelector<HTMLSelectElement>('.custom-rule .rule-type-value select')!.value).toBe('regex');
+  });
+
+  it('keeps Regex edits on cancelled example replacement and blocks invalid expressions', async () => {
+    addRule('private-[0-9]+'); chooseType('regex');
+    const examples = document.querySelector<HTMLSelectElement>('.custom-rule .regex-examples')!;
+    vi.mocked(window.confirm).mockReturnValueOnce(false);
+    examples.value = 'aws'; examples.dispatchEvent(new Event('change'));
+    const text = document.querySelector<HTMLTextAreaElement>('.custom-rule textarea')!;
+    expect(text.value).toBe('private-[0-9]+');
+    input(text, '[');
+    expect(text.getAttribute('aria-invalid')).toBe('true');
+    expect(document.querySelector('.custom-rule .rule-error')!.textContent).toContain('Invalid Regex');
+    click('save-filters'); await settle();
+    expect(setStored).not.toHaveBeenCalled();
+    expect(get('status').textContent).toContain('Invalid Regex');
+    input(text, 'private-[0-9]+');
+    expect(text.getAttribute('aria-invalid')).toBe('false');
+    chooseType('text'); expect(examples.hidden).toBe(true);
+  });
+
   it('keeps one header per mode on reload and preserves edits when reload is cancelled', async () => {
     const headers = [...document.querySelectorAll('thead th')].map(header => header.textContent);
     click('reload-filters'); await settle();
@@ -63,13 +177,14 @@ describe('Customize filter settings', () => {
     expect([...document.querySelectorAll('thead th')].map(header => header.textContent)).toEqual(headers);
   });
 
-  it('duplicates every built-in as editable custom detectors and saves/reloads their modes', async () => {
+  it('duplicates every configurable built-in as editable custom detectors and saves/reloads their modes', async () => {
+    const configurable = BUILTIN_FILTERS.filter(filter => isCustomRuleType(customRuleFromBuiltin(filter.id).type));
     const builtins = [...document.querySelectorAll<HTMLButtonElement>('.builtin [data-duplicate]')];
     for (const duplicate of builtins) duplicate.click();
-    expect(document.querySelectorAll('.custom-rule')).toHaveLength(8);
-    expect(document.querySelectorAll('.builtin td:first-child input:checked')).toHaveLength(8);
+    expect(document.querySelectorAll('.custom-rule')).toHaveLength(configurable.length);
+    expect(document.querySelectorAll('.builtin td:first-child input:checked')).toHaveLength(BUILTIN_FILTERS.length - defaultRedactionSettings().disabledBuiltins.length);
     expect([...document.querySelectorAll<HTMLSelectElement>('.builtin select')].every(input => input.disabled)).toBe(true);
-    const expected = validateRedactionSettings({ version: 1, disabledBuiltins: [], customRules: BUILTIN_FILTERS.map((builtin, index) => ({
+    const expected = validateRedactionSettings({ ...defaultRedactionSettings(), customRules: configurable.map((builtin, index) => ({
       ...customRuleFromBuiltin(builtin.id), id: `copy-${index}`, name: `${builtin.name} copy`,
     })) });
     // IDs are generated by the UI, so compare semantic settings independently.
@@ -80,24 +195,25 @@ describe('Customize filter settings', () => {
     click('restore-defaults');
     selectFile(exported); await settle();
     const rows = [...document.querySelectorAll('.custom-rule')];
-    expect(rows).toHaveLength(8);
+    expect(rows).toHaveLength(configurable.length);
     for (let index = 0; index < rows.length; index++) {
-      expect(rows[index]!.querySelector<HTMLSelectElement>('select')!.value).toBe(actual.customRules[index]!.type);
+      expect(rows[index]!.querySelector<HTMLSelectElement>('.rule-type-value select')!.value).toBe(actual.customRules[index]!.type);
     }
     input(rows[1]!.querySelector<HTMLTextAreaElement>('textarea')!, 'CustomAuth');
-    document.querySelectorAll<HTMLInputElement>('.builtin td:first-child input').forEach(toggle => toggle.click());
+    document.querySelectorAll<HTMLInputElement>('.builtin td:first-child input').forEach(toggle => { if (toggle.checked) toggle.click(); });
     input(get<HTMLTextAreaElement>('test-input'), 'CustomAuth abcdefghijkl'); click('test-filters');
     expect(get<HTMLTextAreaElement>('test-output').value).toBe('CustomAuth [REDACTED]');
     expect(get<HTMLButtonElement>('save-filters').disabled).toBe(false);
   });
 
-  it.each(RULE_TYPES)('saves, reloads and edits the selected $id type after saving', async type => {
+  it.each(CUSTOM_RULE_TYPES)('saves, reloads and edits the selected $id type after saving', async type => {
     addRule('client_key'); chooseType(type.id);
     click('save-filters'); await settle();
     click('reload-filters'); await settle();
-    expect(document.querySelector<HTMLSelectElement>('.custom-rule select')!.value).toBe(type.id);
+    expect(document.querySelector<HTMLSelectElement>('.custom-rule .rule-type-value select')!.value).toBe(type.id);
     expect(stored).toEqual(expect.objectContaining({ customRules: [expect.objectContaining({ type: type.id })] }));
     chooseType(type.id === 'text' ? 'jwt' : 'text');
+    if (isAutomaticType(type.id)) input(document.querySelector<HTMLTextAreaElement>('.custom-rule textarea')!, 'Acme');
     expect(get<HTMLButtonElement>('save-filters').disabled).toBe(false);
     click('save-filters'); await settle();
     expect(get<HTMLButtonElement>('save-filters').disabled).toBe(true);
@@ -106,7 +222,7 @@ describe('Customize filter settings', () => {
   it('shows old combined rules as separate typed rows and saves the migration without sample data', async () => {
     selectFile(JSON.stringify({ version: 1, disabledBuiltins: [], customRules: [{ id: 'old', name: 'Old', text: 'client_key', caseSensitive: false, enabled: true, fieldLabels: true, wholeWords: true, urlParameters: true }] }));
     await settle();
-    expect([...document.querySelectorAll<HTMLSelectElement>('.custom-rule select')].map(select => select.value)).toEqual(['fieldWords', 'urlParameters']);
+    expect([...document.querySelectorAll<HTMLSelectElement>('.custom-rule .rule-type-value select')].map(select => select.value)).toEqual(['fieldWords', 'urlParameters']);
     expect(document.querySelectorAll('.custom-rule input[type=checkbox]')).toHaveLength(4);
     input(get<HTMLInputElement>('test-field-label'), 'Client_key');
     input(get<HTMLTextAreaElement>('test-input'), 'short'); click('test-filters');
@@ -224,7 +340,7 @@ describe('Customize filter settings', () => {
     expect(removeTab).toHaveBeenLastCalledWith(7);
   });
   it('loads safe defaults without capturing, writing preferences or copying anything', () => {
-    expect(document.querySelectorAll('.builtin td:first-child input:checked')).toHaveLength(8);
+    expect(document.querySelectorAll('.builtin td:first-child input:checked')).toHaveLength(BUILTIN_FILTERS.length - defaultRedactionSettings().disabledBuiltins.length);
     expect(get('empty-rules').hidden).toBe(false);
     expect(get<HTMLButtonElement>('save-filters').disabled).toBe(true);
     expect(setStored).not.toHaveBeenCalled(); expect(clipboard).not.toHaveBeenCalled();
@@ -253,7 +369,7 @@ describe('Customize filter settings', () => {
     builtin.checked = false; builtin.dispatchEvent(new Event('change'));
     input(get<HTMLTextAreaElement>('test-input'), 'private sample');
     click('save-filters'); await settle();
-    expect(setStored).toHaveBeenCalledExactlyOnceWith({ [key]: expect.objectContaining({ disabledBuiltins: ['sensitive-fields'], customRules: [expect.objectContaining({ text: 'Acme', name: 'Client', enabled: true, caseSensitive: false })] }) });
+    expect(setStored).toHaveBeenCalledExactlyOnceWith({ [key]: expect.objectContaining({ disabledBuiltins: ['sensitive-fields', ...defaultRedactionSettings().disabledBuiltins], customRules: [expect.objectContaining({ text: 'Acme', name: 'Client', enabled: true, caseSensitive: false })] }) });
     expect(JSON.stringify(stored)).not.toContain('private sample');
     expect(get('status').textContent).toContain('Filters saved');
     expect(get<HTMLButtonElement>('save-filters').disabled).toBe(true);
@@ -277,7 +393,7 @@ describe('Customize filter settings', () => {
     }
   });
   it('tests and persists custom URL modes with all built-in filters switched off', async () => {
-    for (const toggle of document.querySelectorAll<HTMLInputElement>('.builtin td:first-child input')) toggle.click();
+    for (const toggle of document.querySelectorAll<HTMLInputElement>('.builtin td:first-child input')) { if (toggle.checked) toggle.click(); }
     expect([...document.querySelectorAll<HTMLSelectElement>('.builtin select')].every(select => select.disabled)).toBe(true);
     addRule('client_key / token');
     chooseType('urlParameters');
@@ -285,15 +401,44 @@ describe('Customize filter settings', () => {
     click('test-filters');
     expect(get<HTMLTextAreaElement>('test-output').value).toBe('client_key https://example.test/?client_key=[REDACTED]&token=[REDACTED]&x=keep');
     click('save-filters'); await settle(); click('reload-filters'); await settle();
-    expect(document.querySelector<HTMLSelectElement>('.custom-rule select')!.value).toBe('urlParameters');
+    expect(document.querySelector<HTMLSelectElement>('.custom-rule .rule-type-value select')!.value).toBe('urlParameters');
     expect(stored).toEqual(expect.objectContaining({ disabledBuiltins: BUILTIN_FILTERS.map(filter => filter.id), customRules: [expect.objectContaining({ type: 'urlParameters' })] }));
   });
+  it.each([
+    ['email-mask-domain', 'ASCII email addresses:', 'name+tag@sub.example.com'],
+    ['email-hide', 'ASCII email addresses:', 'name+tag@sub.example.com'],
+    ['phone-mask', '8–15 digits;', 'Phone / Telephone / Tel / Mobile / Fax'],
+    ['phone-numbers', '8–15 digits;', 'Phone / Telephone / Tel / Mobile / Fax'],
+    ['payment-cards', '13–19 digits', 'Luhn checksum'],
+    ['iban', 'country code + 2 check digits', 'MOD-97 checksum'],
+  ] as const)('describes the fixed detection criteria for %s without editable matching text', (id, format, criterion) => {
+    const row = [...document.querySelectorAll('.builtin')][BUILTIN_FILTERS.findIndex(filter => filter.id === id)]!;
+    expect(row.children[2]!.textContent).toContain(format);
+    expect(row.children[2]!.textContent).toContain(criterion);
+    expect(row.querySelector('textarea')).toBeNull();
+    expect(row.querySelector('button')).toBeNull();
+    expect(customRuleFromBuiltin(id).text).toBe('');
+  });
+
+  it('shows both personal field actions as automatic built-ins with fixed matching behavior', () => {
+    for (const [id, name] of [['personal-fields-mask', 'Mask personal field values (English labels)'], ['personal-fields', 'Hide personal field values (English labels)']]) {
+      const toggle = document.querySelector<HTMLInputElement>(`label[title="Enable ${name}"] input`)!;
+      const row = toggle.closest('tr')!;
+      expect(row.querySelector('code')!.textContent).toBe(PERSONAL_FIELD_TERMS);
+      expect(row.querySelector('textarea')).toBeNull();
+      expect(customRuleFromBuiltin(id as 'personal-fields').text).toBe('');
+      expect(row.querySelector('button')).toBeNull();
+      expect(row.querySelector('select')!.value).toBe(customRuleFromBuiltin(id as 'personal-fields').type);
+      expect(row.querySelectorAll('input[type="checkbox"]')).toHaveLength(1);
+    }
+  });
+
   it('shows fixed built-in label behavior and uses the same list separator in both custom modes', async () => {
     const builtinTypes = document.querySelectorAll<HTMLSelectElement>('.builtin select');
-    expect(builtinTypes).toHaveLength(8);
-    expect([...builtinTypes].map(select => select.value)).toEqual(['fieldWords', 'authorization', 'jwt', 'githubTokens', 'awsKeys', 'openaiKeys', 'assignedSecrets', 'urlParameters']);
+    expect(builtinTypes).toHaveLength(BUILTIN_FILTERS.length);
+    expect([...builtinTypes].map(select => select.value)).toEqual(BUILTIN_FILTERS.map(filter => customRuleFromBuiltin(filter.id).type));
     expect([...builtinTypes].every(select => select.disabled)).toBe(true);
-    expect([...builtinTypes[0]!.options].map(option => option.value)).toEqual(RULE_TYPES.map(type => type.id));
+    expect([...builtinTypes[0]!.options].map(option => option.value)).toEqual(['fieldWords']);
     expect(document.querySelector('.builtin code')!.textContent).toBe(customRuleFromBuiltin('sensitive-fields').text);
     addRule('pass / private');
     input(get<HTMLTextAreaElement>('test-input'), 'pass and private'); click('test-filters');
@@ -304,7 +449,7 @@ describe('Customize filter settings', () => {
     input(get<HTMLInputElement>('test-field-label'), 'Pass phrase');
     click('test-filters'); expect(get<HTMLTextAreaElement>('test-output').value).toBe('[REDACTED]');
     click('save-filters'); await settle(); click('reload-filters'); await settle();
-    expect(document.querySelector<HTMLSelectElement>('.custom-rule select')!.value).toBe('fieldLabels');
+    expect(document.querySelector<HTMLSelectElement>('.custom-rule .rule-type-value select')!.value).toBe('fieldLabels');
     expect([...document.querySelectorAll<HTMLSelectElement>('.builtin select')].every(flag => flag.disabled)).toBe(true);
   });
   it('tests unsaved rules safely and invalidates results when sample or rules change', () => {
@@ -357,7 +502,7 @@ describe('Customize filter settings', () => {
     expect(picker).toHaveBeenCalledOnce();
     const settings = { ...defaultRedactionSettings(), disabledBuiltins: ['github'] as const };
     selectFile(JSON.stringify(settings)); await settle();
-    expect(document.querySelectorAll('.builtin td:first-child input:checked')).toHaveLength(7);
+    expect(document.querySelectorAll('.builtin td:first-child input:checked')).toHaveLength(BUILTIN_FILTERS.length - settings.disabledBuiltins.length);
     expect(get('status').textContent).toContain('Filters imported');
     expect(setStored).not.toHaveBeenCalled();
     click('save-filters'); await settle();
@@ -410,7 +555,7 @@ describe('Customize filter settings', () => {
     events.get('pagehide')!(new Event('pagehide'));
     expect(get<HTMLTextAreaElement>('test-input').value).toBe('');
     expect(get<HTMLTextAreaElement>('test-output').value).toBe('');
-    expect(exportRedactionSettings(defaultRedactionSettings())).toContain('"version": 7');
+    expect(exportRedactionSettings(defaultRedactionSettings())).toContain('"version": 13');
   });
 
   it('rejects malformed or oversized files without changing the table', async () => {
@@ -418,7 +563,7 @@ describe('Customize filter settings', () => {
     selectFile('{'); await settle();
     expect(get('status').textContent).toContain('Invalid JSON');
     expect(document.querySelectorAll('.custom-rule')).toHaveLength(1);
-    selectFile('{}', 256001);
+    selectFile('{}', REDACTION_LIMITS.json + 1);
     expect(get('status').textContent).toContain('too large');
     expect(document.querySelectorAll('.custom-rule')).toHaveLength(1);
     selectFile('{"version":99}'); await settle();
@@ -441,9 +586,9 @@ describe('Customize filter settings', () => {
     expect(downloaded?.download).toBe('copy-as-context-filters.json');
     expect(downloaded?.href).toBe('blob:filters');
     const exported = JSON.parse(await createObjectURL.mock.calls[0]![0].text());
-    expect(exported.version).toBe(7);
+    expect(exported.version).toBe(13);
     const builtins = exported.filters.filter((filter: { source: string }) => filter.source === 'builtin');
-    expect(builtins).toHaveLength(8);
+    expect(builtins).toHaveLength(BUILTIN_FILTERS.length);
     expect(builtins[0]).toMatchObject({ id: 'sensitive-fields', enabled: false, name: 'Sensitive field values', matchingRule: expect.stringContaining('password') });
     expect(exported.filters.find((filter: { source: string }) => filter.source === 'custom').matchingRule).toBe('a.b$&');
     expect(setStored).not.toHaveBeenCalled(); expect(clipboard).not.toHaveBeenCalled();

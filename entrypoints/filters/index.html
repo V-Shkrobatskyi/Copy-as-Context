@@ -17,12 +17,12 @@
     <section class="filters-section" aria-labelledby="filters-title">
       <div class="table-toolbar">
         <h2 id="filters-title">Filters</h2>
-        <div class="toolbar-actions"><button id="show-import" type="button" title="Choose a filter file" disabled>Import</button><button id="export-filters" type="button" title="Download all built-in and custom filters" disabled>Export</button></div>
+        <div class="toolbar-actions"><button id="open-demo" type="button" title="Open a live demo of enabled filters" disabled>Demo</button><button id="show-import" type="button" title="Choose a filter file" disabled>Import</button><button id="export-filters" type="button" title="Download all built-in and custom filters" disabled>Export</button></div>
       </div>
       <div class="table-scroll" role="region" aria-label="Redaction filters table" tabindex="0">
         <table>
           <caption class="sr-only">Built-in and custom redaction filters. Add your own filters as new rows.</caption>
-          <thead><tr><th scope="col" class="enabled-column">On</th><th scope="col" class="name-column">Name</th><th scope="col">Text / matching rule</th><th scope="col" class="rule-type-column">Rule type</th><th scope="col" class="case-column">Case sensitive</th><th scope="col" class="actions-column"><span class="sr-only">Actions</span></th></tr></thead>
+          <thead><tr><th scope="col" class="enabled-column">On</th><th scope="col" class="name-column">Name</th><th scope="col">Text / matching rule</th><th scope="col" class="rule-type-column">Rule type</th><th scope="col" class="case-column">Case sensitive</th><th scope="col" class="actions-column">Actions</th></tr></thead>
           <tbody id="builtins"></tbody>
           <tbody id="custom-rules"></tbody>
         </table>
@@ -30,8 +30,8 @@
       <div class="table-bottom"><button id="add-rule" type="button" disabled>+ Add filter</button><p id="empty-rules" class="note">Add your own text filters as new rows.</p></div>
       <details>
         <summary>How to use filters</summary>
-        <p class="note">Use Duplicate to create an editable copy of any built-in filter. Turn the original off if you want your copy to replace it. Choose one Rule type for each custom row. To check the same terms in another place, add another row.</p>
-        <p class="note">Matching rules contain literal names or prefixes, never regex. Use <code> / </code> (space, slash, space) between alternatives in every mode; commas and ordinary URL/path slashes are literal. Text hides literal alternatives. Text — single literal treats the entire cell as one phrase, preserving older rules. Case sensitive applies to the selected type.</p>
+        <p class="note">Use Duplicate to create an editable copy of a configurable built-in filter. Automatic built-ins have no Duplicate action. Turn the original off if you want your copy to replace it. Choose one Rule type for each custom row. To check the same terms in another place, add another row.</p>
+        <p class="note">Automatic email, phone, card, IBAN and personal-field types are built-in only. They need no matching text or case settings; use On to enable or disable them. Other types except Regex use literal names or prefixes. Use <code> / </code> (space, slash, space) between literal alternatives; commas and ordinary URL/path slashes are literal. Text hides literal alternatives. Text — single literal treats the entire cell as one phrase, preserving older rules. Case sensitive applies to the selected type.</p>
         <p class="note">Field labels hides the value and nested text of a matching field, keeping its label visible. Field labels — whole words requires word boundaries; Field labels uses substring matching. URL parameters hides values in <code>?name=value</code> and <code>&amp;name=value</code>; enter names without ?, &amp;, =, # or line breaks.</p>
       </details>
       <details><summary>Rule types and examples</summary>
@@ -39,7 +39,10 @@
         <p class="note">JWT: first-segment prefixes such as <code>eyJ</code>. Requires three dot-separated segments: at least 5 characters after the prefix in the first segment, and at least 5 in each remaining segment. Segments use letters, digits, underscores and hyphens.</p>
         <p class="note">GitHub tokens: prefixes such as <code>ghp_ / github_pat_ / company_</code>, followed by at least 20 letters, digits or underscores. AWS keys: prefixes such as <code>AKIA / ASIA</code>, followed by exactly 16 uppercase letters or digits (lowercase is also accepted when Case sensitive is off). OpenAI keys: prefixes such as <code>sk- / sk-proj-</code>, followed by at least 16 letters, digits, underscores or hyphens.</p>
         <p class="note">Assigned secrets: names such as <code>api_key / token / private_key</code>, followed by : or = and a value of at least 8 characters. Whitespace, &amp;, quotes, commas and semicolons end the value. The label and separator stay visible.</p>
-        <p class="note">Credential detectors require word boundaries, matching the built-in behavior. These are credential-shape checks, not cryptographic validation. Older rules with several modes become separate rows, preserving every check. Duplicate includes all built-in aliases and settings.</p>
+        <p class="note"><strong>Mask email addresses (including domains)</strong> is enabled by default: <code>abcdef@gmail.com</code> becomes <code>abc***@gm***.com</code>. The name and each domain label keep half their characters, rounded down and capped at three visible characters; the final domain suffix remains visible. One-character parts become *. <strong>Hide email addresses</strong> is off by default and hides the whole address when enabled. Full hiding from overlapping rules always wins, regardless of row order. Both types work automatically without matching text or case settings, recognize common email formats, and follow the master Redact sensitive data setting. Masking is stable on repeated processing.</p>
+        <p class="note"><strong>Regex</strong> hides matching text, field values, links and metadata. Choose <strong>Insert example…</strong> in a custom Regex row for email addresses, GitHub tokens, AWS keys, OpenAI keys or order IDs. Enter the expression without surrounding slashes or flags. Use <code>|</code> for alternatives, not <code> / </code>. Case sensitive sets the default letter-case matching. Lookarounds and backreferences are not supported. Empty matches are ignored; existing <code>[REDACTED]</code> markers are preserved.</p>
+        <p class="note">Regex examples match common formats, not every possible email address or a verified credential. You can edit them and test your own sample. Matching rules allow 256 characters, or 4,096 for Regex; all rules together allow 131,072 characters. Import files can be up to 1 MB.</p>
+        <p class="note">Credential detectors require word boundaries, matching the built-in behavior. These are credential-shape checks, not cryptographic validation. Older rules with several modes become separate rows, preserving every check. Older GitHub, AWS and OpenAI custom types become equivalent Regex rules. Duplicate includes all built-in aliases and settings.</p>
       </details>
     </section>
     <details id="test-panel">
@@ -49,22 +52,27 @@
       <p id="test-scope-note" class="note">Test all checks enabled rules. Test selected checks only the chosen rule, even if it is off, without changing its On setting. Both use unsaved edits.</p>
       <div class="test-actions"><button id="load-example" type="button" disabled>Load example</button><button id="load-near-miss" type="button" disabled>Load near miss</button></div>
       <p id="example-feedback" class="note" role="status" aria-live="polite"></p>
+      <label for="test-context">Test as</label>
+      <select id="test-context" aria-describedby="context-test-note"><option value="auto">Text or field value</option><option value="link">Link URL</option><option value="title">Page title</option><option value="url">Page URL</option></select>
+      <p id="context-test-note" class="note">Text works for tokens, phone numbers, emails, cards and IBANs. Paste a complete URL for URL parameter rules, or choose a URL context to test links and page metadata.</p>
+      <div id="test-field-context">
       <label for="test-field-label">Field label (optional)</label>
       <input id="test-field-label" type="text" maxlength="256" autocomplete="off" placeholder="e.g. API key" aria-describedby="field-test-note" />
-      <p id="field-test-note" class="note">Leave blank to test plain text. Add a label to test built-in and custom Field labels rules.</p>
+      <p id="field-test-note" class="note">Leave blank to test plain text. Add a label to test field hiding, personal-field masking or local phone numbers in labelled fields.</p>
+      </div>
       <label for="test-input">Sample text</label>
-      <textarea id="test-input" rows="3" maxlength="100000" spellcheck="false" placeholder="Paste a short example to test your current filters."></textarea>
+      <textarea id="test-input" rows="1" maxlength="100000" spellcheck="false" placeholder="Paste a short example to test your current filters."></textarea>
       <div class="test-actions"><button id="test-filters" type="button" disabled>Test all</button><button id="test-selected" type="button" disabled>Test selected</button></div>
       <div id="test-label-result" hidden><label for="test-label-output">Field label result</label><input id="test-label-output" type="text" readonly /></div>
       <label for="test-output">Result</label>
-      <textarea id="test-output" rows="3" readonly spellcheck="false"></textarea>
+      <textarea id="test-output" rows="1" readonly spellcheck="false"></textarea>
       <p id="test-count" class="note" role="status" aria-live="polite"></p>
       <section id="test-match-results" aria-labelledby="test-match-title" hidden>
         <h2 id="test-match-title">Matched rules</h2>
         <ul id="test-matches"></ul>
         <p class="note">Each rule is checked independently against your original sample and field label. Counts can overlap and need not add up to the combined replacements above.</p>
       </section>
-      <p class="note">Examples use the chosen rule’s terms and synthetic values. Tests check a text sample or one field, rather than capturing a page. Test data stays in this tab only. Password input values are always omitted during page capture.</p>
+      <p class="note">Examples use the chosen rule’s terms and synthetic values. Regex examples are available for the provided presets; for other expressions, paste your own sample. Tests check the selected text, field, link or metadata context. Demo provides a complete capturable page with examples for enabled rules. Test data stays in this tab only. Password input values are always omitted during page capture.</p>
     </details>
     <input id="import-file" type="file" accept=".json,application/json" hidden />
     <div class="save-bar"><button id="save-filters" type="button" disabled>Save filters</button><button id="close-filters" type="button">Close</button><span id="dirty" class="note"></span><p id="save-feedback" class="note"></p></div>
