@@ -21,6 +21,10 @@ const element = <T extends HTMLElement>(id: string) => document.getElementById(i
 const editor = () => element<HTMLTextAreaElement>('context');
 const button = (id: string) => element<HTMLButtonElement>(id);
 const input = (text: string) => { editor().value = text; editor().dispatchEvent(new Event('input')); };
+const search = (text: string) => {
+  const field = element<HTMLInputElement>('find-text');
+  field.value = text; field.dispatchEvent(new Event('input')); return field;
+};
 let beforeUnload: EventListener;
 let pageHide: EventListener;
 async function loadEditor(firefox = false, os = 'linux') {
@@ -53,6 +57,120 @@ afterEach(() => {
 });
 
 describe('preview editor', () => {
+  it('finds literal text, counts matches, navigates in both directions and wraps', () => {
+    accept({ ...payload, content: 'a.b A.B aXb a.b' });
+    search('a.b');
+    expect(element('find-status').textContent).toBe('3 matches.');
+    editor().setSelectionRange(0, 0);
+    button('find-next').click();
+    expect([editor().selectionStart, editor().selectionEnd]).toEqual([0, 3]);
+    expect(element('find-status').textContent).toBe('1 of 3 matches.');
+    button('find-previous').click();
+    expect(editor().selectionStart).toBe(12);
+    button('find-next').click();
+    expect(editor().selectionStart).toBe(0);
+    const matchCase = element<HTMLInputElement>('match-case');
+    matchCase.checked = true; matchCase.dispatchEvent(new Event('change'));
+    expect(element('find-status').textContent).toBe('1 of 2 matches.');
+    expect(editor().value).toBe('a.b A.B aXb a.b');
+    expect(element('edited').hidden).toBe(true);
+  });
+
+  it('disables actions for empty queries and missing matches', () => {
+    accept(payload);
+    for (const query of ['', 'missing text']) {
+      search(query);
+      for (const id of ['find-previous', 'find-next', 'replace-one', 'replace-all']) expect(button(id).disabled).toBe(true);
+    }
+    expect(element('find-status').textContent).toBe('No matches.');
+  });
+
+  it('replaces one selected match, advances, updates dirty state and copies exact edits', async () => {
+    accept({ ...payload, content: 'cat cat cat' });
+    search('cat');
+    editor().setSelectionRange(4, 7);
+    element<HTMLInputElement>('replace-text').value = 'dog';
+    button('replace-one').click();
+    expect(editor().value).toBe('cat dog cat');
+    expect(editor().selectionStart).toBe(8);
+    expect(element('edited').hidden).toBe(false);
+    const event = new Event('beforeunload', { cancelable: true }); beforeUnload(event);
+    expect(event.defaultPrevented).toBe(true);
+    await vi.advanceTimersByTimeAsync(120);
+    button('copy').click(); await Promise.resolve();
+    expect(writeText).toHaveBeenCalledWith(wrapClipboardContext('cat dog cat', 'compact'));
+  });
+
+  it('replaces the next match if the editor selection is not a complete match', () => {
+    accept({ ...payload, content: 'cat cat' }); search('cat');
+    editor().setSelectionRange(1, 2);
+    element<HTMLInputElement>('replace-text').value = 'dog';
+    button('replace-one').click();
+    expect(editor().value).toBe('cat dog');
+  });
+
+  it('replaces all non-overlapping matches once with literal replacement characters', () => {
+    accept({ ...payload, content: '😀 Cat cat' }); search('cat');
+    element<HTMLInputElement>('replace-text').value = '$&cat';
+    button('replace-all').click();
+    expect(editor().value).toBe('😀 $&cat $&cat');
+    expect(element('find-status').textContent).toBe('Replaced 2 matches.');
+    expect(element('edited').hidden).toBe(false);
+  });
+
+  it('supports deletion, refreshes after manual edits and keeps search active after reset', async () => {
+    accept({ ...payload, content: 'cat cat' }); search('cat');
+    button('replace-all').click();
+    expect(editor().value).toBe(' ');
+    await vi.advanceTimersByTimeAsync(120);
+    expect(button('copy').disabled).toBe(true);
+    expect(button('replace-one').disabled).toBe(true);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    button('reset').click();
+    expect(editor().value).toBe('cat cat');
+    expect(button('replace-all').disabled).toBe(false);
+    input('no hits'); await vi.advanceTimersByTimeAsync(120);
+    expect(element('find-status').textContent).toBe('No matches.');
+  });
+
+  it('rejects oversized replacement without changing the draft', () => {
+    accept({ ...payload, content: 'x'.repeat(MAX_PREVIEW_CHARACTERS) });
+    search('x'.repeat(1000)); element<HTMLInputElement>('replace-text').value = 'x'.repeat(1001);
+    button('replace-all').click();
+    expect(editor().value).toBe('x'.repeat(MAX_PREVIEW_CHARACTERS));
+    expect(element('find-status').textContent).toContain('exceeds');
+    expect(element('edited').hidden).toBe(true);
+  });
+
+  it('supports keyboard search and replacement shortcuts and Enter navigation', () => {
+    accept({ ...payload, content: 'cat cat' });
+    editor().setSelectionRange(0, 3);
+    const shortcut = new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true, cancelable: true });
+    document.dispatchEvent(shortcut);
+    expect(shortcut.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(element('find-text'));
+    expect(element<HTMLInputElement>('find-text').value).toBe('cat');
+    element('find-text').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(editor().selectionStart).toBe(4);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', metaKey: true, bubbles: true }));
+    expect(document.activeElement).toBe(element('replace-text'));
+    element('replace-text').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.activeElement).toBe(editor());
+  });
+
+  it('blocks replacements during saving and clears search text with the private draft', async () => {
+    accept({ ...payload, content: 'cat' }); search('cat');
+    element<HTMLInputElement>('replace-text').value = 'private replacement';
+    button('save').click();
+    expect(button('replace-all').disabled).toBe(true);
+    button('replace-all').click(); expect(editor().value).toBe('cat');
+    await Promise.resolve();
+    expect(button('replace-all').disabled).toBe(false);
+    pageHide(new Event('pagehide'));
+    expect(element<HTMLInputElement>('find-text').value).toBe('');
+    expect(element<HTMLInputElement>('replace-text').value).toBe('');
+  });
+
   it('explains the 23-character clipboard overhead with matching character and token counts', () => {
     accept({ ...payload, content: 'x'.repeat(4978) + '\n' });
     expect(element('metrics').textContent).toContain('5002 characters to copy · ~1251 tokens (including boundaries)');
