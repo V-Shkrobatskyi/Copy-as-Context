@@ -1,4 +1,4 @@
-Bundled third-party code
+Bundled third-party code and assets
 
 WXT entrypoint helpers and @wxt-dev/browser
 Source: https://github.com/wxt-dev/wxt
@@ -28,3 +28,10 @@ and their dependencies) are not included in the installed extension bundle.
 Their versions and source locations are recorded in package-lock.json for the
 source build. The extension has no runtime npm dependencies, remote JavaScript,
 analytics SDK or network service. Re-audit notices when bundled code changes.
+
+Simple Icons brand icons (YouTube, Google Chrome, Firefox Browser, GitHub)
+Source: https://github.com/simple-icons/simple-icons
+Files: icon/brands/*.svg
+License: CC0 1.0 Universal (full text in icon/brands/LICENSE.txt)
+Changes: set icon fill colors for the user guide.
+Brand names and logos remain trademarks of their respective owners.

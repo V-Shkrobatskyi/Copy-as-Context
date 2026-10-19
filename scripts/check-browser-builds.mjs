@@ -42,6 +42,20 @@ for (const target of ['chrome', 'firefox']) {
     }
   } finally { licenseDocument.window.close(); }
   assert.ok((await readFile(new URL(manifest.action.default_popup, directory), 'utf8')).length > 0);
+  const filtersDocument = new JSDOM(await readFile(new URL('filters.html', directory), 'utf8'));
+  try {
+    assert.equal(filtersDocument.window.document.documentElement.lang, 'en');
+    assert.ok(filtersDocument.window.document.querySelector('#builtins'), 'Missing built-in filter controls');
+    assert.ok(filtersDocument.window.document.querySelector('#save-filters'), 'Missing filter save action');
+  } finally { filtersDocument.window.close(); }
+  const previewDocument = new JSDOM(await readFile(new URL('preview.html', directory), 'utf8'));
+  try {
+    assert.equal(previewDocument.window.document.documentElement.lang, 'en');
+    assert.ok(previewDocument.window.document.querySelector('textarea#context'), 'Missing plain-text preview editor');
+    assert.ok(previewDocument.window.document.querySelector('button#copy'), 'Missing preview Copy action');
+    assert.ok(previewDocument.window.document.querySelector('button#save'), 'Missing preview Save action');
+    assert.ok(previewDocument.window.document.querySelector('#compression-metrics'), 'Missing preview compression metrics');
+  } finally { previewDocument.window.close(); }
   assert.ok(!manifest.host_permissions?.length);
   assert.ok(!manifest.content_scripts?.length);
   const source = await javascript(fileURLToPath(directory));
