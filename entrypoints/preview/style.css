@@ -12,6 +12,17 @@ h1 { margin: 20px 0 6px; font-size: clamp(1.6rem, 5vw, 2rem); }
 .warning { padding: 12px; border-left: 3px solid #9a6818; background: #fff5db; line-height: 1.5; }
 .editor-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; }
 #edited { font-size: .85rem; color: #52617a; }
+.find-replace { margin: 0 0 12px; padding: 6px 12px 10px; border: 1px solid #cbd5e1; border-radius: 9px; min-width: 0; background: #f7f9fc; }
+.find-replace legend { padding: 0 6px; font-size: .85rem; font-weight: 600; }
+.search-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.search-row + .search-row { margin-top: 6px; }
+.search-field { display: grid; grid-template-columns: 82px minmax(0, 1fr); align-items: center; flex: 1 1 220px; gap: 6px; min-width: 0; font-size: .86rem; }
+.search-field input { width: 100%; min-width: 0; min-height: 32px; padding: 5px 9px; border: 1px solid #a5b5ce; border-radius: 6px; font: inherit; color: #1b2942; background: #fff; }
+.find-replace button { min-height: 32px; padding: 6px 8px; font-size: .75rem; white-space: nowrap; }
+.case-option { display: flex; align-items: center; gap: 6px; min-height: 32px; font-size: .86rem; }
+.case-option input { width: 16px; height: 16px; margin: 0; accent-color: #365ed7; }
+#find-status { margin: 6px 0 0; }
+#find-status:empty { display: none; }
 textarea { display: block; width: 100%; min-height: 240px; height: 48vh; height: 48dvh; padding: 16px; resize: vertical; border: 1px solid #a5b5ce; border-radius: 10px; font: 14px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; background: #fff; color: #1b2942; tab-size: 2; }
 .note { font-size: .85rem; line-height: 1.5; margin: 8px 0; }
 .actions, footer { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
@@ -24,10 +35,17 @@ footer { border-top: 1px solid #cbd5e1; padding-top: 16px; }
 footer a { color: inherit; font-size: .9rem; }
 [hidden] { display: none !important; }
 @media (max-width: 520px) { main { padding: 18px 14px; } textarea { padding: 10px; font-size: 16px; } .actions button { flex: 1; } }
+@media (max-width: 640px) {
+  .search-field { flex-basis: 100%; }
+  .search-field input { font-size: 16px; }
+  .case-option { margin-right: auto; }
+}
 @media (prefers-color-scheme: dark) {
   :root { color: #e6ebf5; background: #192333; }
   .intro, .note, #edited { color: #b9c8df; }
-  textarea, button { color: #e6ebf5; background: #202e44; border-color: #60769a; }
+  textarea, button, .search-field input { color: #e6ebf5; background: #202e44; border-color: #60769a; }
+  .find-replace { background: #202e44; border-color: #425777; }
+  .search-field input { background: #192333; }
   .warning { background: #3e331e; }
   #copy { background: #365ed7; }
   footer { border-color: #425777; }

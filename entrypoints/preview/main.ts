@@ -7,6 +7,7 @@ import { wrapClipboardContext } from '@/src/clipboard-context';
 import { captureWarningText, isPreviewToken, MAX_PREVIEW_CHARACTERS, type PreviewPayload } from '@/src/preview-message';
 import { receivePreview } from '@/src/preview-session';
 import { saveContextFile } from '@/src/save-context';
+import { setupFindReplace } from '@/src/preview-find-replace';
 
 const editor = document.querySelector<HTMLTextAreaElement>('#context')!;
 const panel = document.querySelector<HTMLElement>('#editor-panel')!;
@@ -26,6 +27,7 @@ let pending = false;
 let leaving = false;
 let metricTimer: ReturnType<typeof setTimeout> | undefined;
 let stopReceiving: (() => void) | undefined;
+const findReplace = setupFindReplace(editor, () => original !== undefined && !pending);
 
 function dirty(): boolean { return original !== undefined && editor.value !== original; }
 
@@ -38,6 +40,7 @@ function update(): void {
   save.disabled = !canSave || copy.disabled;
   save.textContent = canSave ? 'Save to file' : 'Save unavailable';
   save.title = canSave ? '' : 'Saving files is unavailable in this browser. Use Copy.';
+  findReplace.refresh();
   const copiedLength = wrapClipboardContext(editor.value, compression).length;
   metrics.textContent = `${copiedLength} characters to copy · ~${Math.ceil(copiedLength / 4)} tokens (including boundaries). ` +
     `File/editor: ${length} characters · ~${Math.ceil(length / 4)} tokens (without boundaries).` +
@@ -174,6 +177,8 @@ window.addEventListener('pagehide', () => {
   clearTimeout(metricTimer);
   original = undefined;
   editor.value = '';
+  findReplace.clear();
+  findReplace.dispose();
   panel.hidden = true;
 });
 window.addEventListener('pageshow', event => { if (event.persisted) unavailable(); });

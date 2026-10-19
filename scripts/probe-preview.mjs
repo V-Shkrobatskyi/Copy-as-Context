@@ -11,6 +11,7 @@ import { resolve } from 'node:path';
 import { build } from 'vite';
 
 const firefox = process.argv.includes('--firefox');
+const previewOnly = process.argv.includes('--preview-only');
 const profile = await mkdtemp(resolve(tmpdir(), 'context-preview-'));
 const downloads = resolve(profile, 'downloads');
 await mkdir(downloads);
@@ -286,7 +287,7 @@ try {
       return response.result.value;
     };
     contexts = async () => (await send('browsingContext.getTree', {})).contexts.map(item => ({ id: item.context, url: item.url }));
-    await customize(context, `moz-extension://${uuid}`);
+    if (!previewOnly) await customize(context, `moz-extension://${uuid}`);
     // Do not await activation from the opener: its real toolbar equivalent may be destroyed.
     await evaluate(context, `(async()=>{const result=await globalThis.probePrepare(); await globalThis.probeOpenPreview({content:result.serialized.content,compression:'compact',format:'semantic-text',redactSensitiveData:true,redactionCount:result.redactionCount,reductionRatio:result.reductionRatio,warnings:[]})})().catch(e=>{document.querySelector('.status').textContent=e.message}); 'started'`);
   } else {
@@ -308,7 +309,7 @@ try {
       return result.result.value;
     };
     contexts = async () => (await send('Target.getTargets')).targetInfos.map(item => ({ id: item.targetId, url: item.url }));
-    await customize(popup.targetId, `chrome-extension://${extensionId}`);
+    if (!previewOnly) await customize(popup.targetId, `chrome-extension://${extensionId}`);
     await send('Target.activateTarget', { targetId });
     await send('Extensions.triggerAction', { id: extensionId, targetId: tab.targetId });
     const refreshed = await poll(async () => (await send('Target.getTargets')).targetInfos.find(item => item.url === `chrome-extension://${extensionId}/popup.html`), 'reopened popup');
@@ -321,15 +322,59 @@ try {
   assert.ok(original.includes('Synthetic preview page'));
   assert.ok(original.includes('[REDACTED]'));
   assert.ok(!original.includes('synthetic-preview-secret'));
-  assert.ok(!original.includes('CLIENT_MARKER'));
-  assert.ok(original.includes('ghp_abcdefghijklmnopqrstuvwxyz'), 'Disabled GitHub group did not persist');
-  assert.ok(!original.includes('synthetic-custom-url-secret'), 'Custom URL parameter rule did not apply to the next export');
-  assert.ok(original.includes('client_key=[REDACTED]'));
+  if (!previewOnly) {
+    assert.ok(!original.includes('CLIENT_MARKER'));
+    assert.ok(original.includes('ghp_abcdefghijklmnopqrstuvwxyz'), 'Disabled GitHub group did not persist');
+    assert.ok(!original.includes('synthetic-custom-url-secret'), 'Custom URL parameter rule did not apply to the next export');
+    assert.ok(original.includes('client_key=[REDACTED]'));
+  }
   const metrics = await evaluate(preview.id, 'document.querySelector("#metrics").textContent');
   const wrappedLength = `<web_page>\n${original}${original.endsWith('\n') ? '' : '\n'}</web_page>\n`.length;
   assert.ok(metrics.includes(`${wrappedLength} characters to copy`));
   assert.ok(metrics.includes(`File/editor: ${original.length} characters`));
   assert.ok((await evaluate(preview.id, 'document.querySelector("#compression-metrics").textContent')).includes('% smaller than Without'));
+  const searchResult = JSON.parse(await evaluate(preview.id, `(()=>{
+    const editor=document.querySelector('#context'); editor.value='😀 Cat cat a.b'; editor.dispatchEvent(new Event('input')); editor.setSelectionRange(0,0);
+    const find=document.querySelector('#find-text'); find.value='cat'; find.dispatchEvent(new Event('input'));
+    document.querySelector('#find-next').click();
+    const selection=[editor.selectionStart,editor.selectionEnd];
+    document.querySelector('#replace-text').value='$&dog'; document.querySelector('#replace-one').click();
+    const single=editor.value;
+    document.querySelector('#replace-text').value=''; document.querySelector('#replace-all').click();
+    const all=editor.value;
+    find.value='a.b'; find.dispatchEvent(new Event('input')); document.querySelector('#find-next').click();
+    return JSON.stringify({selection,single,all,selected:editor.value.slice(editor.selectionStart,editor.selectionEnd)});
+  })()`));
+  assert.deepEqual(searchResult, { selection: [3, 6], single: '😀 $&dog cat a.b', all: '😀 $&dog  a.b', selected: 'a.b' });
+  async function checkSearchScrolling() {
+    const result = JSON.parse(await evaluate(preview.id, `(()=>{
+      const editor=document.querySelector('#context');
+      const find=document.querySelector('#find-text');
+      const segment=('Wrapped Unicode 😀 content with tabs\\tand spaces. '.repeat(12)+'\\n').repeat(60);
+      editor.value='SCROLL_HIT\\n'+segment+'SCROLL_HIT\\n'+segment+'SCROLL_HIT';
+      editor.dispatchEvent(new Event('input')); editor.setSelectionRange(0,0); editor.scrollTop=0;
+      find.value='SCROLL_HIT'; find.dispatchEvent(new Event('input'));
+      document.querySelector('#find-next').click(); const first=editor.scrollTop;
+      document.querySelector('#find-next').click(); const middle=editor.scrollTop;
+      document.querySelector('#find-next').click(); const last=editor.scrollTop;
+      const maximum=editor.scrollHeight-editor.clientHeight;
+      document.querySelector('#find-previous').click(); const previousMiddle=editor.scrollTop;
+      document.querySelector('#find-previous').click(); const previous=editor.scrollTop;
+      document.querySelector('#find-previous').click(); const wrapped=editor.scrollTop;
+      document.querySelector('#replace-text').value='CHANGED'; document.querySelector('#replace-one').click();
+      return JSON.stringify({first,middle,last,maximum,previousMiddle,previous,wrapped,afterReplace:editor.scrollTop,selected:editor.value.slice(editor.selectionStart,editor.selectionEnd)});
+    })()`));
+    assert.equal(result.first, 0);
+    assert.ok(result.maximum > 1000, 'Scrolling fixture must exceed the editor viewport');
+    assert.ok(Math.abs(result.middle - result.maximum / 2) < 64, JSON.stringify(result));
+    assert.equal(result.previousMiddle, result.middle);
+    assert.ok(Math.abs(result.last - result.maximum) < 4, JSON.stringify(result));
+    assert.equal(result.previous, 0);
+    assert.ok(Math.abs(result.wrapped - result.maximum) < 4, JSON.stringify(result));
+    assert.equal(result.afterReplace, 0);
+    assert.equal(result.selected, 'SCROLL_HIT');
+  }
+  await checkSearchScrolling();
   // Intercept only the destination, so the probe never modifies the system clipboard.
   const copied = JSON.parse(await evaluate(preview.id, `(async()=>{
     Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{globalThis.probeCopied=text}}});
@@ -353,6 +398,8 @@ try {
     const screenshot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }, sessionId);
     await writeFile(resolve(tmpdir(), 'copy-as-context-preview.png'), Buffer.from(screenshot.data, 'base64'));
     await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, sessionId);
+    await checkSearchScrolling();
+    await evaluate(preview.id, `document.querySelector('#context').value=${JSON.stringify(original)}; document.querySelector('#context').dispatchEvent(new Event('input')); 'clean'`);
     assert.equal(await evaluate(preview.id, 'document.documentElement.scrollWidth > innerWidth'), false);
     const mobile = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }, sessionId);
     await writeFile(resolve(tmpdir(), 'copy-as-context-preview-mobile.png'), Buffer.from(mobile.data, 'base64'));
@@ -362,7 +409,7 @@ try {
   }
   await poll(() => evaluate(preview.id, 'document.querySelector("#status")?.textContent.includes("No preview was received")'), 'expired session');
   assert.equal(await evaluate(preview.id, 'document.querySelector("#context").value'), '');
-  console.log(JSON.stringify({ browser: firefox ? 'Firefox Desktop' : 'Chrome Desktop', capture: firefox ? 'synthetic handoff; production activeTab not tested' : 'production toolbar capture', customizeFilters: 'passed (builtins, custom detectors, duplication, isolated/all testing, matched rules, examples, v7 typed import/export and persistence)', filterDownload: 'passed (actual file read back from disk)', filterImport: firefox ? 'passed (native File and change handler)' : 'passed (filesystem file through intercepted picker)', privatePortHandoff: 'passed', editsAndCopy: 'passed (clipboard intercepted)', reloadDiscardsDraft: 'passed', androidNative: 'not tested' }, null, 2));
+  console.log(JSON.stringify({ browser: firefox ? 'Firefox Desktop' : 'Chrome Desktop', capture: firefox ? 'synthetic handoff; production activeTab not tested' : 'production toolbar capture', customizeFilters: previewOnly ? 'skipped' : 'passed (builtins, custom detectors, duplication, isolated/all testing, matched rules, examples, v7 typed import/export and persistence)', filterDownload: previewOnly ? 'skipped' : 'passed (actual file read back from disk)', filterImport: previewOnly ? 'skipped' : firefox ? 'passed (native File and change handler)' : 'passed (filesystem file through intercepted picker)', privatePortHandoff: 'passed', findAndReplace: 'passed (navigation, automatic scrolling through wrapped text, literal replacement, replace one/all, deletion)', editsAndCopy: 'passed (clipboard intercepted)', reloadDiscardsDraft: 'passed', androidNative: 'not tested' }, null, 2));
 } finally {
   for (const request of pending.values()) { clearTimeout(request.timer); request.reject(new Error('Probe closed')); }
   pending.clear(); socket?.close();

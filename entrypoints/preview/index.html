@@ -19,6 +19,21 @@
       <p id="warnings" class="warning" hidden></p>
       <p id="maximum-note" class="warning" hidden>Maximum uses packed structures. Editing dictionaries or references may break them. Choose Compact in the popup for easier editing.</p>
       <div class="editor-label"><label for="context">Page context</label><span id="edited" hidden>Edited</span></div>
+      <fieldset class="find-replace">
+        <legend>Find and replace</legend>
+        <div class="search-row">
+          <label class="search-field" for="find-text">Find<input id="find-text" type="text" autocomplete="off" spellcheck="false" /></label>
+          <label class="case-option"><input id="match-case" type="checkbox" />Match case</label>
+          <button id="find-previous" type="button" disabled>Previous</button>
+          <button id="find-next" type="button" disabled>Next</button>
+        </div>
+        <div class="search-row">
+          <label class="search-field" for="replace-text">Replace with<input id="replace-text" type="text" autocomplete="off" spellcheck="false" /></label>
+          <button id="replace-one" type="button" disabled>Replace</button>
+          <button id="replace-all" type="button" disabled>Replace all</button>
+        </div>
+        <p id="find-status" class="note" role="status" aria-live="polite" aria-atomic="true"></p>
+      </fieldset>
       <textarea id="context" spellcheck="false" autocomplete="off" autocapitalize="off" aria-describedby="privacy-note lifetime-note"></textarea>
       <p id="metrics" class="note"></p>
       <p id="compression-metrics" class="note"></p>

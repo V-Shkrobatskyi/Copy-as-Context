@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.4.1 — unreleased
+## 1.4.2 — unreleased
+
+- Add compact Find and replace controls to Preview & edit, with literal text search, match counts, case matching, forward/backward navigation and replacement of one or all matches.
+- Scroll the editor automatically to selected matches, including wrapped text and navigation after replacement.
+- Support keyboard search shortcuts and prevent replacements that exceed the draft size limit.
+
+## 1.4.1
 
 - Move Preview & edit, Copy page context and Save to file above the popup preferences panel for quicker access.
 
