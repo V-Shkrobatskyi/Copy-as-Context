@@ -51,7 +51,7 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 0; bo
 .format-option { display: flex; align-items: center; gap: 6px; min-height: 34px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: .75rem; font-weight: 650; cursor: pointer; }
 .format-option:has(input:checked) { border-color: var(--accent); background: var(--selected); color: var(--accent-dark); }
 .format-option input { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
-.action-section { margin-top: 14px; }
+.action-section { margin-bottom: 14px; }
 .actions { display: grid; grid-template-columns: 1.15fr 1.45fr 1fr; gap: 6px; }
 button { border-radius: 8px; cursor: pointer; padding: 9px 8px; font: inherit; font-size: .76rem; font-weight: 700; }
 .actions button { min-width: 0; padding: 9px 6px; font-size: .7rem; }

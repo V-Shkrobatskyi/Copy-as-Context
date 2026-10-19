@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.4.0 — unreleased
+## 1.4.1 — unreleased
+
+- Move Preview & edit, Copy page context and Save to file above the popup preferences panel for quicker access.
+
+## 1.4.0
 
 - Add Regex filters using RE2JS, preset expressions, validation limits and migration of earlier token rule types.
 - Add automatic email/domain, phone and English personal-field masking, plus full hiding for emails, phones, personal fields, payment card numbers and IBANs. Card and IBAN detection includes checksum validation.
