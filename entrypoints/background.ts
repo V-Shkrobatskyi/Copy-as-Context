@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import { browser } from 'wxt/browser';
+import { loadRedactionSettings } from '@/src/redaction-settings';
 import { resolveBrowserInfo, type BrowserInfoDependencies } from '../src/platform/browser-info';
 import { captureActiveTab } from '../src/adapters/capture';
 import { CAPTURE_ACTIVE_TAB_MESSAGE, isCaptureActiveTabRequest, type CaptureActiveTabResponse } from '../src/capture-message';
@@ -70,6 +71,14 @@ export default defineBackground(() => {
         sendResponse(result);
         return;
       }
+      let filters;
+      if (message.redactSensitiveData) {
+        try { filters = await loadRedactionSettings(); }
+        catch {
+          sendResponse({ ok: false, error: { code: 'redaction-settings', message: 'Unable to load redaction filters. Open Customize to reload or restore them.' } });
+          return;
+        }
+      }
       const result = await captureActiveTab({ id: tab.id, title: tab.title, url: tab.url }, formatCaptureTime(new Date()));
       reportCaptureResult(result);
       if (result.ok) {
@@ -81,7 +90,7 @@ export default defineBackground(() => {
         });
       }
       const response: CaptureActiveTabResponse = result.ok
-        ? { ok: true, export: prepareExport(result.tree, message.compression, message.format, message.redactSensitiveData), ...(result.warnings?.length ? { warnings: result.warnings } : {}), ...(result.frameAccess?.length ? { frameAccess: result.frameAccess } : {}) }
+        ? { ok: true, export: prepareExport(result.tree, message.compression, message.format, message.redactSensitiveData, filters), ...(result.warnings?.length ? { warnings: result.warnings } : {}), ...(result.frameAccess?.length ? { frameAccess: result.frameAccess } : {}) }
         : result;
       sendResponse(response);
     })().catch(() => {

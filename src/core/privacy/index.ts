@@ -2,3 +2,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 export { redactSemanticTree, type RedactionResult } from './redact';
+
+export * from './settings';
