@@ -30,7 +30,7 @@ recipients can still use previously obtained MIT code under its MIT terms.
 
 ## Third-party material
 
-Bundled WXT helpers and `@wxt-dev/browser` retain their MIT notices in
+Bundled WXT helpers, `@wxt-dev/browser`, and the RE2JS regular expression engine retain their MIT notices in
 [public/THIRD_PARTY_NOTICES.txt](public/THIRD_PARTY_NOTICES.txt). Keep those
 notices when distributing the extension. Development dependencies retain their
 respective licenses and are recorded in `package-lock.json`; they are not all

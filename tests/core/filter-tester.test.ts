@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { filterExample, FILTER_TEST_LIMITS, testRedactionFilters, testRules } from '@/src/core/privacy/test-filters';
-import { BUILTIN_FILTERS, customRuleFromBuiltin, defaultRedactionSettings, RULE_TYPES, type CustomRedactionRule, type RedactionSettings } from '@/src/core/privacy/settings';
+import { BUILTIN_FILTERS, customRuleFromBuiltin, defaultRedactionSettings, RULE_TYPES, isCustomRuleType, type CustomRedactionRule, type RedactionSettings } from '@/src/core/privacy/settings';
 
 const custom = (extra: Partial<CustomRedactionRule> = {}): CustomRedactionRule => ({ id: 'custom', name: 'Private client', text: 'ACME', type: 'text', caseSensitive: false, enabled: true, ...extra });
 const config = (...rules: CustomRedactionRule[]): RedactionSettings => ({ ...defaultRedactionSettings(), customRules: rules });
@@ -75,8 +75,9 @@ describe('filter tester', () => {
 
   it.each(RULE_TYPES)('provides a matching example and a near miss for $id', type => {
     const builtin = BUILTIN_FILTERS.map(filter => customRuleFromBuiltin(filter.id)).find(rule => rule.type === type.id);
-    const settings = config(builtin ? { ...builtin, id: 'custom', enabled: false } : custom({ type: type.id, text: 'client code / private phrase' }));
-    const item = testRules(settings).find(item => item.source === 'custom')!;
+    const automatic = !isCustomRuleType(type.id);
+    const settings = automatic ? { ...defaultRedactionSettings(), disabledBuiltins: BUILTIN_FILTERS.map(filter => filter.id) } : config(builtin ? { ...builtin, id: 'custom', enabled: false } : custom({ type: type.id, text: 'client code / private phrase' }));
+    const item = testRules(settings).find(item => automatic ? item.source === 'builtin' && item.rule.type === type.id : item.source === 'custom')!;
     const positive = filterExample(item);
     const negative = filterExample(item, true);
     expect(testRedactionFilters(settings, positive.sample, positive.fieldLabel, item.key).matches).toHaveLength(1);

@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- Copyright (c) 2026 Vitalii Shkrobatskyi; SPDX-License-Identifier: GPL-3.0-only -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Filter demo — Copy as Context</title>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="brand"><img src="/icon/48.png" width="32" height="32" alt="" /><span>Copy as Context</span></div>
+      <div class="heading"><div><p class="eyebrow">LIVE FILTER DEMO</p><h1>See what stays private</h1></div><a class="settings-link" href="/filters.html">Customize filters</a></div>
+      <p class="intro">Only enabled filters appear here. Each result uses all of them together, so full hiding can override masking.</p>
+    </header>
+    <section class="live-panel" aria-label="Demo status">
+      <p id="status" role="status" aria-live="polite">Loading filters…</p>
+      <p id="source" class="note"></p>
+      <p class="note">Open the extension popup to Copy, Preview or Save this page. Use Redact sensitive data to compare protected and original samples.</p>
+    </section>
+    <p class="note">Built-in values are synthetic. Custom examples may contain your matching terms. Results update as you edit filters; nothing is sent to a server.</p>
+    <div id="examples" class="examples"></div>
+    <section id="unavailable-panel" class="unavailable" hidden aria-labelledby="unavailable-title">
+      <h2 id="unavailable-title">Add your own sample</h2>
+      <p>These enabled rules have no automatic example. Try filters can test your own sample against them.</p>
+      <ul id="unavailable"></ul>
+      <a href="/filters.html#test-panel">Open Try filters</a>
+    </section>
+    <p id="empty" class="note" hidden>No filters are enabled. Enable a filter in Customize to see its example.</p>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

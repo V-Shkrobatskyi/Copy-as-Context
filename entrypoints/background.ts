@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import { browser } from 'wxt/browser';
+import { captureFilterDemo } from '@/src/adapters/filter-demo';
+import { isOwnFilterDemo } from '@/src/filter-demo-protocol';
+import type { RedactionSettings } from '@/src/core/privacy/settings';
+import type { CaptureOutcome } from '@/src/adapters/types';
 import { loadRedactionSettings } from '@/src/redaction-settings';
 import { resolveBrowserInfo, type BrowserInfoDependencies } from '../src/platform/browser-info';
 import { captureActiveTab } from '../src/adapters/capture';
@@ -66,20 +70,28 @@ export default defineBackground(() => {
     void (async () => {
       const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
       const tab = tabs[0];
-      if (tab?.id === undefined || !canAttemptCapture(tab.url)) {
+      const demo = isOwnFilterDemo(tab?.url, browser.runtime.getURL('/demo.html'));
+      if (tab?.id === undefined || (!demo && !canAttemptCapture(tab.url))) {
         const result = unsupportedPage('This browser page cannot be captured.');
         sendResponse(result);
         return;
       }
-      let filters;
-      if (message.redactSensitiveData) {
+      let filters: RedactionSettings | undefined;
+      if (message.redactSensitiveData && !demo) {
         try { filters = await loadRedactionSettings(); }
         catch {
           sendResponse({ ok: false, error: { code: 'redaction-settings', message: 'Unable to load redaction filters. Open Customize to reload or restore them.' } });
           return;
         }
       }
-      const result = await captureActiveTab({ id: tab.id, title: tab.title, url: tab.url }, formatCaptureTime(new Date()));
+      const target = { id: tab.id, title: tab.title, url: tab.url };
+      const capturedAt = formatCaptureTime(new Date());
+      let result: CaptureOutcome;
+      if (demo) {
+        const captured = await captureFilterDemo(target, capturedAt);
+        result = captured;
+        if (captured.ok) filters = captured.filters;
+      } else result = await captureActiveTab(target, capturedAt);
       reportCaptureResult(result);
       if (result.ok) {
         result.tree.browser = await resolveBrowserInfo({

@@ -3,10 +3,10 @@
 
 import { describe, expect, it } from 'vitest';
 import { redactSemanticTree, prepareExport, COMPRESSION_LEVELS, type SemanticTree } from '@/src/core';
-import { BUILTIN_FILTERS, DETECTOR_MODES, EXTRA_MODE_KEYS, customRuleFromBuiltin, defaultRedactionSettings, exportRedactionSettings, importRedactionSettings, validateRedactionSettings, type CustomRedactionRule, type RedactionSettings } from '@/src/core/privacy/settings';
+import { BUILTIN_FILTERS, isCustomRuleType, DETECTOR_MODES, EXTRA_MODE_KEYS, customRuleFromBuiltin, defaultRedactionSettings, exportRedactionSettings, importRedactionSettings, validateRedactionSettings, type CustomRedactionRule, type RedactionSettings } from '@/src/core/privacy/settings';
 
 const disabledBuiltins = BUILTIN_FILTERS.map(filter => filter.id);
-const onlyCustom = (customRules: CustomRedactionRule[]): RedactionSettings => ({ version: 1, disabledBuiltins, customRules });
+const onlyCustom = (customRules: CustomRedactionRule[]): RedactionSettings => ({ version: 6, disabledBuiltins, customRules });
 const textTree = (text: string): SemanticTree => ({ schemaVersion: 1, title: text, sourceUrl: `https://example.test/?note=${text}`, root: { role: 'text', name: text, value: text, href: text, children: [] } });
 const samples = [
   'Bearer abcdefghijkl Basic abcdefghijkl bearer abcdefghijkl BASIC abcdefghijkl Bearer short Basic ab+/cd==',
@@ -29,16 +29,17 @@ const fixture: SemanticTree = {
 };
 
 describe('custom credential detectors', () => {
-  it.each(BUILTIN_FILTERS)('reproduces $id with the built-in disabled, including case overrides and field descendants', filter => {
+  it.each(BUILTIN_FILTERS.filter(filter => isCustomRuleType(customRuleFromBuiltin(filter.id).type)))('reproduces $id with the built-in disabled, including case overrides and field descendants', filter => {
     for (const caseSensitive of [true, false]) {
-      const original: RedactionSettings = { version: 1, disabledBuiltins: disabledBuiltins.filter(id => id !== filter.id), customRules: [], builtinCaseSensitivity: { [filter.id]: caseSensitive } };
+      const original: RedactionSettings = { version: 6, disabledBuiltins: disabledBuiltins.filter(id => id !== filter.id), customRules: [], builtinCaseSensitivity: { [filter.id]: caseSensitive } };
       const custom = onlyCustom([customRuleFromBuiltin(filter.id, caseSensitive)]);
       expect(redactSemanticTree(fixture, custom)).toEqual(redactSemanticTree(fixture, original));
     }
   });
 
   it.each(['semantic-text', 'markdown'] as const)('replaces every built-in together through exports and every compression profile (%s)', format => {
-    const custom = onlyCustom(BUILTIN_FILTERS.map(filter => customRuleFromBuiltin(filter.id)));
+    const configurable = BUILTIN_FILTERS.filter(filter => isCustomRuleType(customRuleFromBuiltin(filter.id).type));
+    const custom = { ...defaultRedactionSettings(), disabledBuiltins: [...new Set([...defaultRedactionSettings().disabledBuiltins, ...configurable.map(filter => filter.id)])], customRules: configurable.map(filter => customRuleFromBuiltin(filter.id)) };
     const imported = importRedactionSettings(exportRedactionSettings(custom));
     expect(imported).toEqual(validateRedactionSettings(custom));
     expect(redactSemanticTree(fixture, imported)).toEqual(redactSemanticTree(fixture));

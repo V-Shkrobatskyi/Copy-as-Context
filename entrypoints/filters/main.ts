@@ -2,14 +2,31 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import './style.css';
+import { readFilterDemoDraft, writeFilterDemoDraft } from '@/src/filter-demo-draft';
+import { REGEX_EXAMPLES, compileRegex } from '@/src/core/privacy/regex';
+import { isAutomaticType, PERSONAL_FIELD_TERMS } from '@/src/core/privacy/personal-data';
 import { browser } from 'wxt/browser';
-import { BUILTIN_FILTERS, builtinCaseSensitive, customRuleFromBuiltin, RULE_TYPES, defaultRedactionSettings, exportRedactionSettings, importRedactionSettings, REDACTION_LIMITS, validateRedactionSettings, type CustomRedactionRule, type RuleType, type RedactionSettings } from '@/src/core/privacy/settings';
-import { filterExample, testRedactionFilters, testRules } from '@/src/core/privacy/test-filters';
+import { BUILTIN_FILTERS, builtinCaseSensitive, customRuleFromBuiltin, RULE_TYPES, CUSTOM_RULE_TYPES, isCustomRuleType, defaultRedactionSettings, exportRedactionSettings, importRedactionSettings, REDACTION_LIMITS, validateRedactionSettings, type CustomRedactionRule, type RuleType, type RedactionSettings } from '@/src/core/privacy/settings';
+import { filterExample, testRedactionFilters, testRules, type FilterTestContext } from '@/src/core/privacy/test-filters';
 import { loadRedactionSettings, saveRedactionSettings } from '@/src/redaction-settings';
+
+const AUTOMATIC_MATCHING_DESCRIPTIONS: Partial<Record<RuleType, string>> = {
+  emailMaskDomain: 'ASCII email addresses: name@example.com / name+tag@sub.example.com',
+  emailHide: 'ASCII email addresses: name@example.com / name+tag@sub.example.com',
+  phoneNumbersMask: '8–15 digits; + or 00 prefix, or Phone / Telephone / Tel / Mobile / Fax labels. Spaces, parentheses, dots and hyphens allowed.',
+  phoneNumbers: '8–15 digits; + or 00 prefix, or Phone / Telephone / Tel / Mobile / Fax labels. Spaces, parentheses, dots and hyphens allowed.',
+  paymentCards: '13–19 digits with a valid Luhn checksum; spaces or hyphens allowed. Repeated-digit numbers excluded.',
+  iban: 'IBAN: country code + 2 check digits + account identifier; registered country length and valid MOD-97 checksum. Spaces allowed.',
+  personalFieldsMask: PERSONAL_FIELD_TERMS,
+  personalFieldsHide: PERSONAL_FIELD_TERMS,
+};
 
 const get = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const status = get('status');
 const fileInput = get<HTMLInputElement>('import-file');
+const navigationDraft = readFilterDemoDraft();
+const demoSession = navigationDraft?.session ?? crypto.randomUUID();
+let hasNavigationDraft = !!navigationDraft;
 let draft = defaultRedactionSettings();
 let baseline: string | undefined;
 let ready = false;
@@ -48,12 +65,12 @@ function changed(): void {
   modified = baseline === undefined || JSON.stringify(draft) !== baseline;
   clearTestResult(); refreshTestRules();
   feedback(modified ? 'Changes are not saved yet.' : 'Filters match the saved settings.');
-  updateControls();
+  updateControls(); syncNavigationDraft();
 }
 function updateControls(): void {
   const blocked = busy || leaving;
   document.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLTextAreaElement | HTMLSelectElement>('button, input, textarea, select').forEach(control => { control.disabled = blocked || control.dataset.fixed === 'true'; });
-  for (const id of ['save-filters', 'add-rule', 'test-filters', 'test-selected', 'load-example', 'load-near-miss', 'export-filters']) {
+  for (const id of ['open-demo', 'save-filters', 'add-rule', 'test-filters', 'test-selected', 'load-example', 'load-near-miss', 'export-filters']) {
     get<HTMLButtonElement>(id).disabled = blocked || !ready;
   }
   get<HTMLButtonElement>('show-import').disabled = blocked;
@@ -65,20 +82,25 @@ function updateControls(): void {
   get('dirty').textContent = modified ? 'Unsaved changes' : ready ? 'Saved filters' : '';
 }
 
-function checkbox(label: string, checked: boolean, onChange: (checked: boolean) => void): HTMLLabelElement {
+function checkbox(label: string, checked: boolean, onChange: (checked: boolean) => void, mobileLabel?: string): HTMLLabelElement {
   const wrapper = document.createElement('label'); wrapper.className = 'table-toggle'; wrapper.title = label;
   const input = document.createElement('input'); input.type = 'checkbox'; input.checked = checked;
   input.addEventListener('change', () => { onChange(input.checked); changed(); });
   const text = document.createElement('span'); text.className = 'sr-only'; text.textContent = label;
   wrapper.append(input, text);
+  if (mobileLabel) {
+    const mobileText = document.createElement('span'); mobileText.className = 'mobile-toggle-label';
+    mobileText.textContent = mobileLabel; mobileText.setAttribute('aria-hidden', 'true');
+    wrapper.append(mobileText);
+  }
   return wrapper;
 }
 function cell(row: HTMLTableRowElement, content: Node | string): HTMLTableCellElement {
   const td = document.createElement('td'); td.append(content); row.append(td); return td;
 }
-function ruleTypeSelect(rule: CustomRedactionRule, fixed = false): HTMLSelectElement {
+function ruleTypeSelect(rule: CustomRedactionRule, fixed = false, onTypeChange?: () => void): HTMLSelectElement {
   const select = document.createElement('select'); select.setAttribute('aria-label', `Rule type for ${rule.name || 'new filter'}`);
-  for (const type of RULE_TYPES) {
+  for (const type of fixed ? RULE_TYPES.filter(type => type.id === rule.type) : CUSTOM_RULE_TYPES) {
     const option = document.createElement('option'); option.value = type.id; option.textContent = type.label;
     select.append(option);
   }
@@ -87,6 +109,7 @@ function ruleTypeSelect(rule: CustomRedactionRule, fixed = false): HTMLSelectEle
   else select.addEventListener('change', () => {
     rule.type = select.value as RuleType;
     select.title = RULE_TYPES.find(type => type.id === rule.type)!.description;
+    onTypeChange?.();
     changed();
   });
   return select;
@@ -102,27 +125,37 @@ function render(): void {
     const title = document.createElement('strong'); title.textContent = filter.name;
     const type = document.createElement('small'); type.textContent = 'Built-in';
     name.append(title, type); cell(row, name);
-    const text = document.createElement('code'); text.textContent = customRuleFromBuiltin(filter.id).text; text.title = filter.description;
+    const rule = customRuleFromBuiltin(filter.id);
+    const automatic = isAutomaticType(rule.type);
+    const personalFields = filter.id === 'personal-fields-mask' || filter.id === 'personal-fields';
+    const text = document.createElement(automatic && !personalFields ? 'span' : 'code');
+    text.textContent = AUTOMATIC_MATCHING_DESCRIPTIONS[rule.type!] ?? rule.text;
+    text.title = filter.description;
     cell(row, text);
     cell(row, ruleTypeSelect(customRuleFromBuiltin(filter.id), true)).className = 'rule-type-value';
-    cell(row, checkbox(`Case sensitive for ${filter.name}`, builtinCaseSensitive(draft, filter.id), value => {
+    const caseToggle = checkbox(`Case sensitive for ${filter.name}`, builtinCaseSensitive(draft, filter.id), value => {
       const overrides = { ...draft.builtinCaseSensitivity };
       if (value === filter.caseSensitive) delete overrides[filter.id];
       else overrides[filter.id] = value;
       if (Object.keys(overrides).length) draft.builtinCaseSensitivity = Object.fromEntries(
         BUILTIN_FILTERS.filter(item => overrides[item.id] !== undefined).map(item => [item.id, overrides[item.id]]));
       else delete draft.builtinCaseSensitivity;
-    })).className = 'case-value';
-    const duplicate = document.createElement('button'); duplicate.type = 'button'; duplicate.textContent = 'Duplicate'; duplicate.dataset.duplicate = 'true';
-    duplicate.title = 'Create an editable custom copy of this built-in filter';
-    duplicate.addEventListener('click', () => {
-      if (busy || !ready || draft.customRules.length >= REDACTION_LIMITS.rules) return;
-      const copy = customRuleFromBuiltin(filter.id, builtinCaseSensitive(draft, filter.id));
-      copy.id = crypto.randomUUID(); copy.name = `${filter.name} copy`;
-      draft.customRules.push(copy); changed(); render();
-      get('custom-rules').querySelector<HTMLInputElement>('.custom-rule:last-child input[type="text"]')?.focus();
-    });
-    cell(row, duplicate).className = 'builtin-actions';
+    }, 'Case sensitive');
+    cell(row, automatic ? '—' : caseToggle).className = 'case-value';
+    if (!automatic) {
+      const duplicate = document.createElement('button'); duplicate.type = 'button'; duplicate.textContent = 'Duplicate'; duplicate.dataset.duplicate = 'true';
+      duplicate.title = 'Create an editable custom copy of this built-in filter';
+      duplicate.addEventListener('click', () => {
+        if (!isCustomRuleType(customRuleFromBuiltin(filter.id).type) || busy || !ready || draft.customRules.length >= REDACTION_LIMITS.rules) return;
+        const copy = customRuleFromBuiltin(filter.id, builtinCaseSensitive(draft, filter.id));
+        copy.id = crypto.randomUUID(); copy.name = `${filter.name} copy`;
+        draft.customRules.push(copy); changed(); render();
+        get('custom-rules').querySelector<HTMLInputElement>('.custom-rule:last-child input[type="text"]')?.focus();
+      });
+      cell(row, duplicate).className = 'builtin-actions';
+    } else {
+      const action = cell(row, '—'); action.className = 'builtin-actions'; action.title = 'Automatic built-in filter. Use On to enable or disable it.';
+    }
     builtins.append(row);
   }
   const rules = get('custom-rules'); rules.replaceChildren();
@@ -133,28 +166,58 @@ function render(): void {
     name.maxLength = REDACTION_LIMITS.name; name.placeholder = 'Filter name'; name.setAttribute('aria-label', 'Filter name');
     name.addEventListener('input', () => { rule.name = name.value; changed(); });
     cell(row, name);
-    const text = document.createElement('textarea'); text.rows = 2; text.value = rule.text; text.spellcheck = false;
-    text.maxLength = REDACTION_LIMITS.text; text.placeholder = 'Matching rule'; text.setAttribute('aria-label', 'Matching rule');
-    text.addEventListener('input', () => { rule.text = text.value; changed(); });
-    cell(row, text);
-    cell(row, ruleTypeSelect(rule)).className = 'rule-type-value';
-    cell(row, checkbox('Case sensitive for this filter', rule.caseSensitive, value => { rule.caseSensitive = value; })).className = 'case-value';
+    const text = document.createElement('textarea'); text.rows = 1; text.value = rule.text; text.spellcheck = false;
+    text.placeholder = 'Matching rule'; text.setAttribute('aria-label', 'Matching rule');
+    const matchingCell = cell(row, text);
+    const examples = document.createElement('select'); examples.className = 'regex-examples'; examples.setAttribute('aria-label', 'Insert Regex example');
+    const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = 'Insert example…'; examples.append(placeholder);
+    for (const example of REGEX_EXAMPLES) {
+      const option = document.createElement('option'); option.value = example.id; option.textContent = example.label; examples.append(option);
+    }
+    const hint = document.createElement('small'); hint.className = 'regex-hint';
+    const error = document.createElement('small'); error.className = 'rule-error'; error.id = `rule-error-${rule.id}`; error.setAttribute('aria-live', 'polite');
+    const caseToggle = checkbox('Case sensitive for this filter', rule.caseSensitive, value => { rule.caseSensitive = value; }, 'Case sensitive');
+    text.setAttribute('aria-describedby', error.id);
+    const updateRuleEditor = () => {
+      const regex = rule.type === 'regex';
+      text.maxLength = regex ? REDACTION_LIMITS.regex : REDACTION_LIMITS.text;
+      examples.hidden = !regex; hint.hidden = !regex;
+      hint.textContent = 'Enter Regex without / delimiters or flags. Case sensitive controls letter case.';
+      error.textContent = '';
+      if (regex && rule.text.trim()) {
+        try { compileRegex(rule.text, rule.caseSensitive); }
+        catch (cause) { error.textContent = cause instanceof Error ? cause.message : 'Invalid Regex.'; }
+      }
+      text.setAttribute('aria-invalid', String(Boolean(error.textContent)));
+    };
+    examples.addEventListener('change', () => {
+      const example = REGEX_EXAMPLES.find(example => example.id === examples.value); examples.value = '';
+      if (!example || (rule.text.trim() && rule.text !== example.pattern && !window.confirm('Replace this matching rule with the selected Regex example?'))) return;
+      rule.text = example.pattern; text.value = rule.text; changed(); updateRuleEditor();
+      hint.textContent = example.note; text.focus();
+    });
+    text.addEventListener('input', () => { rule.text = text.value; changed(); updateRuleEditor(); });
+    matchingCell.append(examples, hint, error); updateRuleEditor();
+    cell(row, ruleTypeSelect(rule, false, updateRuleEditor)).className = 'rule-type-value';
+    const caseCell = cell(row, caseToggle); caseCell.className = 'case-value';
     const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove';
     remove.addEventListener('click', () => { draft.customRules = draft.customRules.filter(item => item.id !== rule.id); changed(); render(); });
     cell(row, remove); rules.append(row);
   }
   get('empty-rules').hidden = draft.customRules.length > 0;
   clearTestResult(); refreshTestRules();
-  updateControls();
+  updateControls(); syncNavigationDraft();
 }
 
-async function load(): Promise<void> {
+async function load(restoreNavigation = false): Promise<void> {
   busy = true; clearTestResult(); updateControls();
   try {
-    const settings = await loadRedactionSettings();
+    const restored = restoreNavigation ? readFilterDemoDraft() : undefined;
+    const settings = restored?.settings ?? await loadRedactionSettings();
     if (disposed) return;
-    draft = settings; baseline = JSON.stringify(settings); ready = true; modified = false;
-    feedback('Filters loaded.'); render();
+    draft = settings; baseline = restored ? restored.baseline : JSON.stringify(settings); ready = true; modified = baseline === undefined || JSON.stringify(settings) !== baseline;
+    feedback(restored && modified ? 'Unsaved filter changes restored.' : 'Filters loaded.'); render();
+    if (location.hash === '#test-panel') get<HTMLDetailsElement>('test-panel').open = true;
   } catch {
     ready = false; baseline = undefined; modified = false; draft = defaultRedactionSettings();
     get('builtins').replaceChildren(); get('custom-rules').replaceChildren();
@@ -165,7 +228,7 @@ get('reload-filters').addEventListener('click', () => {
   if (!busy && (!modified || window.confirm('Discard unsaved filter changes?'))) void load();
 });
 get('restore-defaults').addEventListener('click', () => {
-  if (busy || !window.confirm('Restore all built-in filters and remove every custom rule? Choose Save filters to apply this change.')) return;
+  if (busy || !window.confirm('Restore default built-in settings and remove every custom rule? Choose Save filters to apply this change.')) return;
   draft = defaultRedactionSettings(); ready = true; changed(); render();
 });
 get('add-rule').addEventListener('click', () => {
@@ -185,10 +248,11 @@ get('save-filters').addEventListener('click', () => {
       }
       await saveRedactionSettings(settings);
       draft = settings; baseline = JSON.stringify(settings); modified = false;
+      syncNavigationDraft();
       render();
       feedback('Filters saved. They apply to your next export when Redact sensitive data is on.');
-    } catch {
-      feedback('Unable to save filters. Check names and non-blank matching rules (up to 256 characters each; 65,536 total). URL parameter rules need names only, without ?, &, =, # or line breaks. Reload saved if settings changed elsewhere.');
+    } catch (error) {
+      feedback(error instanceof Error && error.message.includes('Regex') ? error.message : 'Unable to save filters. Check names, matching rules and filter limits. URL parameter rules need names only, without ?, &, =, # or line breaks. Reload saved if settings changed elsewhere.');
     } finally { busy = false; updateControls(); }
   })();
 });
@@ -196,9 +260,10 @@ function runTest(selected: boolean): void {
   if (busy || !ready) return;
   clearTestResult();
   try {
-    const label = get<HTMLInputElement>('test-field-label').value.trim();
+    const context = get<HTMLSelectElement>('test-context').value as FilterTestContext;
+    const label = context === 'auto' ? get<HTMLInputElement>('test-field-label').value.trim() : '';
     const sample = get<HTMLTextAreaElement>('test-input').value;
-    const result = testRedactionFilters(draft, sample, label, selected ? get<HTMLSelectElement>('test-rule').value : undefined);
+    const result = testRedactionFilters(draft, sample, label, selected ? get<HTMLSelectElement>('test-rule').value : undefined, context);
     get<HTMLTextAreaElement>('test-output').value = result.output;
     if (result.fieldLabel !== undefined) {
       get('test-label-result').hidden = false;
@@ -216,12 +281,15 @@ function runTest(selected: boolean): void {
       const item = document.createElement('li'); item.textContent = 'No rules matched this sample.'; get('test-matches').append(item);
     }
     feedback(selected ? 'Selected filter tested on its own, including if it is off. Nothing was saved or copied.' : 'Test complete. Nothing was saved or copied.');
-  } catch { feedback('Complete the filters being tested. Use names and non-blank matching rules within the limits; URL parameter rules need names only. Test selected can check a completed rule while other rows are unfinished.'); }
+  } catch (error) { feedback(error instanceof Error && error.message.includes('Regex') ? error.message : 'Complete the filters being tested. Use names and non-blank matching rules within the limits; URL parameter rules need names only. Test selected can check a completed rule while other rows are unfinished.'); }
 }
 get('test-filters').addEventListener('click', () => runTest(false));
 get('test-selected').addEventListener('click', () => runTest(true));
 for (const id of ['test-input', 'test-field-label']) get(id).addEventListener('input', clearTestResult);
 get('test-rule').addEventListener('change', clearTestResult);
+get('test-context').addEventListener('change', () => {
+  get('test-field-context').hidden = get<HTMLSelectElement>('test-context').value !== 'auto'; clearTestResult();
+});
 for (const [id, nearMiss] of [['load-example', false], ['load-near-miss', true]] as const) {
   get(id).addEventListener('click', () => {
     if (busy || !ready) return;
@@ -231,15 +299,41 @@ for (const [id, nearMiss] of [['load-example', false], ['load-near-miss', true]]
       const item = testRules(draft).find(item => item.key === key);
       if (!item) throw new Error('No filter selected');
       const example = filterExample(item, nearMiss);
+      get<HTMLSelectElement>('test-context').value = 'auto'; get('test-field-context').hidden = false;
       get<HTMLInputElement>('test-field-label').value = example.fieldLabel;
       get<HTMLTextAreaElement>('test-input').value = example.sample;
       const matched = testRedactionFilters(draft, example.sample, example.fieldLabel, key).matches.length > 0;
       get('example-feedback').textContent = nearMiss
         ? matched ? 'This near miss also matches your selected rule. Check whether another alternative covers it.' : 'Synthetic near miss loaded. Test selected should leave it unchanged; Test all may match other rules.'
         : matched ? 'Synthetic matching example loaded. Choose Test selected or Test all.' : 'Synthetic example loaded, but your selected rule does not match it. Check its terms and type requirements.';
-    } catch { feedback('Complete the selected filter before loading an example. Other filters can remain unfinished.'); }
+    } catch (error) { feedback(error instanceof Error && error.message.includes('Regex') ? error.message : 'Complete the selected filter before loading an example. Other filters can remain unfinished.'); }
   });
 }
+function demoSettings(): RedactionSettings {
+  return validateRedactionSettings({ ...draft, customRules: draft.customRules.filter(rule => rule.enabled) });
+}
+function syncNavigationDraft(): void {
+  if (!hasNavigationDraft || disposed) return;
+  try { writeFilterDemoDraft({ session: demoSession, settings: draft, baseline }); }
+  catch { /* Navigation validates again before leaving; editing remains available. */ }
+}
+get('open-demo').addEventListener('click', () => {
+  if (busy || !ready) return;
+  try { demoSettings(); }
+  catch { feedback('Complete the enabled filters before opening Demo. Disabled unfinished rows can stay unchanged.'); return; }
+  void (async () => {
+    try {
+      writeFilterDemoDraft({ session: demoSession, settings: draft, baseline });
+      hasNavigationDraft = true;
+      leaving = true; updateControls();
+      const tab = await browser.tabs.getCurrent();
+      if (tab?.id === undefined) throw new Error('tab-unavailable');
+      await browser.tabs.update(tab.id, { url: `${browser.runtime.getURL('/demo.html')}#${demoSession}` });
+    } catch {
+      leaving = false; updateControls(); feedback('Unable to open the filter demo. Your filter changes are still here.');
+    }
+  })();
+});
 get('show-import').addEventListener('click', () => {
   if (busy) return;
   try { fileInput.value = ''; fileInput.click(); }
@@ -248,7 +342,7 @@ get('show-import').addEventListener('click', () => {
 fileInput.addEventListener('change', () => {
   const file = fileInput.files?.[0];
   if (!file || busy) return;
-  if (file.size > REDACTION_LIMITS.json) { feedback('The filter file is too large. The limit is 256 KB.'); fileInput.value = ''; return; }
+  if (file.size > REDACTION_LIMITS.json) { feedback('The filter file is too large. The limit is 1 MB.'); fileInput.value = ''; return; }
   busy = true; updateControls();
   void file.text().then(text => {
     if (disposed) return;
@@ -300,5 +394,5 @@ window.addEventListener('pagehide', () => {
   get<HTMLTextAreaElement>('test-input').value = ''; clearTestResult();
   get<HTMLInputElement>('test-field-label').value = '';
 });
-window.addEventListener('pageshow', event => { if (event.persisted) { disposed = false; leaving = false; void load(); } });
-void load();
+window.addEventListener('pageshow', event => { if (event.persisted) { disposed = false; leaving = false; updateControls(); syncNavigationDraft(); } });
+void load(true);

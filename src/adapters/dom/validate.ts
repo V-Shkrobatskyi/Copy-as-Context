@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { isOwnFilterDemo } from '../../filter-demo-protocol';
 import type { CaptureOutcome } from '../types';
 import { isCaptureWarnings } from '../../capture-warnings';
 import { DOM_CAPTURE_LIMITS } from './limits';
@@ -9,7 +10,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const onlyKeys = (value: Record<string, unknown>, keys: string[]): boolean => Object.keys(value).every((key) => keys.includes(key));
 
 /** Validate the isolated-world boundary before recursive core transformations. */
-export function isDomCaptureOutcome(value: unknown, embedded = false): value is CaptureOutcome {
+export function isDomCaptureOutcome(value: unknown, embedded = false, expectedDemoUrl?: string): value is CaptureOutcome {
   if (!isRecord(value)) return false;
   if (value.ok === false) return isRecord(value.error) &&
     ['capture-failed', 'capture-limit', 'unsupported-page'].includes(String(value.error.code)) && typeof value.error.message === 'string';
@@ -28,7 +29,12 @@ export function isDomCaptureOutcome(value: unknown, embedded = false): value is 
   if (!validText(tree.title) || !validText(tree.sourceUrl) || tree.capturedAt !== undefined) return false;
   if (!embedded || tree.sourceUrl !== undefined) {
     if (typeof tree.sourceUrl !== 'string') return false;
-    try { if (!['http:', 'https:', 'file:'].includes(new URL(tree.sourceUrl).protocol)) return false; } catch { return false; }
+    if (expectedDemoUrl !== undefined && tree.sourceUrl !== expectedDemoUrl) return false;
+    try {
+      const url = new URL(tree.sourceUrl);
+      const demo = expectedDemoUrl !== undefined && tree.sourceUrl === expectedDemoUrl && isOwnFilterDemo(tree.sourceUrl, expectedDemoUrl.split('#')[0]!);
+      if (!['http:', 'https:', 'file:'].includes(url.protocol) && !demo) return false;
+    } catch { return false; }
   }
   const stack = [{ node: tree.root, depth: 0 }];
   const seen = new Set<object>();

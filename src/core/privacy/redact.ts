@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import type { SemanticNode, SemanticTree } from '..';
+import { compileRegex } from './regex';
+import { maskPhone, maskText } from './masking';
+import { emailMatches } from './emails';
+import { isAutomaticType, PERSONAL_DATA_TYPES, personalDataMatches, personalFieldMaskKind, type FieldMaskKind } from './personal-data';
 import { builtinCaseSensitive, DETECTOR_MODES, legacyRuleFromType, customRuleTerms, defaultRedactionSettings, validateRedactionSettings, type BuiltinFilterId, type RedactionSettings } from './settings';
 
 /** A value-only summary that never retains a matched secret. */
@@ -32,6 +36,12 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
   const config = { ...validated, customRules: validated.customRules.map(legacyRuleFromType) };
   const disabled = new Set<BuiltinFilterId>(config.disabledBuiltins);
   const enabled = (id: BuiltinFilterId) => !disabled.has(id);
+  const maskEmailDomains = enabled('email-mask-domain');
+  const hidePhones = enabled('phone-numbers');
+  const maskPhones = enabled('phone-mask');
+  const maskPersonalFields = enabled('personal-fields-mask');
+  const personalTypes = PERSONAL_DATA_TYPES.filter(type => (type === 'phoneNumbers' ? hidePhones || maskPhones : enabled(type === 'paymentCards' ? 'payment-cards' : 'iban')));
+  const hideEmails = enabled('email-hide');
   const configuredPattern = (id: BuiltinFilterId, pattern: RegExp) => new RegExp(pattern.source,
     pattern.flags.replace('i', '') + (builtinCaseSensitive(config, id) ? '' : 'i'));
   const fieldNamePattern = configuredPattern('sensitive-fields', SENSITIVE_FIELD_NAME);
@@ -47,7 +57,8 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
   // User rules are literal substrings. Escape metacharacters before compiling them.
   // Separate matchers preserve overlaps between rules and protect placeholders.
   const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-  const customPatterns = config.customRules.filter(rule => rule.enabled && !rule.fieldLabels && !rule.urlParameters && !DETECTOR_MODES.some(mode => rule[mode.key])).flatMap(rule =>
+  const customRegexPatterns = config.customRules.filter(rule => rule.enabled && rule.type === 'regex').map(rule => compileRegex(rule.text, rule.caseSensitive));
+  const customPatterns = config.customRules.filter(rule => rule.enabled && rule.type !== 'regex' && !isAutomaticType(rule.type) && !rule.fieldLabels && !rule.urlParameters && !DETECTOR_MODES.some(mode => rule[mode.key])).flatMap(rule =>
     customRuleTerms(rule).map(term => new RegExp(`\\[REDACTED\\]|${escape(term)}`, rule.caseSensitive ? 'gu' : 'giu')));
   const customQueryPatterns = config.customRules.filter(rule => rule.enabled && rule.urlParameters).map(rule =>
     new RegExp(`([?&](?:${customRuleTerms(rule).map(escape).join('|')})=)((?!\\[REDACTED\\])[^&#\\s]+)`, rule.caseSensitive ? 'gu' : 'giu'));
@@ -70,10 +81,27 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
     }));
   });
 
-  const redactText = (value: string): string => {
-    if (!CREDENTIAL_MARKER.test(value) && customPatterns.length === 0 && customQueryPatterns.length === 0 && customDetectorPatterns.length === 0) return value;
-    type Span = { start: number; end: number; replacement: string };
+  const redactText = (value: string, phoneField = false, fieldMask?: FieldMaskKind): string => {
+    if (!fieldMask && personalTypes.length === 0 && !CREDENTIAL_MARKER.test(value) && customPatterns.length === 0 && customQueryPatterns.length === 0 && customDetectorPatterns.length === 0 && customRegexPatterns.length === 0 && !((maskEmailDomains || hideEmails) && value.includes('@'))) return value;
+    type Span = { start: number; end: number; replacement: string; mask?: boolean };
     const streams: Generator<Span>[] = [];
+    const protectedRanges = customRegexPatterns.length
+      ? [...value.matchAll(/\[REDACTED\]/gu)].map(match => [match.index, match.index + match[0].length] as const) : [];
+    function* regexMatches(pattern: ReturnType<typeof compileRegex>): Generator<Span> {
+      const matcher = pattern.matcher(value);
+      let protectedIndex = 0;
+      while (matcher.find()) {
+        let start = matcher.start(); const end = matcher.end();
+        if (start === end) continue;
+        while (protectedRanges[protectedIndex] && protectedRanges[protectedIndex]![1] <= start) protectedIndex++;
+        for (let index = protectedIndex; protectedRanges[index] && protectedRanges[index]![0] < end; index++) {
+          const [protectedStart, protectedEnd] = protectedRanges[index]!;
+          if (start < protectedStart) yield { start, end: protectedStart, replacement: '[REDACTED]' };
+          start = Math.max(start, protectedEnd);
+        }
+        if (start < end) yield { start, end, replacement: '[REDACTED]' };
+      }
+    }
     function* matches(pattern: RegExp, prefix: number, replacement: string, protectPlaceholder: boolean): Generator<Span> {
       const matcher = new RegExp(pattern);
       let match: RegExpExecArray | null;
@@ -95,6 +123,27 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
     for (const pattern of customPatterns) collect(pattern, 0, '[REDACTED]', true);
     for (const pattern of customQueryPatterns) collect(pattern, 1);
     for (const { pattern, prefix, replacement } of customDetectorPatterns) collect(pattern, prefix, replacement);
+    for (const pattern of customRegexPatterns) streams.push(regexMatches(pattern));
+    function* emails(): Generator<Span> {
+      for (const email of emailMatches(value)) yield {
+        start: email.start, end: email.end, mask: !hideEmails,
+        replacement: hideEmails ? '[REDACTED]' : maskEmailDomains ? email.maskedDomain : email.masked,
+      };
+    }
+    if (maskEmailDomains || hideEmails) streams.push(emails());
+    for (const type of personalTypes) streams.push(personalDataMatches(value, type, phoneField, type === 'phoneNumbers' && !hidePhones));
+    function* maskedField(): Generator<Span> {
+      if (!fieldMask || !value || value === '[REDACTED]') return;
+      let replacement: string;
+      if (fieldMask === 'hide' || value.includes('[REDACTED]')) replacement = '[REDACTED]';
+      else if (fieldMask === 'phone' && /^[+0-9*(). \u00a0\u202f-]+$/u.test(value)) replacement = maskPhone(value);
+      else if (fieldMask === 'email') {
+        const email = emailMatches(value).next().value;
+        replacement = email && email.start === 0 && email.end === value.length ? email.maskedDomain : maskText(value);
+      } else replacement = maskText(value);
+      yield { start: 0, end: value.length, replacement, mask: replacement !== '[REDACTED]' };
+    }
+    if (fieldMask) streams.push(maskedField());
     // Merge original-text matches as streams, so overlapping rules retain full
     // coverage without retaining a per-character match list for short custom rules.
     const candidates = streams.map(stream => stream.next().value as Span | undefined);
@@ -105,7 +154,7 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
       if (!current) return;
       parts.push(value.slice(cursor, current.start), current.replacement);
       cursor = current.end;
-      redactionCount += 1;
+      if (value.slice(current.start, current.end) !== current.replacement) redactionCount += 1;
     };
     for (;;) {
       let selected = -1;
@@ -117,7 +166,11 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
       if (selected === -1) break;
       const span = candidates[selected]!;
       candidates[selected] = streams[selected]!.next().value as Span | undefined;
-      if (current && span.start <= current.end) current.end = Math.max(current.end, span.end);
+      if (current && (span.start < current.end || (span.start === current.end && !span.mask && !current.mask))) {
+        // Full hiding wins over masking across the entire connected match range.
+        if (current.mask && !span.mask) { current.replacement = span.replacement; current.mask = false; }
+        current.end = Math.max(current.end, span.end);
+      }
       else { flush(); current = span; }
     }
     if (!current) return value;
@@ -131,23 +184,26 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
     return '[REDACTED]';
   };
 
-  const redactNode = (node: SemanticNode, insideSensitiveField = false): SemanticNode => {
+  const redactNode = (node: SemanticNode, insideSensitiveField = false, insidePhoneField = false, insideMaskedField?: FieldMaskKind): SemanticNode => {
+    const phoneField = insidePhoneField || (node.value !== undefined && /\b(?:phone|telephone|tel|mobile|fax)\b/iu.test(node.name ?? ''));
     const sensitiveField = node.value !== undefined &&
       ((enabled('sensitive-fields') && fieldNamePattern.test(node.name ?? '')) ||
+        (enabled('personal-fields') && personalFieldMaskKind(node.name ?? '') !== undefined) ||
         customFieldPatterns.some(pattern => pattern.test(node.name ?? '')));
+    const fieldMask = (maskPersonalFields && node.value !== undefined ? personalFieldMaskKind(node.name ?? '') : undefined) ?? insideMaskedField;
     const sensitiveText = insideSensitiveField && ['StaticText', 'InlineTextBox', 'text'].includes(node.role);
     const result: SemanticNode = {
       role: node.role,
       // AX trees may repeat a control value as text below generic wrappers.
-      children: node.children.map((child) => redactNode(child, insideSensitiveField || sensitiveField)),
+      children: node.children.map((child) => redactNode(child, insideSensitiveField || sensitiveField, phoneField, fieldMask)),
     };
     if (node.id !== undefined) result.id = node.id;
-    if (node.name !== undefined) result.name = sensitiveText ? redactFieldText(node.name) : redactText(node.name);
+    if (node.name !== undefined) result.name = sensitiveText ? redactFieldText(node.name) : redactText(node.name, insidePhoneField && ['StaticText', 'InlineTextBox', 'text'].includes(node.role), ['StaticText', 'InlineTextBox', 'text'].includes(node.role) ? insideMaskedField : undefined);
     if (node.value !== undefined) {
-      if (sensitiveField || sensitiveText) {
+      if (sensitiveField || insideSensitiveField) {
         result.value = redactFieldText(node.value);
       } else {
-        result.value = redactText(node.value);
+        result.value = redactText(node.value, phoneField, fieldMask);
       }
     }
     if (node.level !== undefined) result.level = node.level;

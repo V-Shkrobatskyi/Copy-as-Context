@@ -5,6 +5,7 @@
 // Keep direct module imports in this test; the protocol has no parent barrel.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { defaultRedactionSettings } from '@/src/core/privacy/settings';
 import type { CaptureResult } from '@/src/core';
 import type { CaptureActiveTabResponse } from '@/src/capture-message';
 
@@ -15,12 +16,12 @@ async function loadBackground(target = 'chrome') {
   let listener: ((message: unknown, sender: unknown, reply: (result: unknown) => void) => boolean | void) | undefined;
   vi.stubGlobal('defineBackground', (start: () => void) => start());
   const storage = { local: { get: vi.fn().mockResolvedValue({}) } };
-  const chromeApi = { storage, runtime: { id: 'synthetic-chrome-id', getURL: (path: string) => `chrome-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
+  const chromeApi = { storage, runtime: { sendMessage: vi.fn(), id: 'synthetic-chrome-id', getURL: (path: string) => `chrome-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
     tabs: { query: vi.fn().mockResolvedValue([{ id: 42, title: 'Synthetic', url: 'https://example.test/' }]) } };
   vi.stubGlobal('chrome', chromeApi);
   const firefoxApi = {
     storage,
-    runtime: { getBrowserInfo: vi.fn().mockResolvedValue({ name: 'Firefox', version: '157.0' }), getPlatformInfo: vi.fn().mockResolvedValue({ os: 'android' }), id: 'synthetic-firefox-id', getURL: (path: string) => `moz-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
+    runtime: { sendMessage: vi.fn(), getBrowserInfo: vi.fn().mockResolvedValue({ name: 'Firefox', version: '157.0' }), getPlatformInfo: vi.fn().mockResolvedValue({ os: 'android' }), id: 'synthetic-firefox-id', getURL: (path: string) => `moz-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
     tabs: {
       query: vi.fn().mockResolvedValue([{ id: 42, url: 'https://example.test/' }]),
       get: vi.fn().mockResolvedValue({ id: 42, url: 'https://example.test/' }),
@@ -43,7 +44,7 @@ async function loadBackground(target = 'chrome') {
   await import('../../entrypoints/background');
   const api = target === 'firefox' ? firefoxApi : chromeApi;
   const sender = { id: api.runtime.id, url: api.runtime.getURL('/popup.html') };
-  return { request: (message: unknown) => new Promise<CaptureActiveTabResponse>((resolve) => listener!(message, sender, resolve as (result: unknown) => void)), listener: listener!, sender, firefoxApi, storage };
+  return { request: (message: unknown) => new Promise<CaptureActiveTabResponse>((resolve) => listener!(message, sender, resolve as (result: unknown) => void)), listener: listener!, sender, firefoxApi, storage, api };
 }
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.resetModules(); capture.mockReset(); });
@@ -63,6 +64,27 @@ describe('background export boundary', () => {
     const next = await background.request(request);
     expect(next.ok).toBe(true);
     if (next.ok) expect(next.export.serialized.content).toContain('Acme');
+  });
+
+  it.each(['chrome', 'firefox'])('captures only its own demo through the explicit bridge and applies its live draft in %s', async target => {
+    const background = await loadBackground(target);
+    const url = background.api.runtime.getURL('/demo.html') + '#session-1';
+    background.api.tabs.query.mockResolvedValue([{ id: 42, url }]);
+    const settings = { ...defaultRedactionSettings(), customRules: [{ id: 'client', name: 'Client', type: 'text', text: 'Acme', enabled: true, caseSensitive: false }] };
+    background.api.runtime.sendMessage.mockResolvedValue({ settings, capture: { ok: true, tree: { schemaVersion: 1, sourceUrl: url, root: { role: 'page', children: [{ role: 'StaticText', name: 'Acme', children: [] }] } } } });
+    background.storage.local.get.mockRejectedValue(new Error('Saved filters unavailable'));
+    const request = { type: 'capture-active-tab', compression: 'without', format: 'semantic-text', redactSensitiveData: true };
+    const response = await background.request(request);
+    expect(response.ok).toBe(true);
+    if (response.ok) expect(response.export.serialized.content).toContain('[REDACTED]');
+    expect(response).not.toHaveProperty('tree'); expect(response).not.toHaveProperty('filters');
+    expect(capture).not.toHaveBeenCalled(); expect(background.firefoxApi.scripting.executeScript).not.toHaveBeenCalled();
+    const raw = await background.request({ ...request, redactSensitiveData: false });
+    if (raw.ok) expect(raw.export.serialized.content).toContain('Acme'); else throw new Error('Demo privacy-off capture failed');
+    for (const blocked of [background.api.runtime.getURL('/filters.html'), url.replace('test', 'another'), background.api.runtime.getURL('/demo.html') + '?x=1']) {
+      background.api.tabs.query.mockResolvedValue([{ id: 42, url: blocked }]);
+      expect(await background.request(request)).toMatchObject({ ok: false, error: { code: 'unsupported-page' } });
+    }
   });
 
   it('blocks redacted exports if saved filters cannot be read, while explicit privacy-off exports remain available', async () => {

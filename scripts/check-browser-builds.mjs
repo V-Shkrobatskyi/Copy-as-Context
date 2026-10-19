@@ -48,6 +48,11 @@ for (const target of ['chrome', 'firefox']) {
     assert.ok(filtersDocument.window.document.querySelector('#builtins'), 'Missing built-in filter controls');
     assert.ok(filtersDocument.window.document.querySelector('#save-filters'), 'Missing filter save action');
   } finally { filtersDocument.window.close(); }
+  const demoDocument = new JSDOM(await readFile(new URL('demo.html', directory), 'utf8'));
+  try {
+    assert.equal(demoDocument.window.document.documentElement.lang, 'en');
+    assert.ok(demoDocument.window.document.querySelector('#examples'), 'Missing live filter demo examples');
+  } finally { demoDocument.window.close(); }
   const previewDocument = new JSDOM(await readFile(new URL('preview.html', directory), 'utf8'));
   try {
     assert.equal(previewDocument.window.document.documentElement.lang, 'en');

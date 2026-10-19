@@ -1,6 +1,17 @@
 # Changelog
 
-## 1.3.0 — unreleased
+## 1.4.0 — unreleased
+
+- Add Regex filters using RE2JS, preset expressions, validation limits and migration of earlier token rule types.
+- Add automatic email/domain, phone and English personal-field masking, plus full hiding for emails, phones, personal fields, payment card numbers and IBANs. Card and IBAN detection includes checksum validation.
+- Apply full hiding before partial masking on overlapping original-text matches, independently of filter order.
+- Restrict custom rules to configurable types and reject changes to automatic built-in definitions during import.
+- Make the filters table responsive, reduce row and test-field heights, and describe automatic detection criteria.
+- Add a live, capturable Demo with grouped examples for enabled filters and same-tab navigation that preserves unsaved filter drafts.
+- Extend Try filters to test text, labelled fields, links, page titles and page URLs.
+- Keep Customize compact on Firefox Android and dismiss the popup after Customize or Preview opens successfully.
+
+## 1.3.0
 
 - Improve Try filters with isolated selected-rule tests, independent matched-rule diagnostics, field-label results and synthetic matching/near-miss examples based on the selected type and current terms.
 

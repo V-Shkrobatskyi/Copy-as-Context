@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import { describe, expect, it } from 'vitest';
-import { BUILTIN_FILTERS, EXTRA_MODE_KEYS, RULE_TYPES, legacyRuleFromType, customRuleFromBuiltin, defaultRedactionSettings, exportRedactionSettings, importRedactionSettings, REDACTION_LIMITS, validateRedactionSettings, type RedactionSettings } from '@/src/core/privacy/settings';
+import { BUILTIN_FILTERS, LEGACY_BUILTIN_FILTERS, DETECTOR_MODES, EXTRA_MODE_KEYS, RULE_TYPES, CUSTOM_RULE_TYPES, legacyRuleFromType, customRuleFromBuiltin, defaultRedactionSettings, exportRedactionSettings, importRedactionSettings, REDACTION_LIMITS, validateRedactionSettings, type RedactionSettings } from '@/src/core/privacy/settings';
 import { redactSemanticTree, prepareExport, COMPRESSION_LEVELS, type SemanticTree } from '@/src/core';
 
 const rule = (text: string, extra = {}) => ({ id: 'example', name: 'Example', text, caseSensitive: false, enabled: true, ...extra });
@@ -181,14 +181,19 @@ describe('custom redaction filters', () => {
   });
 });
 
+const historicalBuiltin = (id: (typeof BUILTIN_FILTERS)[number]['id']) => {
+  const mode = DETECTOR_MODES.find(mode => mode.builtin === id);
+  return mode ? { ...customRuleFromBuiltin(id), text: mode.terms, type: mode.key } : customRuleFromBuiltin(id);
+};
+
 function historicalFile(settings: RedactionSettings, version: number): { format: string; version: number; filters: Record<string, any>[] } {
   return { format: 'copy-as-context-filters', version, filters: [
-    ...BUILTIN_FILTERS.map(builtin => ({
+    ...LEGACY_BUILTIN_FILTERS.map(builtin => ({
       type: 'builtin', id: builtin.id, name: builtin.name, description: builtin.description,
-      matchingRule: version === 2 && builtin.id === 'sensitive-fields' ? 'Field labels: password, passcode, secret, token, api key, authorization' : version < 6 ? builtin.matchingRule : customRuleFromBuiltin(builtin.id).text,
+      matchingRule: version === 2 && builtin.id === 'sensitive-fields' ? 'Field labels: password, passcode, secret, token, api key, authorization' : version < 6 ? builtin.matchingRule : historicalBuiltin(builtin.id).text,
       ...(version >= 3 ? { fieldLabels: builtin.id === 'sensitive-fields' } : {}),
       ...(version >= 5 ? { urlParameters: builtin.id === 'query-values' } : {}),
-      ...(version >= 6 ? Object.fromEntries(EXTRA_MODE_KEYS.map(key => [key, legacyRuleFromType(customRuleFromBuiltin(builtin.id))[key] ?? false])) : {}),
+      ...(version >= 6 ? Object.fromEntries(EXTRA_MODE_KEYS.map(key => [key, legacyRuleFromType(historicalBuiltin(builtin.id))[key] ?? false])) : {}),
       caseSensitive: settings.builtinCaseSensitivity?.[builtin.id] ?? builtin.caseSensitive, enabled: !settings.disabledBuiltins.includes(builtin.id),
     })),
     ...settings.customRules.map(rule => ({
@@ -274,13 +279,13 @@ describe('filter configuration import and validation', () => {
     expect(clone).toEqual(validateRedactionSettings(settings));
     clone.customRules[0]!.text = 'Changed';
     expect(settings.customRules[0]!.text).toBe('  Acme  ');
-    expect(defaultRedactionSettings()).toEqual({ version: 1, disabledBuiltins: [], customRules: [] });
+    expect(defaultRedactionSettings()).toEqual({ version: 6, disabledBuiltins: ['email-hide', 'phone-numbers', 'personal-fields'], customRules: [] });
   });
   it('includes every built-in definition and state, and accepts earlier configuration files', () => {
     const settings = config('Acme'); settings.disabledBuiltins = ['github'];
     const file = JSON.parse(exportRedactionSettings(settings));
-    expect(file.format).toBe('copy-as-context-filters'); expect(file.version).toBe(7);
-    expect(file.filters.filter((filter: { source: string }) => filter.source === 'builtin')).toHaveLength(8);
+    expect(file.format).toBe('copy-as-context-filters'); expect(file.version).toBe(13);
+    expect(file.filters.filter((filter: { source: string }) => filter.source === 'builtin')).toHaveLength(BUILTIN_FILTERS.length);
     expect(file.filters.find((filter: { id: string }) => filter.id === 'github')).toMatchObject({ enabled: false, matchingRule: expect.stringContaining('ghp_') });
     expect(file.filters.find((filter: { source: string }) => filter.source === 'custom').matchingRule).toBe('Acme');
     expect(importRedactionSettings(JSON.stringify(settings))).toEqual(validateRedactionSettings(settings));
@@ -299,7 +304,7 @@ describe('filter configuration import and validation', () => {
     }
   });
   it.each([
-    null, {}, { ...defaultRedactionSettings(), version: 2 },
+    null, {}, { ...defaultRedactionSettings(), version: 99 },
     { ...defaultRedactionSettings(), disabledBuiltins: ['unknown'] },
     { ...defaultRedactionSettings(), disabledBuiltins: ['github', 'github'] },
     { ...defaultRedactionSettings(), builtinCaseSensitivity: { github: 'yes' } },
@@ -323,13 +328,13 @@ describe('filter configuration import and validation', () => {
 });
 
 describe('single rule types and the v7 catalog', () => {
-  it.each(RULE_TYPES)('round-trips the code-defined $id type without legacy flags', type => {
+  it.each(CUSTOM_RULE_TYPES)('round-trips the code-defined $id type without legacy flags', type => {
     const settings = config('client_key', { type: type.id });
     const file = JSON.parse(exportRedactionSettings(settings));
     const custom = file.filters.at(-1);
     expect(custom).toMatchObject({ source: 'custom', type: type.id });
     for (const key of ['fieldLabels', 'urlParameters', ...EXTRA_MODE_KEYS]) expect(custom).not.toHaveProperty(key);
-    expect(importRedactionSettings(JSON.stringify(file))).toEqual(settings);
+    expect(importRedactionSettings(JSON.stringify(file))).toEqual(validateRedactionSettings(settings));
   });
 
   it.each([2, 3, 4, 5, 6])('migrates a genuine version %s export and keeps its matching behavior', version => {
