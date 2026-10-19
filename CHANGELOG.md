@@ -1,6 +1,13 @@
 # Changelog
 
-## 1.2.0 — unreleased
+## 1.3.0 — unreleased
+
+- Improve Try filters with isolated selected-rule tests, independent matched-rule diagnostics, field-label results and synthetic matching/near-miss examples based on the selected type and current terms.
+
+- Allow custom rules to reproduce every built-in detector: use one Rule type dropdown per row, editable literal names/prefixes and Duplicate actions. V7 import/export includes a catalog of code-defined types, accepts v1–6 files and splits older combined-mode rules without losing checks.
+- Add Customize for redaction filters: toggle built-in groups, add literal text, Field labels or URL parameters rules with optional case matching and a shared ` / ` separator, test examples, and import/export filter files including built-in definitions. Unify exported matchingRule names and field order, and allow Case sensitive changes for built-in and custom rules. Saved filters apply locally to future exports when redaction is enabled.
+
+- Add Preview: review prepared page context in a separate tab, edit it, reset changes, and copy or save the result. Show live counts with and without clipboard boundaries and the original compression reduction. Drafts stay in memory and disappear when the editor is closed or reloaded.
 
 - License this release under GPL-3.0-only and add an offline license and source-code page. Previously distributed MIT versions retain their original license; bundled third-party notices are preserved.
 

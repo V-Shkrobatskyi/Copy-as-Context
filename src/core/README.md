@@ -48,13 +48,13 @@ not exposed in the popup.
 
 ## Privacy and export preparation
 
-`redactSemanticTree(tree)` is a pure, immutable, idempotent heuristic filter.
+`redactSemanticTree(tree, settings?)` is a pure, immutable, idempotent heuristic filter.
 It redacts password values and common credential-shaped text in every
 normalized text field before serialization. It returns only a replacement count
 and never retains matched secret values. This is not a general PII or DLP
 solution; adapters and UI must not claim it catches every secret.
 
-`prepareExport(tree, compressionLevel, format, redactSensitiveData)` is the only core orchestration
+`prepareExport(tree, compressionLevel, format, redactSensitiveData, redactionSettings?)` is the only core orchestration
 entry point for supported user exports. Its required order is:
 
 ```text
@@ -138,3 +138,5 @@ Inline groups allow at most 128 nodes and 4,096 encoded characters. Limit overfl
 uses literal fragments or Compact fallback without truncation. New analysis limits
 do not expand the existing capture/transform/legacy serializer depth contract.
 All maps and cost caches belong to one export and are discarded afterwards.
+
+Redaction settings default to the original built-in detectors. Each custom rule has one code-defined type: literal alternatives, a single literal, field-label substrings or whole words, URL parameters, Authorization, JWT, GitHub tokens, AWS keys, OpenAI keys, or assigned secrets. Types accept literal terms and optional case matching, not user regex. Field-label types hide values and nested text while preserving labels; URL parameters hide values after exact literal names. New alternative lists use ` / `; older single literals retain their behavior. Legacy combined modes migrate into separate typed rules with unique IDs. V7 exports include an informational catalog of supported types; imported descriptions cannot define new detectors. All enabled matches are found in original strings and overlapping or adjacent spans are merged before replacement. Existing `[REDACTED]` placeholders are protected. The local tester can isolate an off rule and reports each rule's independent matches against the original sample. Browser-local persistence belongs to `src/redaction-settings.ts`; core receives validated settings without accessing storage.

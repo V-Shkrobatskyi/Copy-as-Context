@@ -2,7 +2,7 @@
 
 Copyright (c) 2026 Vitalii Shkrobatskyi.
 
-Starting with the upcoming 1.2.0 release, the original code, documentation,
+Starting with the upcoming 1.3.0 release, the original code, documentation,
 fixtures, and assets in this repository are licensed under the GNU General
 Public License version 3 only (`GPL-3.0-only`), except where separate notices
 identify third-party material. The full terms are in [LICENSE](LICENSE).
@@ -35,6 +35,10 @@ Bundled WXT helpers and `@wxt-dev/browser` retain their MIT notices in
 notices when distributing the extension. Development dependencies retain their
 respective licenses and are recorded in `package-lock.json`; they are not all
 included in the installed browser package.
+
+The user guide includes Simple Icons brand SVGs under CC0 1.0 Universal.
+Their source and modifications are listed in the bundled third-party notices;
+the full license is included at `public/icon/brands/LICENSE.txt`.
 
 ## Corresponding source for releases
 
