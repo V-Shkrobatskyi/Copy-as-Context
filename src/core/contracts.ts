@@ -25,6 +25,7 @@ export const CAPTURE_ERROR_CODES = [
   'capture-timeout',
   'page-changed',
   'invalid-tree',
+  'redaction-settings',
 ] as const;
 export type CaptureErrorCode = (typeof CAPTURE_ERROR_CODES)[number];
 

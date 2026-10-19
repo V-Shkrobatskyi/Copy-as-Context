@@ -4,7 +4,7 @@
 import { renderExportAttribution } from './serializers/attribution';
 import type { CompressionLevel, ExportFormat, SerializedContext } from './contracts';
 import type { SemanticTree } from './model';
-import { redactSemanticTree } from './privacy';
+import { redactSemanticTree, type RedactionSettings } from './privacy';
 import { serializeMarkdown, serializeSemanticText } from './serializers';
 import { serializeMaximum } from './serializers/maximum';
 import { countMarkdownCharacters } from './serializers/markdown';
@@ -27,16 +27,17 @@ export function prepareExport(
   compressionLevel: CompressionLevel,
   format: SupportedExportFormat,
   redactSensitiveData = true,
+  redactionSettings?: RedactionSettings,
 ): PreparedExport {
   // Without is already normalized; serializers and redaction do not mutate it.
   const selectedTree = compressionLevel === 'without' ? tree : compressSemanticTree(tree, compressionLevel);
-  const redaction = redactForExport(selectedTree, redactSensitiveData);
+  const redaction = redactForExport(selectedTree, redactSensitiveData, redactionSettings);
   const attribution = renderExportAttribution(compressionLevel, redactSensitiveData);
   const selected = compressionLevel === 'maximum'
     ? serializeMaximum(redaction.tree, format, attribution) : serialize(redaction.tree, format, attribution);
   const baseline = compressionLevel === 'without'
     ? selected.characterCount
-    : countCharacters(redactForExport(tree, redactSensitiveData).tree, format, renderExportAttribution('without', redactSensitiveData));
+    : countCharacters(redactForExport(tree, redactSensitiveData, redactionSettings).tree, format, renderExportAttribution('without', redactSensitiveData));
   const characterCount = selected.characterCount;
   const rawRatio = baseline === 0
     ? null
@@ -51,8 +52,8 @@ export function prepareExport(
   };
 }
 
-function redactForExport(tree: SemanticTree, redactSensitiveData: boolean) {
-  return redactSensitiveData ? redactSemanticTree(tree) : { tree, redactionCount: 0 };
+function redactForExport(tree: SemanticTree, redactSensitiveData: boolean, settings?: RedactionSettings) {
+  return redactSensitiveData ? redactSemanticTree(tree, settings) : { tree, redactionCount: 0 };
 }
 
 function serialize(tree: SemanticTree, format: SupportedExportFormat, attribution: string): SerializedContext {

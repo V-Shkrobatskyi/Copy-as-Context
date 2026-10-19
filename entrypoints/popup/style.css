@@ -3,15 +3,9 @@ Copyright (c) 2026 Vitalii Shkrobatskyi
 SPDX-License-Identifier: GPL-3.0-only
 */
 
+@import '../../public/page-theme.css';
+
 :root {
-  --background: #e9eef5;
-  --surface: #f7f9fc;
-  --text: #1b2942;
-  --muted: #52617a;
-  --accent: #365ed7;
-  --accent-dark: #263e89;
-  --selected: #e4ecff;
-  --border: #cbd5e1;
   --compression-progress: 66.667%;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
@@ -58,25 +52,52 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 0; bo
 .format-option:has(input:checked) { border-color: var(--accent); background: var(--selected); color: var(--accent-dark); }
 .format-option input { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
 .action-section { margin-top: 14px; }
-.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.actions { display: grid; grid-template-columns: 1.15fr 1.45fr 1fr; gap: 6px; }
 button { border-radius: 8px; cursor: pointer; padding: 9px 8px; font: inherit; font-size: .76rem; font-weight: 700; }
+.actions button { min-width: 0; padding: 9px 6px; font-size: .7rem; }
 .primary-action { border: 1px solid var(--accent); background: var(--accent); color: #fff; box-shadow: 0 1px 2px #263e8929; }
-.secondary-action { border: 1px solid var(--border); background: var(--surface); color: var(--accent-dark); }
+.secondary-action, .preview-action { border: 1px solid var(--border); background: var(--surface); color: var(--accent-dark); }
 button:disabled, input:disabled { cursor: wait; opacity: .65; }
-button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--selected); outline-offset: 2px; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .feedback { margin-top: 10px; padding: 9px 10px; border-radius: 8px; background: var(--surface); }
 .status, .metrics { margin: 0; color: var(--text); font-size: .72rem; line-height: 1.35; }
 .status { font-weight: 700; }
 .metrics { margin-top: 3px; color: var(--muted); }
 .help { margin-top: 13px; padding-top: 10px; border-top: 1px solid var(--border); color: var(--muted); font-size: .7rem; text-align: center; }
-.help a { color: var(--accent); font-weight: 700; text-decoration: none; }
+.help a { color: var(--link); font-weight: 700; text-decoration: none; }
 .save-settings:active:not(:disabled),
-.secondary-action:active:not(:disabled) { background: var(--selected); border-color: var(--accent); }
-.primary-action:active:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); }
+.secondary-action:active:not(:disabled),
+.preview-action:active:not(:disabled) { background: var(--selected); border-color: var(--accent); }
+.primary-action:active:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
 /* Touch browsers can retain emulated hover after a tap. */
 @media (hover: hover) and (pointer: fine) {
   .save-settings:hover:not(:disabled) { background: var(--selected); }
-  .primary-action:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); }
-  .secondary-action:hover:not(:disabled) { background: var(--selected); }
+  .primary-action:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .secondary-action:hover:not(:disabled),
+  .preview-action:hover:not(:disabled),
+  .customize-action:hover:not(:disabled) { background: var(--selected); }
   .help a:hover { text-decoration: underline; }
+}
+
+.privacy-setting-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.customize-action { flex: none; min-height: 26px; padding: 4px 8px; background: transparent; color: var(--link); border: 1px solid var(--border); border-radius: 6px; font-size: .68rem; font-weight: 600; line-height: 1.2; }
+.customize-action:active:not(:disabled) { background: var(--selected); border-color: var(--accent); }
+.customize-action:disabled { opacity: .5; cursor: default; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1b1b23;
+    --surface: #30323f;
+    --selected: #3b4664;
+    --border: #4c4f60;
+    --text: #e2e2e8;
+    --muted: #b2b2bf;
+    --accent: #8baaf7;
+    --accent-hover: #a3bcff;
+    --accent-dark: #d2defe;
+    --link: #9bb7ff;
+    --focus: #adc3ff;
+  }
+  .settings-panel { border-color: var(--border); }
+  .primary-action { color: #1b1b23; box-shadow: none; }
 }

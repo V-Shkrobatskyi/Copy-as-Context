@@ -1,6 +1,6 @@
 # Privacy policy for Copy as Context
 
-Last updated: 2026-10-16. Applies to version 1.2.0.
+Last updated: 2026-10-19. Applies to version 1.3.0.
 
 ## Purpose and local processing
 
@@ -15,6 +15,10 @@ The extension uses this information only to create the export you request. It do
 ## Storage and retention
 
 The extension persists your compression, format, and privacy preferences in browser-local extension storage when you choose Save preferences. It does not maintain a persistent archive of captured pages. Capture data is held temporarily for processing; runtime and browser cleanup determine when memory is reclaimed.
+
+Preview holds the prepared context, its initial text for Reset, and your edits only in the editor tab's memory. The extension does not persist drafts or put captured text in preview URLs. Closing or reloading the tab loses the draft. Manual edits are not automatically checked for sensitive data. Opening a preview does not write to the clipboard; Copy does so only when you choose it.
+
+Redaction filter settings, including custom literal text, are stored in browser-local extension storage when you choose Save filters. Sample text and test results stay only in the settings tab and are not saved. Filter JSON exports contain your custom text; review them before sharing. Filters are not automatically synchronized or downloaded from external lists.
 
 Copy places the result on your clipboard. Desktop Save writes a UTF-8 file to a destination controlled by your browser. Clipboard history, operating-system clipboard synchronization, browser download history, backups, and destination applications may retain copies under their own settings. Android supports Copy only.
 
@@ -32,10 +36,10 @@ If you email a bug report or post a GitHub issue, the recipient/service receives
 
 - Chrome debugger: briefly reads the active page and eligible embedded documents after an export action, checks frame visibility and password input types, and detaches afterward.
 - Firefox activeTab and scripting: obtain temporary page access and capture the current page and permitted embedded documents on demand.
-- Firefox optional site access: Include frames from other sites is off by default. Enabling it requests access to all HTTP/HTTPS websites in one browser prompt. The permission persists across tabs and browser restarts; turning the option off removes site access, including earlier individual host grants. Capture runs only after Copy or Desktop Save. Protected frames may remain unavailable.
+- Firefox optional site access: Include frames from other sites is off by default. Enabling it requests access to all HTTP/HTTPS websites in one browser prompt. The permission persists across tabs and browser restarts; turning the option off removes site access, including earlier individual host grants. Capture runs only after Copy, Preview, or Desktop Save. Protected frames may remain unavailable.
 - clipboardWrite: writes the export you request to your clipboard.
 - downloads (Desktop only): saves the export you request as a local file. In Firefox, this permission is optional and requested when you click Save; Android never requests it.
-- storage: persists export preferences locally.
+- storage: persists export preferences and redaction filter settings locally.
 
 Persistent access to all HTTP/HTTPS websites is optional and requested only when you enable Include frames from other sites in Firefox.
 

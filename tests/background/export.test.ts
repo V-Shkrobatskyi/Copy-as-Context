@@ -14,10 +14,12 @@ vi.mock('../../src/adapters/chrome/capture', () => ({ captureChromeAccessibility
 async function loadBackground(target = 'chrome') {
   let listener: ((message: unknown, sender: unknown, reply: (result: unknown) => void) => boolean | void) | undefined;
   vi.stubGlobal('defineBackground', (start: () => void) => start());
-  const chromeApi = { runtime: { id: 'synthetic-chrome-id', getURL: (path: string) => `chrome-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
+  const storage = { local: { get: vi.fn().mockResolvedValue({}) } };
+  const chromeApi = { storage, runtime: { id: 'synthetic-chrome-id', getURL: (path: string) => `chrome-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
     tabs: { query: vi.fn().mockResolvedValue([{ id: 42, title: 'Synthetic', url: 'https://example.test/' }]) } };
   vi.stubGlobal('chrome', chromeApi);
   const firefoxApi = {
+    storage,
     runtime: { getBrowserInfo: vi.fn().mockResolvedValue({ name: 'Firefox', version: '157.0' }), getPlatformInfo: vi.fn().mockResolvedValue({ os: 'android' }), id: 'synthetic-firefox-id', getURL: (path: string) => `moz-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
     tabs: {
       query: vi.fn().mockResolvedValue([{ id: 42, url: 'https://example.test/' }]),
@@ -41,12 +43,41 @@ async function loadBackground(target = 'chrome') {
   await import('../../entrypoints/background');
   const api = target === 'firefox' ? firefoxApi : chromeApi;
   const sender = { id: api.runtime.id, url: api.runtime.getURL('/popup.html') };
-  return { request: (message: unknown) => new Promise<CaptureActiveTabResponse>((resolve) => listener!(message, sender, resolve as (result: unknown) => void)), listener: listener!, sender, firefoxApi };
+  return { request: (message: unknown) => new Promise<CaptureActiveTabResponse>((resolve) => listener!(message, sender, resolve as (result: unknown) => void)), listener: listener!, sender, firefoxApi, storage };
 }
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.resetModules(); capture.mockReset(); });
 
 describe('background export boundary', () => {
+  it.each(['chrome', 'firefox'])('loads saved custom filters for every request in %s', async target => {
+    const background = await loadBackground(target);
+    capture.mockResolvedValue({ ok: true, tree: { schemaVersion: 1, root: { role: 'page', children: [{ role: 'StaticText', name: 'Acme', children: [] }] } } });
+    background.firefoxApi.scripting.executeScript.mockResolvedValue([{ frameId: 0, result: { ok: true, tree: { schemaVersion: 1, root: { role: 'page', children: [{ role: 'StaticText', name: 'Acme', children: [] }] } } } }]);
+    const settings = { version: 1, disabledBuiltins: [], customRules: [{ id: 'client', name: 'Client', text: 'Acme', enabled: true, caseSensitive: false }] };
+    background.storage.local.get.mockResolvedValue({ 'redaction-filters-v1': settings });
+    const request = { type: 'capture-active-tab', compression: 'compact', format: 'semantic-text', redactSensitiveData: true };
+    const response = await background.request(request);
+    expect(response.ok).toBe(true);
+    if (response.ok) { expect(response.export.serialized.content).not.toContain('Acme'); expect(response.export.serialized.content).toContain('[REDACTED]'); }
+    background.storage.local.get.mockResolvedValue({});
+    const next = await background.request(request);
+    expect(next.ok).toBe(true);
+    if (next.ok) expect(next.export.serialized.content).toContain('Acme');
+  });
+
+  it('blocks redacted exports if saved filters cannot be read, while explicit privacy-off exports remain available', async () => {
+    const background = await loadBackground();
+    background.storage.local.get.mockRejectedValue(new Error('synthetic private details'));
+    const request = { type: 'capture-active-tab', compression: 'compact', format: 'semantic-text', redactSensitiveData: true };
+    expect(await background.request(request)).toMatchObject({ ok: false, error: { code: 'redaction-settings' } });
+    expect(capture).not.toHaveBeenCalled();
+    background.storage.local.get.mockResolvedValue({ 'redaction-filters-v1': { version: 99 } });
+    expect(await background.request(request)).toMatchObject({ ok: false, error: { code: 'redaction-settings' } });
+    expect(capture).not.toHaveBeenCalled();
+    capture.mockResolvedValue({ ok: true, tree: { schemaVersion: 1, root: { role: 'page', children: [] } } });
+    expect((await background.request({ ...request, redactSensitiveData: false })).ok).toBe(true);
+  });
+
   it('prepares Firefox DOM content and warnings without Chrome capture or raw trees in the popup', async () => {
     const background = await loadBackground('firefox');
     const response = await background.request({ type: 'capture-active-tab', compression: 'compact', format: 'semantic-text', redactSensitiveData: true });

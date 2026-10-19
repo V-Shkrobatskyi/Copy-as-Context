@@ -4,6 +4,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { prepareExport, type CaptureResult, type SemanticTree } from '@/src/core';
+const previewMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+vi.mock('@/src/preview-session', () => ({ openPreview: previewMock }));
+
 import type { CaptureActiveTabRequest } from '@/src/capture-message';
 
 class FakeElement {
@@ -39,6 +42,8 @@ interface PopupHarness {
   otherSiteFrames: FakeElement;
   copy: FakeElement;
   save: FakeElement;
+  preview: FakeElement;
+  customize: FakeElement;
   status: FakeElement;
   metrics: FakeElement;
   clipboardWrite: ReturnType<typeof vi.fn>;
@@ -48,6 +53,7 @@ interface PopupHarness {
   storageSet: ReturnType<typeof vi.fn>;
   sendMessage: ReturnType<typeof vi.fn>;
   requestPermission: ReturnType<typeof vi.fn>;
+  createTab: ReturnType<typeof vi.fn>;
 }
 
 const SECRET = 'synthetic-popup-password-value';
@@ -78,6 +84,8 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const format = new FakeElement();
   const copy = new FakeElement();
   const save = new FakeElement();
+  const preview = new FakeElement();
+  const customize = new FakeElement();
   const status = new FakeElement();
   const metrics = new FakeElement();
   const semanticTextFormat = format;
@@ -96,7 +104,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const elements = new Map<string, FakeElement>([
     ['#app', app], ['#compression', compression], ['#format', format],
     ['#format-semantic-text', semanticTextFormat], ['#format-markdown', markdownFormat],
-    ['.primary-action', copy], ['.secondary-action', save], ['.status', status], ['.metrics', metrics],
+    ['#customize', customize], ['#preview', preview], ['.primary-action', copy], ['.secondary-action', save], ['.status', status], ['.metrics', metrics],
     ['.feedback', feedback], ['#compression-description', compressionDescription], ['#guide-link', guideLink],
     ['#redact-sensitive-data', redactSensitiveData], ['#save-settings', saveSettings],
     ['#include-other-site-frames', otherSiteFrames],
@@ -171,7 +179,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   await settle();
   return {
     app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings, otherSiteFrames,
-    copy, save, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission,
+    copy, save, preview, customize, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create,
   };
 }
 
@@ -180,6 +188,7 @@ async function settle(): Promise<void> {
 }
 
 afterEach(() => {
+  previewMock.mockReset().mockResolvedValue(undefined);
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
@@ -187,6 +196,49 @@ afterEach(() => {
 });
 
 describe('popup export flow', () => {
+  it('opens Customize without capturing content or changing privacy preferences', async () => {
+    const popup = await loadPopup(successfulCapture());
+    popup.customize.click(); await settle();
+    expect(popup.createTab).toHaveBeenCalledExactlyOnceWith({ url: expect.stringContaining('/filters.html') });
+    expect(popup.sendMessage).not.toHaveBeenCalled();
+    expect(popup.storageSet).not.toHaveBeenCalled();
+    expect(popup.clipboardWrite).not.toHaveBeenCalled();
+    expect(popup.app.innerHTML).toContain('Customize');
+    expect(popup.app.innerHTML).toContain('Preview &amp; edit');
+  });
+
+  it.each([{ firefox: false }, { firefox: true }, { firefox: true, android: true }])('opens Preview without copying, downloading or requesting permissions: %j', async options => {
+    const popup = await loadPopup(successfulCapture(), options);
+    popup.markdown.checked = true;
+    popup.compression.value = '3';
+    popup.preview.click();
+    popup.copy.click(); popup.save.click(); popup.preview.click();
+    expect(popup.copy.disabled).toBe(true);
+    expect(popup.preview.disabled).toBe(true);
+    await settle();
+    expect(popup.sendMessage).toHaveBeenCalledExactlyOnceWith({ type: 'capture-active-tab', compression: 'maximum', format: 'markdown', redactSensitiveData: true });
+    expect(previewMock).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      content: expect.stringContaining('[REDACTED]'), compression: 'maximum', format: 'markdown',
+      redactSensitiveData: true, redactionCount: 1, reductionRatio: expect.any(Number), warnings: [],
+    }));
+    expect(previewMock.mock.calls[0]![0].content).not.toContain(SECRET);
+    expect(popup.clipboardWrite).not.toHaveBeenCalled();
+    expect(popup.download).not.toHaveBeenCalled();
+    expect(popup.requestPermission).not.toHaveBeenCalled();
+    expect(popup.preview.disabled).toBe(false);
+  });
+
+  it('handles a failed preview transfer and allows another attempt', async () => {
+    const popup = await loadPopup(successfulCapture());
+    previewMock.mockRejectedValueOnce(new Error('synthetic private details'));
+    popup.preview.click(); await settle();
+    expect(popup.status.textContent).toContain('Unable to open the preview');
+    expect(popup.status.textContent).not.toContain('synthetic private details');
+    expect(popup.preview.disabled).toBe(false);
+    popup.preview.click(); await settle();
+    expect(popup.status.textContent).toContain('Preview opened');
+  });
+
   it('exposes broad frame access only in Firefox and does not export when permission is denied', async () => {
     const popup = await loadPopup(successfulCapture(), { firefox: true, permissionDenied: true });
     expect(popup.app.innerHTML).toContain('Include frames from other sites');

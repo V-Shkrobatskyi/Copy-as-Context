@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { openPreview } from '@/src/preview-session';
+import { captureWarningText } from '@/src/preview-message';
 import { openFirefoxSave } from '@/src/firefox-save';
 import { installTouchButtonFeedback } from '@/src/touch-button-feedback';
 import '@popup-style.css';
@@ -13,10 +15,10 @@ import {
 } from '@/src/core';
 import { CAPTURE_ACTIVE_TAB_MESSAGE, isCaptureActiveTabResponse, type CaptureActiveTabRequest } from '@/src/capture-message';
 import { wrapClipboardContext } from '@/src/clipboard-context';
-import { contextBlob, contextDownloadOptions } from '@/src/download-context';
+import { saveContextFile } from '@/src/save-context';
 import { installFrameAccessToggle, type FrameAccessToggle } from '@/src/firefox-frame-access';
 
-type ExportAction = 'copy' | 'save';
+type ExportAction = 'copy' | 'save' | 'preview';
 type StoredPopupSettings = {
   compression?: CompressionLevel;
   format?: SupportedExportFormat;
@@ -36,6 +38,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   'capture-timeout': 'Page capture took too long. Try again.',
   'page-changed': 'The page changed during capture. Wait for it to finish loading and try again.',
   'copy-failed': 'Unable to copy the page context. Check browser clipboard access and try again.',
+  'preview-failed': 'Unable to open the preview. Keep the popup open until the editor is ready and try again.',
+  'redaction-settings': 'Unable to load redaction filters. Open Customize to reload or restore them.',
   'save-failed': 'Unable to save the page context. Try again.',
 };
 
@@ -67,27 +71,7 @@ async function saveContext(content: string, format: SupportedExportFormat): Prom
     await openFirefoxSave(content, format);
     return;
   }
-  const url = URL.createObjectURL(contextBlob(content, format));
-  let changed: ((delta: { id: number; state?: { current?: string }; error?: { current?: string } }) => void) | undefined;
-  try {
-    const id = await browser.downloads.download(contextDownloadOptions(url, format));
-    await new Promise<void>((resolve, reject) => {
-      const check = (state?: string, error?: string) => {
-        if (state === 'interrupted' || error) reject(new Error('download-interrupted'));
-        else if (state === 'complete') resolve();
-      };
-      changed = (delta) => { if (delta.id === id) check(delta.state?.current, delta.error?.current); };
-      browser.downloads.onChanged.addListener(changed);
-      // A small local download may finish before the listener is attached.
-      void browser.downloads.search({ id }).then((items) => {
-        if (!items[0]) reject(new Error('download-unavailable'));
-        else check(items[0].state, items[0].error);
-      }, reject);
-    });
-  } finally {
-    if (changed) browser.downloads.onChanged.removeListener(changed);
-    URL.revokeObjectURL(url);
-  }
+  await saveContextFile(content, format);
 }
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
@@ -110,8 +94,11 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         </div>
         <p id="compression-description" class="field-note">Compact removes repeated accessibility noise.</p>
         <div class="privacy-setting">
-          <label class="privacy-toggle"><input id="redact-sensitive-data" type="checkbox" checked /> <span>Redact sensitive data</span></label>
-          <p>Replaces detected credentials with <code>[REDACTED]</code>.</p>
+          <div class="privacy-setting-header">
+            <label class="privacy-toggle"><input id="redact-sensitive-data" type="checkbox" checked /> <span>Redact sensitive data</span></label>
+            <button id="customize" class="customize-action" type="button" title="Customize redaction filters">Customize</button>
+          </div>
+          <p>Replaces matching credentials and custom text with <code>[REDACTED]</code>.</p>
         </div>
       </fieldset>
       <fieldset class="field format-field">
@@ -129,6 +116,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     </section>` : ''}
     <section class="action-section" aria-label="Export page context">
       <div class="actions">
+        <button id="preview" class="preview-action" type="button">Preview &amp; edit</button>
         <button class="primary-action" type="button">Copy page context</button>
         <button class="secondary-action" type="button">Save to file</button>
       </div>
@@ -147,6 +135,8 @@ const semanticTextFormat = document.querySelector<HTMLInputElement>('#format-sem
 const markdownFormat = document.querySelector<HTMLInputElement>('#format-markdown')!;
 const copyButton = document.querySelector<HTMLButtonElement>('.primary-action')!;
 const saveButton = document.querySelector<HTMLButtonElement>('.secondary-action')!;
+const previewButton = document.querySelector<HTMLButtonElement>('#preview')!;
+const customizeButton = document.querySelector<HTMLButtonElement>('#customize')!;
 const firefox = import.meta.env.BROWSER === 'firefox';
 let canSave = !firefox && typeof browser.downloads?.download === 'function';
 function updateSaveAvailability(): void {
@@ -170,7 +160,7 @@ const saveSettingsButton = document.querySelector<HTMLButtonElement>('#save-sett
 installTouchButtonFeedback(saveSettingsButton, () => document.body.dataset.platform === 'android');
 const controls = [
   compression, semanticTextFormat, markdownFormat, redactSensitiveData,
-  saveSettingsButton, copyButton, saveButton,
+  saveSettingsButton, copyButton, saveButton, previewButton, customizeButton,
 ];
 
 const COMPRESSION_VALUES: readonly CompressionLevel[] = ['without', 'detailed', 'compact', 'maximum'];
@@ -184,12 +174,10 @@ function selectedRangeCompression(value: string): CompressionLevel {
 
 function updateCompressionDescription(): void {
   const descriptions: Record<CompressionLevel, string> = {
-    without: 'Keeps every captured semantic node. Sensitive values are still redacted.',
+    without: 'Keeps every captured semantic node.',
     detailed: 'Removes unnamed wrappers without semantic attributes, preserving text, links and states.',
     compact: 'Removes repeated accessibility noise while retaining meaningful controls.',
-    maximum: firefox
-      ? 'Packs Compact context with abbreviations and shared structures when they save space.'
-      : 'Packs Compact context with selective abbreviations and repeated text or structures; falls back when overhead is too high.',
+    maximum: 'Packs Compact context with selective abbreviations and reusable shared structures when they save space.',
   };
   const minimum = Number.parseFloat(compression.min);
   const maximum = Number.parseFloat(compression.max);
@@ -252,7 +240,7 @@ function setPending(pending: boolean, action?: ExportAction): void {
   saveButton.disabled = pending || !canSave;
   if (pending) {
     metrics.textContent = '';
-    showFeedback(action === 'copy' ? 'Capturing and copying page context…' : 'Capturing and preparing download…');
+    showFeedback(action === 'preview' ? 'Preparing preview…' : action === 'copy' ? 'Capturing and copying page context…' : 'Capturing and preparing download…');
   }
 }
 
@@ -308,6 +296,16 @@ async function exportPageContext(action: ExportAction): Promise<void> {
     let characterCount = result.characterCount;
     let approximateTokenCount = result.approximateTokenCount;
     destinationStarted = true;
+    if (action === 'preview') {
+      await openPreview({
+        content: result.serialized.content, compression: request.compression, format: exportFormat,
+        redactSensitiveData: request.redactSensitiveData, redactionCount: result.redactionCount,
+        reductionRatio: result.reductionRatio,
+        warnings: response.warnings ?? [],
+      });
+      showFeedback('Preview opened. Nothing has been copied.');
+      return;
+    }
     if (action === 'copy') {
       const content = wrapClipboardContext(result.serialized.content, request.compression);
       await navigator.clipboard.writeText(content);
@@ -318,9 +316,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       await saveContext(result.serialized.content, exportFormat);
       showFeedback(firefox ? 'Saving file in a separate tab.' : `Saved ${FORMAT_LABELS[exportFormat]} file.`);
     }
-    const warnings = (response.warnings ?? []).map((code) => code === 'embedded-frames'
-      ? 'Embedded frames are not included.' : code === 'embedded-frames-partial'
-        ? 'Some embedded documents could not be captured.' : 'Canvas content is not included.').join(' ');
+    const warnings = captureWarningText(response.warnings ?? []);
     metrics.textContent = formatMetrics(
       characterCount,
       approximateTokenCount,
@@ -330,7 +326,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
     ) + (warnings ? ` ${warnings}` : '');
   } catch {
     showFeedback(ERROR_MESSAGES[
-      destinationStarted ? (action === 'copy' ? 'copy-failed' : 'save-failed') : 'capture-failed'
+      destinationStarted ? (action === 'preview' ? 'preview-failed' : action === 'copy' ? 'copy-failed' : 'save-failed') : 'capture-failed'
     ]!);
   } finally {
     exportPending = false;
@@ -339,6 +335,11 @@ async function exportPageContext(action: ExportAction): Promise<void> {
   }
 }
 
+customizeButton.addEventListener('click', () => {
+  if (exportPending || frameAccessToggle?.pending) return;
+  void browser.tabs.create({ url: browser.runtime.getURL('/filters.html') }).catch(() => showFeedback('Unable to open filter settings. Try again.'));
+});
+previewButton.addEventListener('click', () => void exportPageContext('preview'));
 copyButton.addEventListener('click', () => void exportPageContext('copy'));
 saveButton.addEventListener('click', () => void exportPageContext('save'));
 compression.addEventListener('input', updateCompressionDescription);
