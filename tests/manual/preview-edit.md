@@ -11,6 +11,8 @@ node scripts/probe-preview.mjs
 node scripts/probe-preview.mjs --firefox
 ```
 
+For an editor-only probe without the filter customization workflow, add `--preview-only` to either command. This still checks capture/handoff, find and replace, copying, draft disposal, and Chrome file saving and narrow-screen layout.
+
 The scripts use temporary browser profiles and remove them afterward. The default macOS browser paths can be overridden with `CHROME_BINARY` and `FIREFOX_BINARY`. Chrome needs support for the experimental Extensions automation domain and explicitly enables unsafe extension debugging only in the temporary profile.
 
 Chrome exercises the production toolbar → capture → redaction → popup → private port → editor path. Firefox tests the built editor and production private-port transfer with a synthetic export from a temporary harness at the popup URL; it does not exercise Firefox's native toolbar/activeTab gesture. Both first exercise Customize, built-in toggles, literal rules, filter file import/export and local persistence, then check editing, exact clipboard boundaries with an intercepted clipboard destination, and loss of the draft on reload. Chrome also checks narrow-screen overflow and writes Desktop/mobile-layout screenshots to the system temporary directory. These probes do not verify the system clipboard, an Android device, mobile keyboard behavior, or screen-reader interaction.
@@ -30,6 +32,8 @@ Run these checks in Chrome Desktop, Firefox Desktop and Firefox Android. Record 
 8. Exercise capture errors, partial iframe/canvas warnings and a large context. Warnings remain in the editor, text is not silently truncated, and typing/count updates remain usable.
 9. Verify Tab order, visible focus, field label and status announcements with a screen reader. On Android test touch selection, scrolling, copying and reaching buttons with the keyboard open, in portrait and landscape.
 10. Recheck direct Copy/Save. Firefox Desktop asks for downloads permission only after Save; Preview does not ask. Android Save remains unavailable before and after Preview.
+11. In **Find and replace**, search for repeated text. Verify the count, **Next**/**Previous** wraparound and selected text. In a long draft with wrapped lines, verify the editor scrolls to each selected hit near the beginning, middle and end, including after replacing a match and at narrow widths. Toggle **Match case** and search for literal punctuation such as `a.b`. Use **Replace** and **Replace all**, including an empty replacement and literal `$&`. Verify the edited indicator, metrics, Reset, Copy and Save reflect the resulting draft. Empty queries and missing matches must disable search actions. Replacements that exceed the editor limit must leave the draft intact.
+12. Test Ctrl/Cmd+F and Ctrl/Cmd+H, Enter/Shift+Enter in Find, and Escape to return to the editor. Selected single-line editor text should populate Find. Check the search controls at narrow widths and with the Android keyboard open.
 
 ## Implementation verification record — 2026-10-18
 
@@ -45,3 +49,15 @@ Run these checks in Chrome Desktop, Firefox Desktop and Firefox Android. Record 
 - Chrome Desktop probe passed: copy metrics match wrapped text, file/editor metrics match unwrapped text, original compression is visible, and a real downloaded `.txt` contains the exact edited Unicode text without boundaries.
 - Firefox Desktop synthetic handoff probe passed with the new metrics and compression metadata. Download permission denial/retry and Android Save availability are covered by mocked editor tests; Firefox's native permission prompt and editor file picker remain manual checks.
 - Desktop and narrow-screen editor screenshots reviewed; no horizontal document overflow.
+
+## Find and replace verification — 2026-10-19
+
+- Full checks passed: 802 unit tests, 10 memory tests, both browser builds, build boundary checks and Firefox lint.
+- Editor-only Chrome Desktop and Firefox Desktop probes passed for search selection, literal replacement, replacement of one/all matches, deletion, copying and draft disposal. Firefox uses the synthetic handoff described above.
+- Chrome Desktop and narrow-screen screenshots reviewed; search controls wrap without horizontal overflow. Physical Android and assistive-technology checks remain manual.
+- The full browser probe currently times out waiting for its expected default filter configuration, before reaching the editor. Use `--preview-only` for isolated editor verification; filter customization was not verified in these runs.
+
+## Search scrolling verification — 2026-10-19
+
+- Chrome Desktop and Firefox Desktop editor-only probes passed automatic scrolling to the beginning, middle and end of long wrapped Unicode text, backward navigation, wraparound and navigation after replacement. Chrome also passed at a 390px viewport width.
+- Full project checks passed: 802 unit tests, 10 memory tests, both builds, build boundary checks and Firefox lint. Physical Android remains untested.
