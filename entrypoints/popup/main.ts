@@ -83,6 +83,13 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <p class="intro">Private page context for your next prompt.</p>
       </div>
     </header>
+    <section class="action-section" aria-label="Export page context">
+      <div class="actions">
+        <button id="preview" class="preview-action" type="button">Preview &amp; edit</button>
+        <button class="primary-action" type="button">Copy page context</button>
+        <button class="secondary-action" type="button">Save to file</button>
+      </div>
+    </section>
     <section class="settings-panel" aria-label="Export preferences">
       <fieldset class="field compression-field">
         <legend>Compression</legend>
@@ -114,13 +121,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <label class="privacy-toggle"><input id="include-other-site-frames" type="checkbox" disabled aria-describedby="other-site-frames-note" /> <span>Include frames from other sites</span></label>
       <p id="other-site-frames-note">Applies immediately. Requires access to all sites; off revokes it.</p>
     </section>` : ''}
-    <section class="action-section" aria-label="Export page context">
-      <div class="actions">
-        <button id="preview" class="preview-action" type="button">Preview &amp; edit</button>
-        <button class="primary-action" type="button">Copy page context</button>
-        <button class="secondary-action" type="button">Save to file</button>
-      </div>
-    </section>
     <section class="feedback" hidden aria-label="Export result">
       <p class="status" role="status" aria-live="polite"></p>
       <p class="metrics" aria-live="polite"></p>

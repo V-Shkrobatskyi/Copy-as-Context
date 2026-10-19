@@ -15,7 +15,7 @@ body { min-width: 0; width: 376px; max-width: 100%; }
 body:not([data-platform="android"]) .popup { padding-top: 8px; padding-bottom: 8px; }
 body:not([data-platform="android"]) .settings-panel { padding: 10px; }
 body:not([data-platform="android"]) .popup-header { margin-bottom: 10px; }
-body:not([data-platform="android"]) .action-section { margin-top: 8px; }
+body:not([data-platform="android"]) .action-section { margin-bottom: 8px; }
 body:not([data-platform="android"]) .help { margin-top: 6px; padding-top: 6px; }
 
 
