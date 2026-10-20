@@ -80,5 +80,15 @@ function escapeText(value: string): string {
 }
 
 function code(value: string): string {
-  return `\`${value.replace(/`/gu, '\\`').replace(/\r?\n/gu, ' ')}\``;
+  const text = value.replace(/\r\n?|\n/gu, ' ');
+  if (!text) return '""';
+  let longest = 0;
+  for (const match of text.matchAll(/`+/gu)) longest = Math.max(longest, match[0].length);
+  const fence = '`'.repeat(longest + 1);
+  // CommonMark ignores backslash escapes inside code spans. A longer fence
+  // keeps arbitrary content inert; padding avoids merging with edge backticks
+  // and preserves significant leading/trailing spaces after normalization.
+  const pad = text.startsWith('`') || text.endsWith('`') ||
+    text.startsWith(' ') && text.endsWith(' ') && /[^ ]/u.test(text) ? ' ' : '';
+  return `${fence}${pad}${text}${pad}${fence}`;
 }
