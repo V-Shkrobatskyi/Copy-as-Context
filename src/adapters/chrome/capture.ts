@@ -11,6 +11,7 @@ export interface ChromeDebuggerSession {
 
 /** Minimal transport shared by the production extension and deterministic CDP mocks. */
 export interface ChromeDebuggerClient {
+  extensionOrigin?: string;
   attach(target: { tabId: number }, version: string, callback: (error?: string) => void): void;
   sendCommand(
     target: ChromeDebuggerSession,
@@ -25,6 +26,7 @@ export interface ChromeDebuggerClient {
 
 export function chromeDebuggerClient(): ChromeDebuggerClient {
   return {
+    get extensionOrigin() { return chrome.runtime.getURL('/').replace(/\/$/u, ''); },
     attach(target, version, callback) {
       chrome.debugger.attach(target, version, () => callback(chrome.runtime.lastError?.message));
     },

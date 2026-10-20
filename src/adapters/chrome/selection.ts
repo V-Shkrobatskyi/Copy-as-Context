@@ -4,25 +4,6 @@
 import type { ChromeAxNode, ChromeAxTreeResponse } from './types';
 import { CHROME_CAPTURE_LIMITS as LIMITS } from './limits';
 
-/** Executed by CDP in the page world. Only the opaque marker is read. */
-export function findMarkedElement(attribute: string): Element | null {
-  const pending: (Document | ShadowRoot)[] = [document];
-  let found: Element | null = null;
-  let visited = 0;
-  while (pending.length) {
-    const root = pending.pop()!;
-    for (const element of root.querySelectorAll('*')) {
-      if (++visited > 100_000) throw new Error('Selection lookup exceeded the node limit.');
-      if (element.hasAttribute(attribute)) {
-        if (found) throw new Error('Ambiguous selection.');
-        found = element;
-      }
-      if (element.shadowRoot) pending.push(element.shadowRoot);
-    }
-  }
-  return found;
-}
-
 interface DomDescription {
   backendNodeId: number;
   nodeName?: string;

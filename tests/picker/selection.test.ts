@@ -6,11 +6,28 @@ import { JSDOM } from 'jsdom';
 import { captureDomPage } from '@/src/adapters/dom/capture';
 import { selectChromeAxTree, selectedDomIds } from '@/src/adapters/chrome/selection';
 import { normalizeChromeAxTree } from '@/src/adapters/chrome/normalize-ax';
-import { isPickerStart, PICKER_START, pickerToken, PICKER_PORT, selectedElementInfo, selectionAttribute } from '@/src/element-picker-protocol';
+import { isPickerStart, PICKER_START, pickerToken, PICKER_PORT, selectedElementInfo, selectedElementReference, selectionAttribute } from '@/src/element-picker-protocol';
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('single block boundaries', () => {
+  it('uses the retained isolated-world reference even when the page copies its marker and replaces DOM lookup', () => {
+    const dom = new JSDOM('<section id="chosen">Chosen</section><section id="other">Outside selection</section>');
+    try {
+      const doc = dom.window.document;
+      const chosen = doc.getElementById('chosen')!;
+      const other = doc.getElementById('other')!;
+      chosen.setAttribute(selectionAttribute('opaque'), '');
+      other.setAttribute(selectionAttribute('opaque'), '');
+      doc.querySelectorAll = (() => [other]) as any;
+      vi.stubGlobal('document', doc);
+      vi.stubGlobal('__copyAsContextPicker', { token: 'opaque', root: () => chosen });
+      expect(selectedElementReference('opaque')).toBe(chosen);
+      expect(selectedElementReference('wrong')).toBeNull();
+      chosen.removeAttribute(selectionAttribute('opaque'));
+      expect(selectedElementReference('opaque')).toBeNull();
+    } finally { dom.window.close(); }
+  });
   it('verifies the original marked element and permits visible descendants of visibility-hidden ancestors', () => {
     const dom = new JSDOM('<div style="visibility:hidden"><p id="pick" style="visibility:visible">Visible selection</p></div>');
     try {

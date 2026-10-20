@@ -8,8 +8,8 @@ import { inspectFrameOwner } from './frame-visibility';
 import { CHROME_CAPTURE_LIMITS as LIMITS } from './limits';
 import { normalizeChromeAxTree } from './normalize-ax';
 import type { ChromeAxNode, ChromeAxTreeResponse } from './types';
-import { findMarkedElement, selectedDomIds, selectChromeAxTree } from './selection';
-import { selectionAttribute } from '../../element-picker-protocol';
+import { selectedDomIds, selectChromeAxTree } from './selection';
+import { selectedElementReference } from '../../element-picker-protocol';
 
 interface Session {
   id?: string;
@@ -141,6 +141,9 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
     let cleanupDeadline = 0;
     let selectionIds: Set<number> | undefined;
     let selectedObject: string | undefined;
+    let selectionContext: string | undefined;
+    let runtimeEnabled = false;
+    const pickerContexts = new Map<number, string>();
     const budget = { nodes: 0, characters: 0, bytes: 0 };
 
     const command = async (session: Session, method: string, params: Record<string, unknown> = {}, cleanup = false): Promise<Record<string, unknown>> => {
@@ -167,7 +170,17 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
     const event = (source: { tabId?: number; sessionId?: string }, method: string, payload: unknown) => {
       if (source.tabId !== tabId || closing || !sessions.has(source.sessionId ?? '')) return;
       const params = record(payload);
-      if (method === 'Target.attachedToTarget' && typeof params.sessionId === 'string') {
+      if (method === 'Runtime.executionContextCreated' && !source.sessionId && selection && client.extensionOrigin) {
+        const context = record(params.context);
+        const auxiliary = record(context.auxData);
+        if (Number.isInteger(context.id) && typeof context.uniqueId === 'string' && context.uniqueId &&
+          context.origin === client.extensionOrigin && auxiliary.frameId === rootId &&
+          auxiliary.isDefault === false && auxiliary.type === 'isolated') pickerContexts.set(context.id as number, context.uniqueId);
+      } else if (method === 'Runtime.executionContextDestroyed' && !source.sessionId) {
+        pickerContexts.delete(params.executionContextId as number);
+      } else if (method === 'Runtime.executionContextsCleared' && !source.sessionId) {
+        pickerContexts.clear();
+      } else if (method === 'Target.attachedToTarget' && typeof params.sessionId === 'string') {
         if (record(params.targetInfo).type !== 'iframe') return;
         if (sessions.has(params.sessionId)) return;
         if (sessions.size >= LIMITS.documents) { partial = true; return; }
@@ -283,8 +296,16 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
       // Setup/inventory events are not changes to an AX snapshot that has not been read yet.
       changed.clear();
       if (selection) {
+        // Runtime.enable reports existing contexts. Browser-provided origin and
+        // frame identity select our content-script world, never page globals.
+        if (!client.extensionOrigin) throw new CaptureFailure('capture-unavailable', 'The selection context is unavailable.');
+        runtimeEnabled = true;
+        await command(rootSession, 'Runtime.enable');
+        if (pickerContexts.size !== 1) throw new CaptureFailure('page-changed', 'The selected element is no longer available.');
+        selectionContext = [...pickerContexts.values()][0]!;
         const response = await command(rootSession, 'Runtime.evaluate', {
-          expression: `(${findMarkedElement.toString()})(${JSON.stringify(selectionAttribute(selection))})`, objectGroup, silent: true,
+          expression: `(${selectedElementReference.toString()})(${JSON.stringify(selection)})`,
+          uniqueContextId: selectionContext, objectGroup, silent: true,
         });
         selectedObject = record(response.result).objectId as string | undefined;
         if (response.exceptionDetails || !selectedObject) throw new CaptureFailure('page-changed', 'The selected element is no longer available.');
@@ -368,9 +389,16 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
       }
       if (!selection && [...current.keys()].some((id) => !frames.has(id))) partial = true;
       if (selectedObject && selection) {
+        if (!selectionContext || ![...pickerContexts.values()].includes(selectionContext)) throw new CaptureFailure('page-changed', 'The selection context changed during capture.');
+        const currentSelection = await command(rootSession, 'Runtime.evaluate', {
+          expression: `(${selectedElementReference.toString()})(${JSON.stringify(selection)})`,
+          uniqueContextId: selectionContext, objectGroup, silent: true,
+        });
+        const currentObject = record(currentSelection.result).objectId;
+        if (currentSelection.exceptionDetails || typeof currentObject !== 'string') throw new CaptureFailure('page-changed', 'The selected element changed during capture.');
         const verification = await command(rootSession, 'Runtime.callFunctionOn', {
-          objectId: selectedObject, functionDeclaration: 'function(attribute) { return this.isConnected && this.hasAttribute(attribute); }',
-          arguments: [{ value: selectionAttribute(selection) }], returnByValue: true, silent: true,
+          objectId: selectedObject, functionDeclaration: 'function(current) { return this === current && this.isConnected; }',
+          arguments: [{ objectId: currentObject }], returnByValue: true, silent: true,
         });
         if (verification.exceptionDetails || record(verification.result).value !== true) throw new CaptureFailure('page-changed', 'The selected element changed during capture.');
         const currentRoot = await command(rootSession, 'DOM.describeNode', { objectId: selectedObject, depth: -1, pierce: true });
@@ -389,6 +417,7 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
         if (!session.live || !attached || detached) continue;
         for (const [method, params] of [
           ['Runtime.releaseObjectGroup', { objectGroup }],
+          ...(session === rootSession && runtimeEnabled ? [['Runtime.disable', {}]] : []),
           ...(session.ax ? [['Accessibility.disable', {}]] : []),
           ...(session.auto ? [['Target.setAutoAttach', { autoAttach: false, flatten: true, waitForDebuggerOnStart: false }]] : []),
           ['Page.disable', {}],

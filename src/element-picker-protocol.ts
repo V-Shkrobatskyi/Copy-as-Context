@@ -24,6 +24,13 @@ export interface PickerHandle {
 }
 export interface PickerGlobal { __copyAsContextPicker?: PickerHandle }
 
+/** Resolve the retained reference only inside this extension's isolated world. */
+export function selectedElementReference(token: string): Element | null {
+  const picker = (globalThis as PickerGlobal).__copyAsContextPicker;
+  const root = picker?.token === token ? picker.root() : undefined;
+  return root?.isConnected && root.hasAttribute(`data-cac-selection-${token}`) ? root : null;
+}
+
 /** Serialized into the isolated world. Keep independent of imports and closures. */
 export function selectedElementInfo(token: string): { tagName: string } | undefined {
   const picker = (globalThis as PickerGlobal).__copyAsContextPicker;
