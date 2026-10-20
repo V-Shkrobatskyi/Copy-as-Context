@@ -19,17 +19,19 @@ class FakeElement {
   textContent = '';
   innerHTML = '';
   readonly style = { setProperty: vi.fn() };
-  private readonly listeners = new Map<string, () => void>();
+  private readonly listeners = new Map<string, (event: Event) => void>();
 
   // noinspection JSUnusedGlobalSymbols
-  addEventListener(type: string, listener: () => void): void {
+  addEventListener(type: string, listener: (event: Event) => void): void {
     this.listeners.set(type, listener);
   }
 
-  change(): void { this.listeners.get('change')?.(); }
+  change(): void { this.listeners.get('change')?.(new Event('change')); }
 
-  click(): void {
-    this.listeners.get('click')?.();
+  click(): Event {
+    const event = new Event('click', { cancelable: true });
+    this.listeners.get('click')?.(event);
+    return event;
   }
 }
 
@@ -46,6 +48,8 @@ interface PopupHarness {
   preview: FakeElement;
   selectElement: FakeElement;
   customize: FakeElement;
+  guideLink: FakeElement;
+  licenseLink: FakeElement;
   status: FakeElement;
   metrics: FakeElement;
   clipboardWrite: ReturnType<typeof vi.fn>;
@@ -96,6 +100,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const feedback = new FakeElement();
   const compressionDescription = new FakeElement();
   const guideLink = new FakeElement();
+  const licenseLink = new FakeElement();
   const redactSensitiveData = new FakeElement();
   const saveSettings = new FakeElement();
   const otherSiteFrames = new FakeElement();
@@ -108,7 +113,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
     ['#app', app], ['#compression', compression], ['#format', format],
     ['#format-semantic-text', semanticTextFormat], ['#format-markdown', markdownFormat],
     ['#customize', customize], ['#preview', preview], ['#select-element', selectElement], ['.primary-action', copy], ['.secondary-action', save], ['.status', status], ['.metrics', metrics],
-    ['.feedback', feedback], ['#compression-description', compressionDescription], ['#guide-link', guideLink],
+    ['.feedback', feedback], ['#compression-description', compressionDescription], ['#guide-link', guideLink], ['#license-link', licenseLink],
     ['#redact-sensitive-data', redactSensitiveData], ['#save-settings', saveSettings],
     ['#include-other-site-frames', otherSiteFrames],
   ]);
@@ -182,7 +187,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   await settle();
   return {
     app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings, otherSiteFrames,
-    copy, save, preview, selectElement, customize, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create,
+    copy, save, preview, selectElement, customize, guideLink, licenseLink, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create,
   };
 }
 
@@ -199,6 +204,30 @@ afterEach(() => {
 });
 
 describe('popup export flow', () => {
+  for (const [link, path] of [['guideLink', '/guide.html'], ['licenseLink', '/license.html']] as const) {
+    it.each([{ firefox: false }, { firefox: true }, { firefox: true, android: true }])(`opens ${path} once and closes only after the tab opens: %j`, async options => {
+      const popup = await loadPopup(successfulCapture(), options);
+      let opened!: (value: { id: number }) => void;
+      popup.createTab.mockReturnValueOnce(new Promise(resolve => { opened = resolve; }));
+      const event = popup[link].click();
+      expect(event.defaultPrevented).toBe(true);
+      expect(popup.createTab).toHaveBeenCalledExactlyOnceWith({ url: expect.stringContaining(path), active: true });
+      expect(window.close).not.toHaveBeenCalled();
+      opened({ id: 5 }); await settle();
+      expect(window.close).toHaveBeenCalledOnce();
+      expect(popup.sendMessage).not.toHaveBeenCalled();
+      expect(popup.storageSet).not.toHaveBeenCalled();
+    });
+
+    it(`keeps Firefox popup open if ${path} cannot be opened`, async () => {
+      const popup = await loadPopup(successfulCapture(), { firefox: true });
+      popup.createTab.mockRejectedValueOnce(new Error('Synthetic tab failure'));
+      popup[link].click(); await settle();
+      expect(window.close).not.toHaveBeenCalled();
+      expect(popup.status.textContent).toBe('Unable to open this page. Try again.');
+    });
+  }
+
   it('starts the picker with current preferences and closes only after readiness', async () => {
     const popup = await loadPopup({ ok: true });
     popup.markdown.checked = true; popup.compression.value = '1';

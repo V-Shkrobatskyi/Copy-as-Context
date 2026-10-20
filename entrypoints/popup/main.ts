@@ -127,7 +127,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <p class="status" role="status" aria-live="polite"></p>
       <p class="metrics" aria-live="polite"></p>
     </section>
-    <footer class="help"><span>New here?</span> <a id="guide-link" target="_blank" rel="noopener">View the quick guide</a> · <a href="/license.html" target="_blank" rel="noopener">License</a></footer>
+    <footer class="help"><span>New here?</span> <a id="guide-link" target="_blank" rel="noopener">View the quick guide</a> · <a id="license-link" href="/license.html" target="_blank" rel="noopener">License</a></footer>
 
   </main>
 `;
@@ -169,6 +169,16 @@ const controls = [
 const COMPRESSION_VALUES: readonly CompressionLevel[] = ['without', 'detailed', 'compact', 'maximum'];
 
 guideLink.href = browser.runtime.getURL('/guide.html');
+const licenseLink = document.querySelector<HTMLAnchorElement>('#license-link')!;
+licenseLink.href = browser.runtime.getURL('/license.html');
+for (const [link, path] of [[guideLink, '/guide.html'], [licenseLink, '/license.html']] as const) {
+  link.addEventListener('click', event => {
+    event.preventDefault();
+    void browser.tabs.create({ url: browser.runtime.getURL(path), active: true })
+      .then(() => window.close())
+      .catch(() => showFeedback('Unable to open this page. Try again.'));
+  });
+}
 
 function selectedRangeCompression(value: string): CompressionLevel {
   const index = Number.parseInt(value, 10);
