@@ -13,6 +13,7 @@ function harness(options: {
   hidden?: boolean; technical?: boolean; unknown?: boolean; missingOwner?: boolean; changed?: 'root' | 'child';
   childError?: boolean; nested?: boolean; invalidChild?: boolean; enableError?: boolean; cleanupError?: boolean;
   rootResponse?: unknown; password?: boolean; noFrames?: boolean;
+  selectionContext?: 'missing' | 'duplicate' | 'destroyed'; selectionReplaced?: boolean;
 } = {}) {
   const calls: { method: string; session?: string; params?: Record<string, unknown> }[] = [];
   let event: Event | undefined;
@@ -20,7 +21,7 @@ function harness(options: {
   let inventories = 0;
   const response = (frameId: string): ChromeAxTreeResponse => ({ nodes: [
     { nodeId: 'root', frameId, role: { value: 'RootWebArea' }, name: { value: frameId === 'root' ? 'Shared label' : 'Child title' }, childIds: ['text', ...(frameId === 'root' && !options.noFrames || frameId === 'child' && options.nested ? ['owner'] : []), ...(options.password && frameId === 'child' ? ['password'] : [])] },
-    { nodeId: 'text', role: { value: 'StaticText' }, name: { value: frameId === 'root' ? 'Parent text' : 'Shared label' } },
+    { nodeId: 'text', backendDOMNodeId: 30, role: { value: 'StaticText' }, name: { value: frameId === 'root' ? 'Parent text' : 'Shared label' } },
     ...(frameId === 'root' && !options.noFrames || frameId === 'child' && options.nested ? [{ nodeId: 'owner', backendDOMNodeId: 10, role: { value: 'Iframe' }, name: { value: 'Widget' }, childIds: [] }] : []),
     ...(options.password && frameId === 'child' ? [
       { nodeId: 'password', backendDOMNodeId: 20, role: { value: 'textbox' }, name: { value: 'Unlabelled' }, value: { value: 'private-password' }, childIds: ['password-text'] },
@@ -28,18 +29,34 @@ function harness(options: {
     ] : []),
   ] });
   const client: ChromeDebuggerClient = {
+    extensionOrigin: 'chrome-extension://test',
     attach(_target, _version, callback) { calls.push({ method: 'attach' }); callback(); },
     detach(_target, callback) { calls.push({ method: 'detach' }); callback(); },
     onEvent(listener) { event = listener; return () => { event = undefined; }; },
     onDetach(listener) { detachEvent = listener; return () => { detachEvent = undefined; }; },
     sendCommand(target, method, callback, params) {
       calls.push({ method, session: target.sessionId, params });
+      if (method === 'Runtime.enable') {
+        const context = { id: 7, uniqueId: 'picker-world', origin: 'chrome-extension://test', auxData: { frameId: 'root', type: 'isolated', isDefault: false } };
+        for (const invalid of [
+          { ...context, id: 1, uniqueId: 'page-world', origin: 'https://example.test', auxData: { frameId: 'root', type: 'default', isDefault: true } },
+          { ...context, id: 2, uniqueId: 'other-extension', origin: 'chrome-extension://other' },
+          { ...context, id: 3, uniqueId: 'child-world', auxData: { ...context.auxData, frameId: 'child' } },
+          { ...context, id: 4, uniqueId: 'spoofed-page', auxData: { ...context.auxData, type: 'default', isDefault: true } },
+        ]) event?.(target, 'Runtime.executionContextCreated', { context: invalid });
+        if (options.selectionContext !== 'missing') event?.(target, 'Runtime.executionContextCreated', { context });
+        if (options.selectionContext === 'duplicate') event?.(target, 'Runtime.executionContextCreated', { context: { ...context, id: 8, uniqueId: 'duplicate' } });
+        callback({}); return;
+      }
+      if (method === 'Runtime.evaluate') { callback({ result: { objectId: 'selected' } }); return; }
+      if (method === 'DOM.describeNode') { callback({ node: { backendNodeId: 30, nodeName: 'SECTION' } }); return; }
       if (method === 'Target.setAutoAttach' && params?.autoAttach) {
         if (!target.sessionId && !options.noFrames) event?.({ tabId: target.tabId }, 'Target.attachedToTarget', { sessionId: 'child-session', targetInfo: { type: 'iframe' } });
         if (target.sessionId === 'child-session' && options.nested) event?.({ tabId: target.tabId, sessionId: target.sessionId }, 'Target.attachedToTarget', { sessionId: 'nested-session', targetInfo: { type: 'iframe' } });
       }
       if (method === 'Page.getFrameTree') {
         if (!target.sessionId) inventories++;
+        if (inventories === 2 && options.selectionContext === 'destroyed') event?.(target, 'Runtime.executionContextDestroyed', { executionContextId: 7 });
         const id = target.sessionId === 'nested-session' ? 'nested' : target.sessionId ? 'child' : 'root';
         if (inventories === 2 && options.changed) event?.({ tabId: target.tabId, sessionId: target.sessionId }, 'Page.frameNavigated', { frame: { id: options.changed } });
         callback({ frameTree: { frame: { id, loaderId: 'loader', ...(id !== 'root' ? { parentId: id === 'child' ? 'root' : 'child' } : {}) } } }); return;
@@ -52,6 +69,7 @@ function harness(options: {
       if (method === 'DOM.getFrameOwner') { callback(options.missingOwner ? {} : { backendNodeId: 10 }); return; }
       if (method === 'DOM.resolveNode') { callback({ object: { objectId: params?.backendNodeId === 20 ? 'password' : 'owner' } }); return; }
       if (method === 'Runtime.callFunctionOn') {
+        if (params?.objectId === 'selected') { callback({ result: { value: !options.selectionReplaced } }); return; }
         callback({ result: { value: params?.objectId === 'password' ? true : options.hidden ? 'hidden' : options.technical ? 'technical' : options.unknown ? undefined : 'visible' } }); return;
       }
       callback({}, options.enableError && method === 'Accessibility.enable' ? 'Cannot access this page' : options.cleanupError && method === 'Accessibility.disable' ? 'Disable failed' : undefined);
@@ -63,6 +81,34 @@ function harness(options: {
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('Chrome embedded document coordinator', () => {
+  it('resolves the retained picker reference only in its authenticated root isolated world', async () => {
+    const h = harness({ noFrames: true });
+    const result = await createFrameCapturer(h.client)(42, '11111111-2222-4333-8444-555555555555');
+    expect(result).toMatchObject({ ok: true });
+    const evaluations = h.calls.filter(call => call.method === 'Runtime.evaluate');
+    expect(evaluations).toHaveLength(2);
+    for (const call of evaluations) {
+      expect(call.params?.uniqueContextId).toBe('picker-world');
+      expect(call.params?.expression).toContain('__copyAsContextPicker');
+      expect(call.params?.expression).not.toContain('querySelector');
+    }
+    expect(h.calls.find(call => call.method === 'Runtime.callFunctionOn')?.params?.arguments).toEqual([{ objectId: 'selected' }]);
+    expect(h.calls.some(call => call.method === 'Runtime.disable')).toBe(true);
+    expect(h.calls.at(-1)?.method).toBe('detach');
+    expect(h.listeners()).toEqual([undefined, undefined]);
+  });
+
+  it.each(['missing', 'duplicate', 'destroyed'] as const)('rejects %s picker contexts without falling back to the page world', async selectionContext => {
+    const h = harness({ noFrames: true, selectionContext });
+    expect(await createFrameCapturer(h.client)(42, 'opaque')).toMatchObject({ ok: false, error: { code: 'page-changed' } });
+    expect(h.calls.filter(call => call.method === 'Runtime.evaluate')).toHaveLength(selectionContext === 'destroyed' ? 1 : 0);
+    expect(h.calls.at(-1)?.method).toBe('detach');
+  });
+
+  it('rejects a different retained element even when it has the same tag and marker', async () => {
+    const h = harness({ noFrames: true, selectionReplaced: true });
+    expect(await createFrameCapturer(h.client)(42, 'opaque')).toMatchObject({ ok: false, error: { code: 'page-changed' } });
+  });
   it('merges OOPIF and nested sessions at their owners without leaking IDs', async () => {
     const h = harness({ nested: true });
     const result = await createFrameCapturer(h.client)(42);
