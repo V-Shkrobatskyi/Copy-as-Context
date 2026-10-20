@@ -54,6 +54,14 @@ normalized text field before serialization. It returns only a replacement count
 and never retains matched secret values. This is not a general PII or DLP
 solution; adapters and UI must not claim it catches every secret.
 
+Field rules also recognize editable semantic roles without a `value` property.
+Full hiding covers every descendant name, value and link target; partial field
+masking also follows named descendants. The field's own label remains visible.
+The DOM adapter keeps input, textarea and select values out of ancestor names
+so field values retain their label context. URL parameter rules decode names
+once (percent escapes and `+` spaces), preserve case preferences, and replace
+original value spans without rewriting unrelated URL text.
+
 `prepareExport(tree, compressionLevel, format, redactSensitiveData, redactionSettings?)` is the only core orchestration
 entry point for supported user exports. Its required order is:
 

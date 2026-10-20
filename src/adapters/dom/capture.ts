@@ -70,10 +70,14 @@ export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAP
       if (element !== root && aria) { add(` ${aria} `); continue; }
       if (element.localName === 'img' || element.localName === 'input' && (element as HTMLInputElement).type === 'image') { add(` ${element.getAttribute('alt') ?? ''} `); continue; }
       if (element.localName === 'input' || element.localName === 'textarea') {
-        if (element !== root) add(` ${(element as HTMLInputElement).value} `);
+        // Keep field values on their own nodes, where privacy rules have the
+        // field label. Duplicating them in an ancestor name loses that context.
+        if (element.localName === 'input' && ['button', 'submit', 'reset'].includes((element as HTMLInputElement).type)) {
+          add(` ${accessibleName(element, path, includeHidden)} `);
+        }
         continue;
       }
-      if (element.localName === 'select') { add(` ${Array.from((element as HTMLSelectElement).selectedOptions).map((option) => option.label).join(' ')} `); continue; }
+      if (element.localName === 'select') continue;
       if (element.localName === 'br') { add(' '); continue; }
       if (element !== root && /^(?:block|flex|grid|list-item|table(?:-|$))/u.test(style(element).display)) {
         add(' '); stack.push({ node: null, depth });

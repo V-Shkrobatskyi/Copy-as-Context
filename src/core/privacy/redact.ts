@@ -21,7 +21,7 @@ const GITHUB_TOKEN = /\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{2
 const AWS_ACCESS_KEY = /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/gu;
 const OPENAI_STYLE_KEY = /\bsk-(?:proj-)?[A-Za-z0-9_-]{16,}\b/gu;
 const ASSIGNED_SECRET = /\b((?:api[ _-]?key|token|secret|password)\s*[:=]\s*)((?!\[REDACTED\])[^\s&"',;]{8,})/giu;
-const SECRET_QUERY_VALUE = /([?&](?:api[ _-]?key|token|secret|password)=)((?!\[REDACTED\])[^&#\s]+)/giu;
+const FIELD_ROLES = new Set(['textbox', 'searchbox', 'combobox', 'listbox', 'spinbutton', 'slider']);
 // Every supported credential pattern contains one of these markers. Most labels do not.
 const CREDENTIAL_MARKER = /Bearer|Basic|eyJ|gh[pousr]_|github_pat_|AKIA|ASIA|sk-|api[ _-]?key|token|secret|password/iu;
 
@@ -49,7 +49,7 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
     ['authorization', AUTHORIZATION_VALUE, 1, ' [REDACTED]'],
     ['jwt', JWT, 0, '[REDACTED]'], ['github', GITHUB_TOKEN, 0, '[REDACTED]'],
     ['aws', AWS_ACCESS_KEY, 0, '[REDACTED]'], ['openai', OPENAI_STYLE_KEY, 0, '[REDACTED]'],
-    ['assignments', ASSIGNED_SECRET, 1, '[REDACTED]'], ['query-values', SECRET_QUERY_VALUE, 1, '[REDACTED]'],
+    ['assignments', ASSIGNED_SECRET, 1, '[REDACTED]'],
   ] as const;
   const builtinPatterns = builtins.filter(([id]) => enabled(id)).map(([id, pattern, prefix, replacement]) =>
     ({ pattern: configuredPattern(id, pattern), prefix, replacement }));
@@ -60,8 +60,11 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
   const customRegexPatterns = config.customRules.filter(rule => rule.enabled && rule.type === 'regex').map(rule => compileRegex(rule.text, rule.caseSensitive));
   const customPatterns = config.customRules.filter(rule => rule.enabled && rule.type !== 'regex' && !isAutomaticType(rule.type) && !rule.fieldLabels && !rule.urlParameters && !DETECTOR_MODES.some(mode => rule[mode.key])).flatMap(rule =>
     customRuleTerms(rule).map(term => new RegExp(`\\[REDACTED\\]|${escape(term)}`, rule.caseSensitive ? 'gu' : 'giu')));
-  const customQueryPatterns = config.customRules.filter(rule => rule.enabled && rule.urlParameters).map(rule =>
-    new RegExp(`([?&](?:${customRuleTerms(rule).map(escape).join('|')})=)((?!\\[REDACTED\\])[^&#\\s]+)`, rule.caseSensitive ? 'gu' : 'giu'));
+  const queryNamePatterns = [
+    ...(enabled('query-values') ? [new RegExp('^(?:api[ _-]?key|token|secret|password)$', builtinCaseSensitive(config, 'query-values') ? 'u' : 'iu')] : []),
+    ...config.customRules.filter(rule => rule.enabled && rule.urlParameters).map(rule =>
+      new RegExp(`^(?:${customRuleTerms(rule).map(escape).join('|')})$`, rule.caseSensitive ? 'u' : 'iu')),
+  ];
   const customFieldPatterns = config.customRules.filter(rule => rule.enabled && rule.fieldLabels).flatMap(rule =>
     customRuleTerms(rule).map(term => new RegExp(rule.wholeWords ? `\\b${escape(term)}\\b` : escape(term), rule.caseSensitive ? 'u' : 'iu')));
 
@@ -82,7 +85,7 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
   });
 
   const redactText = (value: string, phoneField = false, fieldMask?: FieldMaskKind): string => {
-    if (!fieldMask && personalTypes.length === 0 && !CREDENTIAL_MARKER.test(value) && customPatterns.length === 0 && customQueryPatterns.length === 0 && customDetectorPatterns.length === 0 && customRegexPatterns.length === 0 && !((maskEmailDomains || hideEmails) && value.includes('@'))) return value;
+    if (!fieldMask && personalTypes.length === 0 && !CREDENTIAL_MARKER.test(value) && customPatterns.length === 0 && queryNamePatterns.length === 0 && customDetectorPatterns.length === 0 && customRegexPatterns.length === 0 && !((maskEmailDomains || hideEmails) && value.includes('@'))) return value;
     type Span = { start: number; end: number; replacement: string; mask?: boolean };
     const streams: Generator<Span>[] = [];
     const protectedRanges = customRegexPatterns.length
@@ -121,7 +124,16 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
       for (const { pattern, prefix, replacement } of builtinPatterns) collect(pattern, prefix, replacement);
     }
     for (const pattern of customPatterns) collect(pattern, 0, '[REDACTED]', true);
-    for (const pattern of customQueryPatterns) collect(pattern, 1);
+    function* queryValues(): Generator<Span> {
+      // Decode names once using URL query semantics, but retain original spans
+      // so escaping, parameter order and unrelated values remain unchanged.
+      for (const match of value.matchAll(/[?&]([^?&#=]+)=([^&#\s]+)/gu)) {
+        const name = new URLSearchParams(`${match[1]}=`).keys().next().value ?? '';
+        if (match[2] === '[REDACTED]' || !queryNamePatterns.some(pattern => pattern.test(name))) continue;
+        yield { start: match.index + match[1]!.length + 2, end: match.index + match[0].length, replacement: '[REDACTED]' };
+      }
+    }
+    if (queryNamePatterns.length && /[?&]/u.test(value)) streams.push(queryValues());
     for (const { pattern, prefix, replacement } of customDetectorPatterns) collect(pattern, prefix, replacement);
     for (const pattern of customRegexPatterns) streams.push(regexMatches(pattern));
     function* emails(): Generator<Span> {
@@ -185,20 +197,21 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
   };
 
   const redactNode = (node: SemanticNode, insideSensitiveField = false, insidePhoneField = false, insideMaskedField?: FieldMaskKind): SemanticNode => {
-    const phoneField = insidePhoneField || (node.value !== undefined && /\b(?:phone|telephone|tel|mobile|fax)\b/iu.test(node.name ?? ''));
-    const sensitiveField = node.value !== undefined &&
+    const field = node.value !== undefined || FIELD_ROLES.has(node.role);
+    const phoneField = insidePhoneField || (field && /\b(?:phone|telephone|tel|mobile|fax)\b/iu.test(node.name ?? ''));
+    const sensitiveField = field &&
       ((enabled('sensitive-fields') && fieldNamePattern.test(node.name ?? '')) ||
         (enabled('personal-fields') && personalFieldMaskKind(node.name ?? '') !== undefined) ||
         customFieldPatterns.some(pattern => pattern.test(node.name ?? '')));
-    const fieldMask = (maskPersonalFields && node.value !== undefined ? personalFieldMaskKind(node.name ?? '') : undefined) ?? insideMaskedField;
-    const sensitiveText = insideSensitiveField && ['StaticText', 'InlineTextBox', 'text'].includes(node.role);
+    const fieldMask = insideMaskedField === 'hide' ? 'hide'
+      : (maskPersonalFields && field ? personalFieldMaskKind(node.name ?? '') : undefined) ?? insideMaskedField;
     const result: SemanticNode = {
       role: node.role,
       // AX trees may repeat a control value as text below generic wrappers.
       children: node.children.map((child) => redactNode(child, insideSensitiveField || sensitiveField, phoneField, fieldMask)),
     };
     if (node.id !== undefined) result.id = node.id;
-    if (node.name !== undefined) result.name = sensitiveText ? redactFieldText(node.name) : redactText(node.name, insidePhoneField && ['StaticText', 'InlineTextBox', 'text'].includes(node.role), ['StaticText', 'InlineTextBox', 'text'].includes(node.role) ? insideMaskedField : undefined);
+    if (node.name !== undefined) result.name = insideSensitiveField ? redactFieldText(node.name) : redactText(node.name, insidePhoneField, insideMaskedField);
     if (node.value !== undefined) {
       if (sensitiveField || insideSensitiveField) {
         result.value = redactFieldText(node.value);
@@ -207,7 +220,7 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
       }
     }
     if (node.level !== undefined) result.level = node.level;
-    if (node.href !== undefined) result.href = redactText(node.href);
+    if (node.href !== undefined) result.href = insideSensitiveField ? redactFieldText(node.href) : redactText(node.href, false, insideMaskedField);
     if (node.states !== undefined) result.states = { ...node.states };
     return result;
   };

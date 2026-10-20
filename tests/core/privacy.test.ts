@@ -114,7 +114,7 @@ describe('semantic privacy redaction', () => {
     expect(twice.tree).toEqual(once.tree);
     expect(twice.redactionCount).toBe(0);
     expect(once.tree.root.states).toEqual({ required: true, disabled: false });
-    expect(once.tree.root.children[0]?.name).toBe('child');
-    expect(once.tree.root.children[0]?.href).toBe('https://example.test/?token=[REDACTED]');
+    expect(once.tree.root.children[0]?.name).toBe('[REDACTED]');
+    expect(once.tree.root.children[0]?.href).toBe('[REDACTED]');
   });
 });
