@@ -220,6 +220,7 @@ export function redactSemanticTree(tree: SemanticTree, settings: RedactionSettin
   if (tree.sourceUrl !== undefined) result.sourceUrl = redactText(tree.sourceUrl);
   if (tree.capturedAt !== undefined) result.capturedAt = tree.capturedAt;
   if (tree.browser !== undefined) result.browser = tree.browser;
+  if (tree.selectedElementTag !== undefined) result.selectedElementTag = tree.selectedElementTag;
 
   return { tree: result, redactionCount };
 }

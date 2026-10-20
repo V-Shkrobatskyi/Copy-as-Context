@@ -68,6 +68,7 @@ function appendDetailedNode(node: SemanticNode, destination: SemanticNode[]): vo
 function copyDocumentMetadata(source: SemanticTree, target: SemanticTree): void {
   if (source.title !== undefined) target.title = source.title;
   if (source.sourceUrl !== undefined) target.sourceUrl = source.sourceUrl;
+  if (source.selectedElementTag !== undefined) target.selectedElementTag = source.selectedElementTag;
   if (source.capturedAt !== undefined) target.capturedAt = source.capturedAt;
   if (source.browser !== undefined) target.browser = source.browser;
 }

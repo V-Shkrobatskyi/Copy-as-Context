@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import { openPreview } from '@/src/preview-session';
+import { PICKER_START } from '@/src/element-picker-protocol';
 import { captureWarningText } from '@/src/preview-message';
 import { openFirefoxSave } from '@/src/firefox-save';
 import { installTouchButtonFeedback } from '@/src/touch-button-feedback';
@@ -88,6 +89,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <button id="preview" class="preview-action" type="button">Preview &amp; edit</button>
         <button class="primary-action" type="button">Copy page context</button>
         <button class="secondary-action" type="button">Save to file</button>
+        <button id="select-element" class="preview-action" type="button">Select element</button>
       </div>
     </section>
     <section class="settings-panel" aria-label="Export preferences">
@@ -136,6 +138,7 @@ const markdownFormat = document.querySelector<HTMLInputElement>('#format-markdow
 const copyButton = document.querySelector<HTMLButtonElement>('.primary-action')!;
 const saveButton = document.querySelector<HTMLButtonElement>('.secondary-action')!;
 const previewButton = document.querySelector<HTMLButtonElement>('#preview')!;
+const selectElementButton = document.querySelector<HTMLButtonElement>('#select-element')!;
 const customizeButton = document.querySelector<HTMLButtonElement>('#customize')!;
 const firefox = import.meta.env.BROWSER === 'firefox';
 let canSave = !firefox && typeof browser.downloads?.download === 'function';
@@ -160,7 +163,7 @@ const saveSettingsButton = document.querySelector<HTMLButtonElement>('#save-sett
 installTouchButtonFeedback(saveSettingsButton, () => document.body.dataset.platform === 'android');
 const controls = [
   compression, semanticTextFormat, markdownFormat, redactSensitiveData,
-  saveSettingsButton, copyButton, saveButton, previewButton, customizeButton,
+  saveSettingsButton, copyButton, saveButton, previewButton, selectElementButton, customizeButton,
 ];
 
 const COMPRESSION_VALUES: readonly CompressionLevel[] = ['without', 'detailed', 'compact', 'maximum'];
@@ -343,6 +346,21 @@ customizeButton.addEventListener('click', () => {
     .catch(() => showFeedback('Unable to open filter settings. Try again.'));
 });
 previewButton.addEventListener('click', () => void exportPageContext('preview'));
+selectElementButton.addEventListener('click', async () => {
+  if (exportPending || frameAccessToggle?.pending) return;
+  exportPending = true; setPending(true); frameAccessToggle?.setPending(true);
+  showFeedback('Starting element selection…');
+  try {
+    const response = await browser.runtime.sendMessage({ type: PICKER_START,
+      compression: selectedRangeCompression(compression.value),
+      format: selectedFormat(markdownFormat.checked ? 'markdown' : 'semantic-text'),
+      redactSensitiveData: redactSensitiveData.checked,
+    });
+    if (response?.ok === true) window.close();
+    else showFeedback(typeof response?.error?.message === 'string' ? response.error.message : 'Unable to start element selection. Try again.');
+  } catch { showFeedback('Unable to start element selection. Try again.'); }
+  finally { exportPending = false; frameAccessToggle?.setPending(false); setPending(false); }
+});
 copyButton.addEventListener('click', () => void exportPageContext('copy'));
 saveButton.addEventListener('click', () => void exportPageContext('save'));
 compression.addEventListener('input', updateCompressionDescription);
@@ -362,11 +380,13 @@ async function initializeFirefoxPlatform(): Promise<void> {
     ]);
     const android = platform?.os === 'android' || /Android/u.test(navigator.userAgent);
     document.body.dataset.platform = android ? 'android' : 'desktop';
+    selectElementButton.hidden = android;
     canSave = !android && ['mac', 'win', 'linux', 'cros', 'openbsd'].includes(platform?.os ?? '')
       && typeof browser.permissions?.request === 'function';
   } catch {
     // Copy remains available if local platform detection fails.
     document.body.dataset.platform = /Android/u.test(navigator.userAgent) ? 'android' : 'desktop';
+    selectElementButton.hidden = document.body.dataset.platform === 'android';
   } finally {
     clearTimeout(timer);
     updateSaveAvailability();

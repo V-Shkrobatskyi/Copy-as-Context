@@ -10,15 +10,15 @@ export interface CaptureTab {
 }
 
 /** WXT replaces the target at build time, excluding Chrome capture from Firefox. */
-export async function captureActiveTab(tab: CaptureTab, capturedAt: string): Promise<CaptureOutcome> {
+export async function captureActiveTab(tab: CaptureTab, capturedAt: string, selection?: string, signal?: AbortSignal): Promise<CaptureOutcome> {
   if (import.meta.env.BROWSER === 'firefox') {
     const { captureFirefoxPage } = await import('./firefox/capture');
-    return captureFirefoxPage(tab, capturedAt);
+    return selection ? captureFirefoxPage(tab, capturedAt, selection, signal) : captureFirefoxPage(tab, capturedAt);
   }
 
   const { captureChromeAccessibilityTree } = await import('./chrome/capture');
   const { addChromeDocumentMetadata } = await import('./chrome/document-metadata');
-  const capture = await captureChromeAccessibilityTree(tab.id);
+  const capture = await (selection ? captureChromeAccessibilityTree(tab.id, selection, signal) : captureChromeAccessibilityTree(tab.id));
   return capture.ok
     ? { ...capture, tree: addChromeDocumentMetadata(capture.tree, tab, capturedAt) }
     : capture;

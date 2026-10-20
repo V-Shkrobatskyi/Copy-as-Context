@@ -6,6 +6,32 @@ import { describe, expect, it } from 'vitest';
 
 import { prepareExport, serializeMarkdown, type SemanticTree } from '@/src/core';
 
+describe('selected-element export metadata', () => {
+  for (const format of ['semantic-text', 'markdown'] as const) {
+    for (const compression of ['without', 'detailed', 'compact', 'maximum'] as const) {
+      for (const redact of [false, true]) {
+        it(`${format}/${compression}/redaction=${redact} adds element metadata only for a selection`, () => {
+          const page: SemanticTree = {
+            schemaVersion: 1, title: 'Example', sourceUrl: 'https://example.test/', browser: 'Test Browser',
+            root: { role: 'page', children: [{ role: 'text', name: 'Example content', children: [] }] },
+          };
+          const full = prepareExport(page, compression, format, redact).serialized.content;
+          expect(full).not.toContain('Element:');
+          expect(full).not.toContain('**Element:**');
+          const selected = prepareExport({ ...page, selectedElementTag: 'nav' }, compression, format, redact);
+          const content = selected.serialized.content;
+          const line = format === 'markdown' ? '**Element:** Selected block `<nav>`' : 'Element: Selected block <nav>';
+          expect(content.split('\n')).toContain(line);
+          expect(content.indexOf(line)).toBeGreaterThan(content.indexOf('https://example.test/'));
+          expect(content.indexOf(line)).toBeLessThan(content.indexOf('Browser:'));
+          expect(selected.characterCount).toBe(content.length);
+          expect(page).not.toHaveProperty('selectedElementTag');
+        });
+      }
+    }
+  }
+});
+
 describe('safe export pipeline', () => {
   const tree: SemanticTree = {
     schemaVersion: 1,

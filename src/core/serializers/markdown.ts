@@ -45,6 +45,7 @@ export function renderMarkdownHeader(tree: SemanticTree, lines: string[], attrib
 
   lines.push(`**Page:** ${escapeText(tree.title ?? 'Untitled page')}`);
   lines.push(`**URL:** ${code(tree.sourceUrl ?? 'Unavailable')}`);
+  if (tree.selectedElementTag !== undefined) lines.push(`**Element:** Selected block ${code(`<${tree.selectedElementTag}>`)}`);
   lines.push(`**Browser:** ${escapeText(tree.browser ?? 'Unavailable')}`);
   lines.push(`**Captured:** ${escapeText(tree.capturedAt ?? 'Unavailable')}`);
   lines.push(attribution, '');

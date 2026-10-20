@@ -8,10 +8,20 @@ import { isPreviewPayload, PREVIEW_PORT_PREFIX, PREVIEW_TIMEOUT_MS, type Preview
 type PreviewPort = ReturnType<typeof browser.runtime.connect>;
 
 /** Transfer to one authenticated document, then activate it after receipt. */
-export async function openPreview(payload: PreviewPayload): Promise<void> {
+export async function openPreview(payload: PreviewPayload, signal?: AbortSignal): Promise<void> {
+  return openExportDocument(payload, '/preview.html', true, signal);
+}
+
+/** Downloads own their blob in an extension document, independently of the source page. */
+export async function openSelectionSave(payload: PreviewPayload, signal?: AbortSignal): Promise<void> {
+  return openExportDocument(payload, '/selection-save.html', false, signal);
+}
+
+async function openExportDocument(payload: PreviewPayload, path: '/preview.html' | '/selection-save.html', activate: boolean, signal?: AbortSignal): Promise<void> {
   if (!isPreviewPayload(payload)) throw new Error('invalid-preview');
+  if (signal?.aborted) throw new Error('preview-cancelled');
   const token = crypto.randomUUID();
-  const url = `${browser.runtime.getURL('/preview.html')}#${token}`;
+  const url = `${browser.runtime.getURL(path)}#${token}`;
   let tabId: number | undefined;
   let port: PreviewPort | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -49,7 +59,8 @@ export async function openPreview(payload: PreviewPayload): Promise<void> {
   };
   const onPageHide = () => fail(new Error('preview-cancelled'));
   browser.runtime.onConnect.addListener(onConnect);
-  window.addEventListener('pagehide', onPageHide);
+  if (typeof window !== 'undefined') window.addEventListener('pagehide', onPageHide);
+  signal?.addEventListener('abort', onPageHide, { once: true });
   timer = setTimeout(() => fail(new Error('preview-timeout')), PREVIEW_TIMEOUT_MS);
   try {
     const creation = browser.tabs.create({ url, active: false });
@@ -64,9 +75,11 @@ export async function openPreview(payload: PreviewPayload): Promise<void> {
     tabId = tab.id;
     if (tabId === undefined) throw new Error('preview-tab-unavailable');
     await received;
+    if (signal?.aborted) throw new Error('preview-cancelled');
     // Release the payload and listeners before activation can close the popup.
     cleanup();
-    await browser.tabs.update(tabId, { active: true });
+    if (activate) await browser.tabs.update(tabId, { active: true });
+    if (signal?.aborted) throw new Error('preview-cancelled');
   } catch (error) {
     cancelled = true;
     if (tabId !== undefined) await browser.tabs.remove(tabId).catch(() => {});
@@ -78,7 +91,8 @@ export async function openPreview(payload: PreviewPayload): Promise<void> {
   function cleanup(): void {
     clearTimeout(timer);
     browser.runtime.onConnect.removeListener(onConnect);
-    window.removeEventListener('pagehide', onPageHide);
+    if (typeof window !== 'undefined') window.removeEventListener('pagehide', onPageHide);
+    signal?.removeEventListener('abort', onPageHide);
     if (port) {
       port.onMessage.removeListener(onMessage);
       port.onDisconnect.removeListener(onDisconnect);

@@ -3,7 +3,7 @@ Copyright (c) 2026 Vitalii Shkrobatskyi
 SPDX-License-Identifier: GPL-3.0-only
 */
 
-@import '../../public/page-theme.css';
+@import '../../public/popup-theme.css';
 
 :root {
   --compression-progress: 66.667%;
@@ -53,6 +53,7 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 0; bo
 .format-option input { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
 .action-section { margin-bottom: 14px; }
 .actions { display: grid; grid-template-columns: 1.15fr 1.45fr 1fr; gap: 6px; }
+#select-element { grid-column: 1 / -1; }
 button { border-radius: 8px; cursor: pointer; padding: 9px 8px; font: inherit; font-size: .76rem; font-weight: 700; }
 .actions button { min-width: 0; padding: 9px 6px; font-size: .7rem; }
 .primary-action { border: 1px solid var(--accent); background: var(--accent); color: #fff; box-shadow: 0 1px 2px #263e8929; }
@@ -85,19 +86,6 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .customize-action:disabled { opacity: .5; cursor: default; }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1b1b23;
-    --surface: #30323f;
-    --selected: #3b4664;
-    --border: #4c4f60;
-    --text: #e2e2e8;
-    --muted: #b2b2bf;
-    --accent: #8baaf7;
-    --accent-hover: #a3bcff;
-    --accent-dark: #d2defe;
-    --link: #9bb7ff;
-    --focus: #adc3ff;
-  }
   .settings-panel { border-color: var(--border); }
   .primary-action { color: #1b1b23; box-shadow: none; }
 }

@@ -1,0 +1,18 @@
+/* Copyright (c) 2026 Vitalii Shkrobatskyi; SPDX-License-Identifier: GPL-3.0-only */
+@import './page-theme.css';
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1b1b23;
+    --surface: #30323f;
+    --selected: #3b4664;
+    --border: #4c4f60;
+    --text: #e2e2e8;
+    --muted: #b2b2bf;
+    --accent: #8baaf7;
+    --accent-hover: #a3bcff;
+    --accent-dark: #d2defe;
+    --link: #9bb7ff;
+    --focus: #adc3ff;
+  }
+}

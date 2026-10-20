@@ -51,6 +51,6 @@ export const createChromeAccessibilityCapturer = createFrameCapturer;
 const captureWithChrome = createChromeAccessibilityCapturer(chromeDebuggerClient());
 
 /** Captures a tab and eligible embedded documents, then releases all debugger sessions. */
-export function captureChromeAccessibilityTree(tabId: number): Promise<CaptureOutcome> {
-  return captureWithChrome(tabId);
+export function captureChromeAccessibilityTree(tabId: number, selection?: string, signal?: AbortSignal): Promise<CaptureOutcome> {
+  return captureWithChrome(tabId, selection, signal);
 }

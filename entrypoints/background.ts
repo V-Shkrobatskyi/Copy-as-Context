@@ -11,6 +11,8 @@ import { resolveBrowserInfo, type BrowserInfoDependencies } from '../src/platfor
 import { captureActiveTab } from '../src/adapters/capture';
 import { CAPTURE_ACTIVE_TAB_MESSAGE, isCaptureActiveTabRequest, type CaptureActiveTabResponse } from '../src/capture-message';
 import { prepareExport, type CaptureResult } from '@/src/core';
+import { PICKER_START, isPickerStart } from '@/src/element-picker-protocol';
+import { createPickerCoordinator } from '@/src/element-picker-session';
 
 function unsupportedPage(message: string): CaptureActiveTabResponse {
   return { ok: false, error: { code: 'unsupported-page', message } };
@@ -49,8 +51,16 @@ function reportCaptureResult(result: CaptureResult): void {
 export default defineBackground(() => {
   console.info('[Copy as Context] Background ready.');
   const runtime = browser.runtime as typeof browser.runtime & { getBrowserInfo?: BrowserInfoDependencies['getBrowserInfo'] };
+  let picker: ReturnType<typeof createPickerCoordinator> | undefined;
 
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message && typeof message === 'object' && (message as { type?: unknown }).type === PICKER_START) {
+      if (sender.tab || sender.id !== browser.runtime.id || sender.url !== browser.runtime.getURL('/popup.html')) return;
+      if (!isPickerStart(message)) { sendResponse({ ok: false, error: { message: 'Invalid selection preferences.' } }); return; }
+      picker ??= createPickerCoordinator();
+      void picker.start(message).then(sendResponse);
+      return true;
+    }
     if (
       typeof message !== 'object' ||
       message === null ||

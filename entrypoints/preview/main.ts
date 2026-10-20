@@ -51,6 +51,10 @@ function update(): void {
 }
 
 function accept(payload: PreviewPayload): void {
+  if (payload.scope === 'selection') {
+    document.querySelector('h1')!.textContent = 'Selected element context';
+    document.title = 'Selected element context — Copy as Context';
+  }
   original = payload.content;
   compression = payload.compression;
   format = payload.format;

@@ -8,6 +8,8 @@ import { inspectFrameOwner } from './frame-visibility';
 import { CHROME_CAPTURE_LIMITS as LIMITS } from './limits';
 import { normalizeChromeAxTree } from './normalize-ax';
 import type { ChromeAxNode, ChromeAxTreeResponse } from './types';
+import { findMarkedElement, selectedDomIds, selectChromeAxTree } from './selection';
+import { selectionAttribute } from '../../element-picker-protocol';
 
 interface Session {
   id?: string;
@@ -117,7 +119,7 @@ function checkSnapshot(value: unknown, budget: { nodes: number; characters: numb
 /** One root attachment owns all child sessions and releases them before normalization. */
 export function createFrameCapturer(client: ChromeDebuggerClient) {
   const inFlight = new Set<number>();
-  return async (tabId: number): Promise<CaptureOutcome> => {
+  return async (tabId: number, selection?: string, signal?: AbortSignal): Promise<CaptureOutcome> => {
     if (!Number.isInteger(tabId) || tabId < 0) return fail('unsupported-page', 'This page cannot be captured.');
     if (inFlight.has(tabId)) return fail('capture-failed', 'A capture is already running for this tab.');
     inFlight.add(tabId);
@@ -137,12 +139,15 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
     let rootId: string | undefined;
     let result: CaptureOutcome | undefined;
     let cleanupDeadline = 0;
+    let selectionIds: Set<number> | undefined;
+    let selectedObject: string | undefined;
     const budget = { nodes: 0, characters: 0, bytes: 0 };
 
     const command = async (session: Session, method: string, params: Record<string, unknown> = {}, cleanup = false): Promise<Record<string, unknown>> => {
       const remaining = (cleanup ? cleanupDeadline : deadline) - Date.now();
       if (remaining <= 0) throw new CaptureFailure('capture-timeout', 'Page capture took too long.');
       if (!cleanup && (closing || detached || !session.live)) throw new CaptureFailure('page-changed', 'The page changed during capture.');
+      if (!cleanup && signal?.aborted) throw new CaptureFailure('page-changed', 'Selection was cancelled.');
       const response = await bounded<{ value: unknown; error?: string }>((done) => {
         client.sendCommand({ tabId, ...(session.id ? { sessionId: session.id } : {}) }, method,
           (value, error) => done({ value, error }), params);
@@ -277,7 +282,23 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
       if (!rootId || !frames.has(rootId)) throw new CaptureFailure('invalid-tree', 'Chrome returned no main document.');
       // Setup/inventory events are not changes to an AX snapshot that has not been read yet.
       changed.clear();
+      if (selection) {
+        const response = await command(rootSession, 'Runtime.evaluate', {
+          expression: `(${findMarkedElement.toString()})(${JSON.stringify(selectionAttribute(selection))})`, objectGroup, silent: true,
+        });
+        selectedObject = record(response.result).objectId as string | undefined;
+        if (response.exceptionDetails || !selectedObject) throw new CaptureFailure('page-changed', 'The selected element is no longer available.');
+        const description = await command(rootSession, 'DOM.describeNode', { objectId: selectedObject, depth: -1, pierce: true });
+        try {
+          selectionIds = await selectedDomIds(description.node, async backendNodeId =>
+            (await command(rootSession, 'DOM.describeNode', { backendNodeId, depth: -1, pierce: true })).node);
+        } catch { throw new CaptureFailure('capture-limit', 'Unable to resolve the selected block within capture limits.'); }
+      }
       await snapshot(frames.get(rootId)!);
+      if (selectionIds) {
+        try { frames.get(rootId)!.snapshot = selectChromeAxTree(frames.get(rootId)!.snapshot!, selectionIds); }
+        catch { throw new CaptureFailure('capture-unavailable', 'The selected element has no accessible content. Pick another block.'); }
+      }
       let documents = 1;
       const visit = async (parent: Frame, depth: number) => {
         for (const frame of frames.values()) {
@@ -286,6 +307,7 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
             const owner = await command(parent.session, 'DOM.getFrameOwner', { frameId: frame.id });
             if (typeof owner.backendNodeId !== 'number') throw new Error('missing-owner');
             frame.owner = owner.backendNodeId;
+            if (parent.id === rootId && selectionIds && !selectionIds.has(frame.owner)) { frame.omitted = true; continue; }
             const visibility = await inspect(parent.session, frame.owner, inspectFrameOwner.toString());
             if (visibility === 'hidden' || visibility === 'technical') { frame.omitted = true; continue; }
             if (visibility !== 'visible') { frame.status = 'Not captured: visibility unknown'; partial = true; continue; }
@@ -321,6 +343,18 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
         }
       };
       await visit(frames.get(rootId)!, 0);
+      if (selection) {
+        for (const frame of frames.values()) {
+          let ancestor = frame.parentId ? frames.get(frame.parentId) : undefined;
+          const seen = new Set<string>();
+          while (ancestor) {
+            if (seen.has(ancestor.id)) throw new CaptureFailure('invalid-tree', 'Chrome returned an invalid frame hierarchy.');
+            seen.add(ancestor.id);
+            if (ancestor.omitted) { frame.omitted = true; break; }
+            ancestor = ancestor.parentId ? frames.get(ancestor.parentId) : undefined;
+          }
+        }
+      }
       await drain();
       const current = await inventory();
       for (const frame of frames.values()) {
@@ -332,7 +366,18 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
           if (!frame.omitted) { frame.status = 'Not captured: document changed'; partial = true; }
         }
       }
-      if ([...current.keys()].some((id) => !frames.has(id))) partial = true;
+      if (!selection && [...current.keys()].some((id) => !frames.has(id))) partial = true;
+      if (selectedObject && selection) {
+        const verification = await command(rootSession, 'Runtime.callFunctionOn', {
+          objectId: selectedObject, functionDeclaration: 'function(attribute) { return this.isConnected && this.hasAttribute(attribute); }',
+          arguments: [{ value: selectionAttribute(selection) }], returnByValue: true, silent: true,
+        });
+        if (verification.exceptionDetails || record(verification.result).value !== true) throw new CaptureFailure('page-changed', 'The selected element changed during capture.');
+        const currentRoot = await command(rootSession, 'DOM.describeNode', { objectId: selectedObject, depth: -1, pierce: true });
+        const currentIds = await selectedDomIds(currentRoot.node, async backendNodeId =>
+          (await command(rootSession, 'DOM.describeNode', { backendNodeId, depth: -1, pierce: true })).node);
+        if (currentIds.size !== selectionIds?.size || [...currentIds].some(id => !selectionIds!.has(id))) throw new CaptureFailure('page-changed', 'The selected block changed during capture. Pick it again.');
+      }
       if (detached) throw new CaptureFailure('page-changed', 'The page changed during capture.');
     } catch (error) {
       result = error instanceof CaptureFailure ? fail(error.code, error.message) : fail('capture-failed', 'Unable to capture this page’s accessibility tree.');
@@ -364,6 +409,8 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
     }
     if (result) return result;
     try {
+      // Selection warnings describe only the retained document boundaries.
+      if (selection) partial = false;
       const normalize = (frame: Frame, baseDepth = 0): SemanticNode | undefined => {
         if (!frame.snapshot) return undefined;
         const owners = new Map<number, SemanticNode>();

@@ -14,6 +14,7 @@ class FakeElement {
   min = '0';
   max = '3';
   disabled = false;
+  hidden = false;
   checked = false;
   textContent = '';
   innerHTML = '';
@@ -43,6 +44,7 @@ interface PopupHarness {
   copy: FakeElement;
   save: FakeElement;
   preview: FakeElement;
+  selectElement: FakeElement;
   customize: FakeElement;
   status: FakeElement;
   metrics: FakeElement;
@@ -85,6 +87,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const copy = new FakeElement();
   const save = new FakeElement();
   const preview = new FakeElement();
+  const selectElement = new FakeElement();
   const customize = new FakeElement();
   const status = new FakeElement();
   const metrics = new FakeElement();
@@ -104,7 +107,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const elements = new Map<string, FakeElement>([
     ['#app', app], ['#compression', compression], ['#format', format],
     ['#format-semantic-text', semanticTextFormat], ['#format-markdown', markdownFormat],
-    ['#customize', customize], ['#preview', preview], ['.primary-action', copy], ['.secondary-action', save], ['.status', status], ['.metrics', metrics],
+    ['#customize', customize], ['#preview', preview], ['#select-element', selectElement], ['.primary-action', copy], ['.secondary-action', save], ['.status', status], ['.metrics', metrics],
     ['.feedback', feedback], ['#compression-description', compressionDescription], ['#guide-link', guideLink],
     ['#redact-sensitive-data', redactSensitiveData], ['#save-settings', saveSettings],
     ['#include-other-site-frames', otherSiteFrames],
@@ -179,7 +182,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   await settle();
   return {
     app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings, otherSiteFrames,
-    copy, save, preview, customize, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create,
+    copy, save, preview, selectElement, customize, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create,
   };
 }
 
@@ -196,6 +199,31 @@ afterEach(() => {
 });
 
 describe('popup export flow', () => {
+  it('starts the picker with current preferences and closes only after readiness', async () => {
+    const popup = await loadPopup({ ok: true });
+    popup.markdown.checked = true; popup.compression.value = '1';
+    let finish!: (value: unknown) => void;
+    popup.sendMessage.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    popup.selectElement.click();
+    expect(popup.sendMessage).toHaveBeenCalledWith({ type: 'element-picker-start-v1', compression: 'detailed', format: 'markdown', redactSensitiveData: true });
+    expect(popup.selectElement.disabled).toBe(true);
+    expect(window.close).not.toHaveBeenCalled();
+    finish({ ok: true }); await settle();
+    expect(window.close).toHaveBeenCalledOnce();
+    expect(popup.clipboardWrite).not.toHaveBeenCalled(); expect(popup.download).not.toHaveBeenCalled();
+  });
+
+  it('keeps the popup usable after picker failure', async () => {
+    const popup = await loadPopup({ ok: false, error: { message: 'Synthetic picker failure' } });
+    popup.selectElement.click(); await settle();
+    expect(popup.status.textContent).toBe('Synthetic picker failure'); expect(popup.copy.disabled).toBe(false);
+    expect(window.close).not.toHaveBeenCalled();
+  });
+
+  it('hides the picker action on Android', async () => {
+    const android = await loadPopup({ ok: true }, { firefox: true, android: true });
+    expect(android.selectElement.hidden).toBe(true);
+  });
   it.each([{ firefox: false }, { firefox: true }, { firefox: true, android: true }])('opens Customize and dismisses the popup without changing privacy preferences: %j', async options => {
     const popup = await loadPopup(successfulCapture(), options);
     popup.customize.click(); await settle();

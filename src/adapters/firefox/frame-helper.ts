@@ -7,9 +7,10 @@ import type { SemanticNode } from '../../core';
 import { frameVisibility } from './frame-visibility';
 import { FIREFOX_CAPTURE_LIMITS as LIMITS } from './limits';
 import type { FrameCommand, FrameHandler, FrameOwner, FrameSnapshot, FrameVerification } from './frame-contract';
+import type { PickerGlobal } from '../../element-picker-protocol';
 
 interface OwnerRecord { element: Element; frameId: number; signature: string; changed: boolean; stop: () => void }
-interface Lease { generation: string; root: Element; url: string; valid: boolean; inventoryChanged: boolean; owners: OwnerRecord[]; dispose: () => void; flush: () => void }
+interface Lease { generation: string; root: Element; selected?: Element; url: string; valid: boolean; inventoryChanged: boolean; owners: OwnerRecord[]; dispose: () => void; flush: () => void }
 const signature = (element: Element): string => `${(element.getAttribute('src') ?? '').slice(0, 2048)}\u0000${element.hasAttribute('srcdoc')}\u0000${(element.getAttribute('sandbox') ?? '').slice(0, 512)}`;
 const pending = (element: Element): boolean => {
   try {
@@ -36,7 +37,7 @@ export function createFrameHandler(doc: Document, frameId: (target: Element | Wi
       if (!previous || previous.generation !== command.generation) return undefined;
       previous.flush();
       return { operation: command.operation, generation: previous.generation,
-        valid: previous.valid && doc.documentElement === previous.root && doc.location.href === previous.url,
+        valid: previous.valid && doc.documentElement === previous.root && doc.location.href === previous.url && (!previous.selected || previous.selected.isConnected),
         inventoryChanged: previous.inventoryChanged,
         owners: previous.owners.map(owner => ({ frameId: owner.frameId, visibility: frameVisibility(owner.element),
           changed: owner.changed || !owner.element.isConnected || signature(owner.element) !== owner.signature || frameId(owner.element) !== owner.frameId,
@@ -48,10 +49,13 @@ export function createFrameHandler(doc: Document, frameId: (target: Element | Wi
     if (!limits || Object.keys(limits).some(key => !(key in LIMITS)) ||
       Object.entries(limits).some(([key, value]) => !Number.isFinite(value) || value < 0 || value > LIMITS[key as keyof typeof LIMITS]) ||
       !Number.isInteger(command.maxOwners) || command.maxOwners < 0 || command.maxOwners > LIMITS.owners) return undefined;
+    const picker = (globalThis as PickerGlobal).__copyAsContextPicker;
+    const selected = command.selection ? picker?.token === command.selection ? picker.root() : undefined : undefined;
+    if (command.selection && (!selected || selected.ownerDocument !== doc || !selected.isConnected)) return undefined;
     const generation = crypto.randomUUID();
     const ownerNodes = new Map<SemanticNode, OwnerRecord>();
     const records: OwnerRecord[] = [];
-    const lease: Lease = { generation, root: doc.documentElement, url: doc.location.href, valid: true, inventoryChanged: false, owners: records, dispose: () => {}, flush: () => {} };
+    const lease: Lease = { generation, root: doc.documentElement, selected, url: doc.location.href, valid: true, inventoryChanged: false, owners: records, dispose: () => {}, flush: () => {} };
     const mutations = (items: MutationRecord[]): void => {
       let inspected = 0;
       for (const item of items) {
@@ -71,7 +75,7 @@ export function createFrameHandler(doc: Document, frameId: (target: Element | Wi
       }
     };
     const observer = new doc.defaultView.MutationObserver(mutations);
-    observer.observe(doc.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'srcdoc', 'sandbox'] });
+    observer.observe(selected ?? doc.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'srcdoc', 'sandbox'] });
     lease.flush = () => mutations(observer.takeRecords());
     const pagehide = () => { lease.valid = false; };
     doc.defaultView.addEventListener('pagehide', pagehide);
@@ -84,6 +88,7 @@ export function createFrameHandler(doc: Document, frameId: (target: Element | Wi
     leases.set(command.operation, lease);
     let work: DomCaptureWork = { nodes: 0, visited: 0, nameWork: 0, characters: 0, milliseconds: 0 };
     const outcome = captureDomPage(doc, limits, {
+      ...(selected ? { root: selected } : {}),
       embedded: frameId(doc.defaultView) !== 0,
       includeFrame(element) { return !['hidden', 'technical'].includes(frameVisibility(element)); },
       onFrame(element, node) {

@@ -1,7 +1,8 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { COMPRESSION_LEVELS, type CaptureError, type CompressionLevel, type PreparedExport, type SupportedExportFormat } from './core';
+import { COMPRESSION_LEVELS, type CaptureError, type CompressionLevel } from './core/contracts';
+import type { PreparedExport, SupportedExportFormat } from './core/export';
 import { isCaptureWarnings, type CaptureWarningCode } from './capture-warnings';
 import { isFrameAccess } from './frame-access';
 

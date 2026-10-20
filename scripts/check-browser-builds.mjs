@@ -100,7 +100,7 @@ for (const target of ['chrome', 'firefox']) {
     assert.ok(!source.includes('Include frames from other sites'), 'Chrome includes Firefox site access UI');
     assert.ok(!source.includes('Other-site frames enabled'), 'Chrome includes Firefox permission controller');
     assert.equal(manifest.minimum_chrome_version, '125');
-    assert.deepEqual([...manifest.permissions].sort(), ['debugger', 'clipboardWrite', 'downloads', 'storage'].sort());
+    assert.deepEqual([...manifest.permissions].sort(), ['debugger', 'activeTab', 'scripting', 'clipboardWrite', 'downloads', 'storage'].sort());
     assert.ok(manifest.background.service_worker);
     assert.equal(manifest.browser_specific_settings, undefined);
     assert.ok(source.includes('Accessibility.getFullAXTree'), 'Chrome AX capture was removed');
