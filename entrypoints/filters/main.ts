@@ -216,7 +216,7 @@ async function load(restoreNavigation = false): Promise<void> {
     const settings = restored?.settings ?? await loadRedactionSettings();
     if (disposed) return;
     draft = settings; baseline = restored ? restored.baseline : JSON.stringify(settings); ready = true; modified = baseline === undefined || JSON.stringify(settings) !== baseline;
-    feedback(restored && modified ? 'Unsaved filter changes restored.' : 'Filters loaded.'); render();
+    feedback(restored && modified ? 'Unsaved filter changes restored.' : ''); render();
     if (location.hash === '#test-panel') get<HTMLDetailsElement>('test-panel').open = true;
   } catch {
     ready = false; baseline = undefined; modified = false; draft = defaultRedactionSettings();

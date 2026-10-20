@@ -75,9 +75,11 @@
       <p class="note">Examples use the chosen rule’s terms and synthetic values. Regex examples are available for the provided presets; for other expressions, paste your own sample. Tests check the selected text, field, link or metadata context. Demo provides a complete capturable page with examples for enabled rules. Test data stays in this tab only. Password input values are always omitted during page capture.</p>
     </details>
     <input id="import-file" type="file" accept=".json,application/json" hidden />
-    <div class="save-bar"><button id="save-filters" type="button" disabled>Save filters</button><button id="close-filters" type="button">Close</button><span id="dirty" class="note"></span><p id="save-feedback" class="note"></p></div>
-    <footer><button id="reload-filters" type="button">Reload saved</button><button id="restore-defaults" type="button">Restore defaults</button><a href="/guide.html" target="_blank" rel="noopener">View the quick guide</a></footer>
-    <p class="note">Saved filters apply to future exports when Redact sensitive data is on. Settings stay in this browser. Password input values are always omitted, even with every filter off.</p>
+    <div class="save-bar">
+      <div class="action-group"><button id="save-filters" type="button" disabled>Save filters</button><button id="close-filters" type="button">Close</button><span id="dirty" class="note"></span></div>
+      <div class="action-group secondary-actions"><button id="reload-filters" type="button">Reload saved</button><button id="restore-defaults" type="button">Restore defaults</button><a href="/guide.html" target="_blank" rel="noopener">View the quick guide</a></div>
+      <p id="save-feedback" class="note"></p>
+    </div>
   </main>
   <script type="module" src="./main.ts"></script>
 </body>

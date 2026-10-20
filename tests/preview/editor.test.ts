@@ -30,7 +30,9 @@ let pageHide: EventListener;
 async function loadEditor(firefox = false, os = 'linux') {
   vi.stubEnv('BROWSER', firefox ? 'firefox' : 'chrome');
   vi.useFakeTimers();
-  document.body.innerHTML = readFileSync(resolve('entrypoints/preview/index.html'), 'utf8').split('<body>')[1]!.split('</body>')[0]!;
+  const page = new DOMParser().parseFromString(readFileSync(resolve('entrypoints/preview/index.html'), 'utf8'), 'text/html');
+  document.body.className = page.body.className;
+  document.body.innerHTML = page.body.innerHTML;
   location.hash = '11111111-2222-4333-8444-555555555555';
   writeText.mockReset().mockResolvedValue(undefined);
   stop.mockReset(); remove.mockReset().mockResolvedValue(undefined);
