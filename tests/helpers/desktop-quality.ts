@@ -20,7 +20,7 @@ const required = [
   { role: 'rowheader', name: 'Synthetic resource', ancestor: 'Resource inventory' },
   { role: 'button', name: 'Open resource', ancestor: 'Resource inventory' },
   { role: 'button', name: 'Offscreen action' },
-  { role: 'button', name: 'Зберегти 🙂 東京' },
+  { role: 'button', name: 'Save 🙂 ∑' },
   { role: 'button', name: 'Slotted action', ancestor: 'Shadow controls' },
   { role: 'button', name: 'Hidden reference name' },
 ] as const;
@@ -56,7 +56,7 @@ export function assertDesktopQuality(tree: SemanticTree): void {
       const exported = result.serialized.content.replace(/\\([\\`*_{}\[\]()#+\-.!|>])/gu, '$1');
       for (const [index, secret] of ['synthetic-password-never-export', 'synthetic-api-key-never-share', 'abcdefghijklmnopqrstuvwxyz1234567890'].entries()) assert.ok(!exported.includes(secret), `${profile}/${format}: credential sentinel ${index} leaked`);
       assert.ok(result.redactionCount > 0);
-      assert.ok(exported.includes('Зберегти 🙂 東京'));
+      assert.ok(exported.includes('Save 🙂 ∑'));
       const unredacted = prepareExport(tree, profile, format, false).serialized.content.replace(/\\([\\`*_{}\[\]()#+\-.!|>])/gu, '$1');
       assert.ok(!unredacted.includes('synthetic-password-never-export'));
       assert.ok(unredacted.includes('synthetic-api-key-never-share'));

@@ -19,7 +19,7 @@ describe('clipboard context boundaries', () => {
     ['', ''], ['Page', 'Page\n'], ['Page\n', 'Page\n'],
     ['Page\n\n', 'Page\n\n'], ['Page\r\n', 'Page\r\n'],
     ['Page\r\n\r\n', 'Page\r\n\r\n'],
-    ['Unicode Україна 🌍  \n\n\n', 'Unicode Україна 🌍  \n\n\n'],
+    ['Unicode context 🌍  \n\n\n', 'Unicode context 🌍  \n\n\n'],
   ])('preserves payload and separates the closing boundary for %j', (payload, separated) => {
     expect(wrapClipboardContext(payload, 'compact')).toBe(`<web_page>\n${separated}</web_page>\n`);
   });

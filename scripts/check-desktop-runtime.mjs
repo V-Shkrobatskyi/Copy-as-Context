@@ -245,7 +245,7 @@ try {
 
           const savedDownloads = [];
           for (const format of ['semantic-text', 'markdown']) {
-            const content = 'Synthetic download context 🙂 東京 Україна & % , +\n'.repeat(2000);
+            const content = 'Synthetic download context 🙂 ∑ ∞ & % , +\n'.repeat(2000);
             const fileUrl = await extensionEvaluate(`URL.createObjectURL(new Blob([${JSON.stringify(content)}], { type: 'text/plain;charset=utf-8' }))`);
             const owner = popup;
             // Keep the save document alive while a separate initiating popup closes.

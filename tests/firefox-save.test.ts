@@ -34,7 +34,7 @@ it.each(['complete', 'interrupted'] as const)('keeps the Firefox save document a
     downloads: { download, search: vi.fn().mockResolvedValue([{ state: 'in_progress' }]), onChanged: { addListener: (listener: typeof changed) => { changed = listener; }, removeListener } },
   } }));
   await import('../entrypoints/save/main');
-  const message = { type: 'save-firefox-export', token: 'synthetic-token', content: 'Synthetic context 🙂 Україна', format: 'markdown' };
+  const message = { type: 'save-firefox-export', token: 'synthetic-token', content: 'Synthetic context 🙂 ∑', format: 'markdown' };
   const sender = { id: 'extension-id', url: 'moz-extension://id/popup.html' };
   const respond = vi.fn();
   // A tab or mismatched token cannot inject export content into the save page.

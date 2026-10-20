@@ -144,8 +144,9 @@ describe('custom redaction filters', () => {
   });
 
   it('supports Unicode case matching and disabled rules', () => {
-    expect(redactSemanticTree(tree('КЛІЄНТ'), config('клієнт')).tree.title).toBe('[REDACTED]');
-    expect(redactSemanticTree(tree('КЛІЄНТ'), config('клієнт', { caseSensitive: true })).tree.title).toBe('КЛІЄНТ');
+    // Fullwidth Latin letters exercise Unicode case folding without language-specific words.
+    expect(redactSemanticTree(tree('\uFF21\uFF22\uFF23'), config('\uFF41\uFF42\uFF43')).tree.title).toBe('[REDACTED]');
+    expect(redactSemanticTree(tree('\uFF21\uFF22\uFF23'), config('\uFF41\uFF42\uFF43', { caseSensitive: true })).tree.title).toBe('\uFF21\uFF22\uFF23');
     expect(redactSemanticTree(tree('Acme'), config('Acme', { enabled: false })).redactionCount).toBe(0);
     expect(redactSemanticTree(tree('[REDACTED]'), config('REDACTED')).redactionCount).toBe(0);
   });
