@@ -14,7 +14,7 @@ const only = (...rules: CustomRedactionRule[]): RedactionSettings => settingsFor
 describe('phone and English personal-field masking', () => {
   it.each([
     ['A', '*'], ['Al', 'A*'], ['Ann', 'A**'], ['Anna', 'An**'], ['Alice', 'Al***'],
-    ['Robert', 'Rob***'], ['Alexander', 'Ale******'], ['Олександр', 'Оле******'], ['😀😀😀😀', '😀😀**'],
+    ['Robert', 'Rob***'], ['Alexander', 'Ale******'], ['Charlotte', 'Cha******'], ['😀😀😀😀', '😀😀**'],
   ])('uses the email length algorithm for %s', (value, expected) => {
     const input = fieldTree('Full name', value);
     const result = redactSemanticTree(input, only(rule('personalFieldsMask')));

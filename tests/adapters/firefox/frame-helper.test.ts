@@ -22,9 +22,34 @@ function setup(markup: string) {
   const capture = (operation = 'test') => handler({ mode: 'capture', operation, limits: { ...DOM_CAPTURE_LIMITS }, maxOwners: 128 }) as FrameSnapshot;
   return { doc, handler, capture, ids };
 }
-afterEach(() => { windows.splice(0).forEach(dom => dom.window.close()); vi.useRealTimers(); });
+afterEach(() => { windows.splice(0).forEach(dom => dom.window.close()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('isolated Firefox frame helper', () => {
+  it('captures an iframe selected as the root and retains its document boundary', () => {
+    const fixture = setup('<p>Outside marker</p><iframe title="Selected frame"></iframe>');
+    vi.stubGlobal('__copyAsContextPicker', { token: 'frame-token', root: () => fixture.doc.querySelector('iframe') });
+    const snapshot = fixture.handler({ mode: 'capture', operation: 'frame-root', selection: 'frame-token', limits: { ...DOM_CAPTURE_LIMITS }, maxOwners: 128 }) as FrameSnapshot;
+    expect(isFrameSnapshot(snapshot, 'frame-root', false)).toBe(true);
+    expect(snapshot.owners).toHaveLength(1);
+    expect(snapshot.owners[0]!.path).toEqual([0]);
+    expect(JSON.stringify(snapshot.outcome)).not.toContain('Outside marker');
+    fixture.handler({ mode: 'release', operation: 'frame-root' });
+  });
+  it('leases only the selected root and its frames, rejecting replaced or stale selection', () => {
+    const fixture = setup('<aside>Outside marker<iframe title="Outside frame"></iframe></aside><article><h2>Selected marker</h2><iframe title="Selected frame"></iframe></article>');
+    const selected = fixture.doc.querySelector('article')!;
+    vi.stubGlobal('__copyAsContextPicker', { token: 'selection-token', root: () => selected });
+    const command = { mode: 'capture' as const, operation: 'selected', selection: 'selection-token', limits: { ...DOM_CAPTURE_LIMITS }, maxOwners: 128 };
+    const snapshot = fixture.handler(command) as FrameSnapshot;
+    expect(isFrameSnapshot(snapshot, 'selected', false)).toBe(true);
+    expect(snapshot.owners).toHaveLength(1);
+    expect(JSON.stringify(snapshot.outcome)).toContain('Selected marker');
+    expect(JSON.stringify(snapshot.outcome)).not.toContain('Outside');
+    selected.remove();
+    expect(fixture.handler({ mode: 'verify', operation: 'selected', generation: snapshot.generation })).toMatchObject({ valid: false });
+    fixture.handler({ mode: 'release', operation: 'selected' });
+    expect(fixture.handler(command)).toBeUndefined();
+  });
   it('filters hidden and technical owners before capture, retaining below-viewport documents in position', () => {
     const fixture = setup('<p>Before</p><iframe title="Visible" src="https://child.test/path?secret=private"></iframe><div style="opacity:0"><iframe title="Hidden"></iframe></div><iframe title="Pixel"></iframe><p>After</p>');
     const pixel = fixture.doc.querySelector('[title="Pixel"]')!;

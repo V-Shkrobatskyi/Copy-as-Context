@@ -51,6 +51,7 @@ export function renderSemanticTextHeader(tree: SemanticTree, lines: string[], at
 
   lines.push(`Page: ${headerValue(tree.title, 'Untitled page')}`);
   lines.push(`URL: ${headerValue(tree.sourceUrl, 'Unavailable')}`);
+  if (tree.selectedElementTag !== undefined) lines.push(`Element: Selected block <${headerValue(tree.selectedElementTag, '')}>`);
   lines.push(`Browser: ${headerValue(tree.browser, 'Unavailable')}`);
   lines.push(`Captured: ${headerValue(tree.capturedAt, 'Unavailable')}`);
   lines.push(attribution, '');

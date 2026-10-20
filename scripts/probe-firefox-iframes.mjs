@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, writeFile, cp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, cp, rm, mkdir, readdir } from 'node:fs/promises';
 import { build } from 'vite';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -60,20 +60,34 @@ if(process.argv.includes('--serve')) {
  process.exit(0);
 }
 const profile = await mkdtemp(resolve(tmpdir(), 'firefox-iframe-probe-'));
+const downloadDirectory = resolve(profile, 'downloads');
+await mkdir(downloadDirectory);
 const uuid = '11111111-2222-4333-8444-555555555555';
 const original = JSON.parse(await readFile('.output/firefox-mv3/manifest.json', 'utf8'));
 const extensionPath = resolve(profile, 'extension');
 await cp('.output/firefox-mv3', extensionPath, { recursive: true });
 const entry = resolve(profile, 'probe-entry.ts');
-await writeFile(entry, `export { captureFirefoxPage } from ${JSON.stringify(resolve('src/adapters/firefox/capture.ts'))};\nexport { prepareExport } from ${JSON.stringify(resolve('src/core/index.ts'))};`);
-await build({ configFile: false, logLevel: 'silent', build: { lib: { entry, name: 'FirefoxProbe', formats: ['iife'], fileName: () => 'probe-capture.js' }, outDir: extensionPath, emptyOutDir: false } });
+await writeFile(entry, `export { captureFirefoxPage } from ${JSON.stringify(resolve('src/adapters/firefox/capture.ts'))};\nexport { prepareExport } from ${JSON.stringify(resolve('src/core/index.ts'))};\nimport { createPickerCoordinator } from ${JSON.stringify(resolve('src/element-picker-session.ts'))};\nexport const picker = createPickerCoordinator();`);
+await build({ configFile: false, logLevel: 'silent', define: { 'import.meta.env.BROWSER': JSON.stringify('firefox') }, build: { lib: { entry, name: 'FirefoxProbe', formats: ['iife'], fileName: () => 'probe-capture.js' }, outDir: extensionPath, emptyOutDir: false } });
 await writeFile(resolve(extensionPath, 'probe.html'), '<!doctype html><title>Iframe probe</title><script src="probe-capture.js"></script>');
-const manifest = { ...original, permissions: [...original.permissions, 'tabs'], host_permissions: ['http://127.0.0.1/*'] };
+const manifest = { ...original, permissions: [...original.permissions, 'tabs', ...(process.argv.includes('--selection') ? ['clipboardRead', 'downloads'] : [])],
+ ...(process.argv.includes('--selection') ? { optional_permissions: original.optional_permissions.filter(permission=>permission!=='downloads') } : {}), host_permissions: ['http://127.0.0.1/*'] };
+if(process.argv.includes('--selection')) {
+  // Automated download fixture: pregrant permissions and bypass the native file chooser only in this temporary copy.
+  for(const name of await readdir(resolve(extensionPath,'chunks'))) if(name.startsWith('download-context-')&&name.endsWith('.js')) {
+    const path=resolve(extensionPath,'chunks',name); const content=await readFile(path,'utf8');
+    assert.ok(content.includes('saveAs:!0'),'Download fixture no longer matches the production bundle');
+    await writeFile(path,content.replace('saveAs:!0','saveAs:!1'));
+  }
+}
 await writeFile(resolve(extensionPath, 'manifest.json'), JSON.stringify(manifest));
 await writeFile(resolve(profile, 'user.js'), [
   'user_pref("app.update.enabled", false);',
   'user_pref("extensions.webextensions.keepUuidOnUninstall", true);',
   'user_pref("datareporting.policy.dataSubmissionEnabled", false);',
+  'user_pref("browser.download.folderList", 2);',
+  'user_pref("browser.download.useDownloadDir", true);',
+  `user_pref("browser.download.dir", ${JSON.stringify(downloadDirectory)});`,
   `user_pref("extensions.webextensions.uuids", ${JSON.stringify(JSON.stringify({[original.browser_specific_settings.gecko.id]:uuid}))});`
 ].join('\n'));
 const child=spawn('/Applications/Firefox.app/Contents/MacOS/firefox',['--headless','--no-remote','--remote-allow-system-access','--profile',profile,'--remote-debugging-port','0','about:blank'],{stdio:['ignore','pipe','pipe']});
@@ -88,6 +102,92 @@ try {
  let {context:probe}=await protocol.send('browsingContext.create',{type:'tab'});
  await protocol.send('browsingContext.navigate',{context:probe,url:`moz-extension://${uuid}/probe.html`,wait:'complete'});
  const evaluate=async expression=>{const r=await protocol.send('script.evaluate',{expression,target:{context:probe},awaitPromise:true});assert.equal(r.type,'success',r.exceptionDetails?.text);return r.result.value;};
+ if (process.argv.includes('--selection')) {
+   const selected = JSON.parse(await evaluate(`(async () => {
+     const tab = (await browser.tabs.query({})).find(t => t.url === 'http://127.0.0.1:${port}/');
+     await browser.tabs.update(tab.id, {active:true});
+     await browser.scripting.executeScript({target:{tabId:tab.id,frameIds:[0]},world:'ISOLATED',func:() => {
+       const block=document.createElement('article');block.id='picker-workflow';block.tabIndex=0;
+       block.innerHTML='<h2>WORKFLOW_SELECTED</h2><p>WORKFLOW_PROSE</p><input aria-label="Selected field" value="Selected value"><input type="password" value="WORKFLOW_SECRET"><iframe title="Selected iframe" src="/nested" style="width:300px;height:80px"></iframe>';
+       document.body.prepend(block);
+       const attach=Element.prototype.attachShadow;
+       Element.prototype.attachShadow=function(init){const root=attach.call(this,init);globalThis.__probePickerShadow=root;return root;};
+     }});
+     const result=await FirefoxProbe.picker.start({compression:'compact',format:'markdown',redactSensitiveData:true});
+     if (!result.ok) throw Error(JSON.stringify(result));
+     await browser.scripting.executeScript({target:{tabId:tab.id,frameIds:[0]},world:'ISOLATED',func:() => {
+       document.querySelector('#picker-workflow').focus();
+       window.dispatchEvent(new KeyboardEvent('keydown',{key:'F2',bubbles:true,cancelable:true}));
+       const preview=globalThis.__probePickerShadow.querySelector('#preview');
+       if(preview.disabled) throw Error('Selection was not fixed');
+       preview.click();
+     }});
+     return JSON.stringify(result);
+   })()`));
+   assert.equal(selected.ok, true);
+   let editor;
+   for(let attempt=0;attempt<120;attempt++) {
+     const {contexts}=await protocol.send('browsingContext.getTree',{});
+     editor=contexts.find(context=>context.url.startsWith(`moz-extension://${uuid}/preview.html#`));
+     if(editor)break;
+     await new Promise(resolve=>setTimeout(resolve,100));
+   }
+   assert.ok(editor,'No selected-block Preview tab was opened');
+   let content;
+   for(let attempt=0;attempt<80;attempt++) {
+     const response=await protocol.send('script.evaluate',{expression:'JSON.stringify({heading:document.querySelector("h1")?.textContent,content:document.querySelector("#context")?.value})',target:{context:editor.context},awaitPromise:true});
+     if(response.type==='success')content=JSON.parse(response.result.value);
+     if(content?.content)break;
+     await new Promise(resolve=>setTimeout(resolve,100));
+   }
+   assert.equal(content?.heading,'Selected element context');
+   const exported=content.content.replaceAll(String.fromCharCode(92),'');
+   for(const text of ['WORKFLOW_SELECTED','WORKFLOW_PROSE','Selected value','NESTED_MARKER'])assert.ok(exported.includes(text),`${text}: ${exported}`);
+   for(const text of ['WORKFLOW_SECRET','CHILD_MARKER','Select parent','Preparing selection'])assert.ok(!exported.includes(text),text);
+   await protocol.send('browsingContext.close',{context:editor.context});
+   await evaluate(`(async()=>{
+     const tab=(await browser.tabs.query({})).find(t=>t.url==='http://127.0.0.1:${port}/');await browser.tabs.update(tab.id,{active:true});
+     const result=await FirefoxProbe.picker.start({compression:'compact',format:'semantic-text',redactSensitiveData:true});if(!result.ok)throw Error(JSON.stringify(result));
+     await browser.scripting.executeScript({target:{tabId:tab.id,frameIds:[0]},world:'ISOLATED',func:()=>{
+       document.querySelector('#picker-workflow').focus();window.dispatchEvent(new KeyboardEvent('keydown',{key:'F2',bubbles:true,cancelable:true}));
+       globalThis.__probePickerShadow.querySelector('#copy').click();
+     }});
+   })()`);
+   let clipboard;
+   for(let attempt=0;attempt<80;attempt++){
+     clipboard=await evaluate('navigator.clipboard.readText()');
+     if(clipboard?.includes('WORKFLOW_SELECTED'))break;
+     await new Promise(resolve=>setTimeout(resolve,100));
+   }
+   assert.ok(clipboard?.startsWith('<web_page>\n')&&clipboard.includes('WORKFLOW_PROSE'),'Direct Firefox clipboard contents missing');
+   assert.ok(!clipboard.includes('WORKFLOW_SECRET')&&!clipboard.includes('CHILD_MARKER'));
+   // Wait until the acknowledgement has restored the action buttons.
+   let savePoint;
+   for(let attempt=0;attempt<80;attempt++){
+     savePoint=JSON.parse(await evaluate(`(async()=>{const tab=(await browser.tabs.query({})).find(t=>t.url==='http://127.0.0.1:${port}/');const [result]=await browser.scripting.executeScript({target:{tabId:tab.id,frameIds:[0]},world:'ISOLATED',func:()=>{const button=globalThis.__probePickerShadow.querySelector('#save');if(button.disabled)return null;const rect=button.getBoundingClientRect();return{x:Math.round(rect.left+rect.width/2),y:Math.round(rect.top+rect.height/2)};}});return JSON.stringify(result.result);})()`));
+     if(savePoint)break;
+     await new Promise(resolve=>setTimeout(resolve,100));
+   }
+   assert.ok(savePoint,'Save action never became available');
+   await protocol.send('input.performActions',{context:page,actions:[{type:'pointer',id:'picker-save-mouse',parameters:{pointerType:'mouse'},actions:[
+     {type:'pointerMove',...savePoint,origin:'viewport',duration:0},{type:'pointerDown',button:0},{type:'pointerUp',button:0}
+   ]}]});
+   let saved;
+   for(let attempt=0;attempt<100;attempt++){
+     const files=(await readdir(downloadDirectory)).filter(name=>name.endsWith('.txt'));
+     if(files.length){saved=await readFile(resolve(downloadDirectory,files[0]),'utf8');break;}
+     await new Promise(resolve=>setTimeout(resolve,100));
+   }
+   if(!saved){
+     const diagnostic=await evaluate(`(async()=>{const tab=(await browser.tabs.query({})).find(t=>t.url==='http://127.0.0.1:${port}/');const [result]=await browser.scripting.executeScript({target:{tabId:tab.id,frameIds:[0]},world:'ISOLATED',func:()=>globalThis.__probePickerShadow?.querySelector('#status')?.textContent});return JSON.stringify({panel:result.result,downloads:(await browser.downloads.search({})).map(item=>({state:item.state,error:item.error,filename:item.filename})),tabs:(await browser.tabs.query({})).map(tab=>tab.url)});})()`);
+     console.log('Save fixture diagnostic:',diagnostic);
+   }
+   assert.ok(saved?.includes('WORKFLOW_SELECTED')&&saved.includes('WORKFLOW_PROSE'),'Direct Firefox saved file missing');
+   assert.ok(!saved.includes('<web_page>')&&!saved.includes('WORKFLOW_SECRET')&&!saved.includes('CHILD_MARKER'));
+   await evaluate(`(async()=>{const tab=(await browser.tabs.query({})).find(t=>t.url==='http://127.0.0.1:${port}/');await browser.scripting.executeScript({target:{tabId:tab.id,frameIds:[0]},world:'ISOLATED',func:()=>{document.querySelector('#picker-workflow').remove();delete globalThis.__probePickerShadow;}});})()`);
+   console.log('Firefox picker direct actions: clipboard contents and saved file passed (temporary grants; native chooser bypassed in fixture)');
+   console.log('Firefox picker: isolated script → one selected block → DOM/ARIA capture with iframe → authenticated Markdown Preview passed (temporary root-host grant; coordinator hosted by probe page)');
+ }
  const result=JSON.parse(await evaluate(`(async()=>{
  const tab=(await browser.tabs.query({})).find(t=>t.url==='http://127.0.0.1:${port}/');
  if(!tab) throw Error(JSON.stringify(await browser.tabs.query({}))); const [{result:owners}]=await browser.scripting.executeScript({target:{tabId:tab.id,frameIds:[0]},func:()=>Array.from(document.querySelectorAll('iframe'),e=>({name:e.id,id:browser.runtime.getFrameId(e)})),world:'ISOLATED'});

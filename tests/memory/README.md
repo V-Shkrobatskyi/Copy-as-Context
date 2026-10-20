@@ -29,3 +29,9 @@ capture timeout followed by late delivery. Each caller invocation returns before
 GC checks, so the test itself does not retain its last result in an async frame.
 The content helper separately has a structural lease TTL; DOM lifetime and
 Android process termination still require browser/device checks.
+
+The picker suite keeps jsdom source documents alive while checking that detached
+selection nodes and channel listeners are collected after cancel, disconnect,
+completion and failure. It uses coordinate selection without focusing the target
+to avoid jsdom's own retained focus-event targets. This tests picker cleanup, not
+native browser DOM lifetimes or service-worker process memory.

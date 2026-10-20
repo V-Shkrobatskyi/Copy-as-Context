@@ -12,6 +12,7 @@ const clean = (value: string): string => value.replace(/\s+/gu, ' ').trim();
 
 export interface DomCaptureWork { nodes: number; visited: number; nameWork: number; characters: number; milliseconds: number }
 export interface DomCaptureOptions {
+  root?: Element;
   embedded?: boolean;
   includeFrame?: (element: Element) => boolean;
   onFrame?: (element: Element, node: SemanticNode) => void;
@@ -119,7 +120,20 @@ export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAP
   try {
     if (!doc.body || !doc.defaultView) return { ok: false, error: { code: 'unsupported-page', message: 'This document cannot be captured.' } };
     const root: SemanticNode = { role: 'page', children: [] };
-    const stack = [{ node: doc.body as Node, parent: root, depth: 0, listLevel: 0 }];
+    const selected = options.root;
+    if (selected && (selected.ownerDocument !== doc || !selected.isConnected)) return { ok: false, error: { code: 'page-changed', message: 'The selected element is no longer available.' } };
+    let listLevel = 0;
+    if (selected) {
+      let ancestor: Element | null = selected;
+      let depth = 0;
+      while (ancestor) {
+        if (++depth > limits.maxDepth) throw new CaptureLimitError();
+        if (pruned(ancestor)) return { ok: false, error: { code: 'capture-unavailable', message: 'The selected element is hidden.' } };
+        ancestor = ancestor.assignedSlot ?? ancestor.parentElement ?? (ancestor.getRootNode() as ShadowRoot).host ?? null;
+        if (ancestor && roleForElement(ancestor) === 'list') listLevel++;
+      }
+    }
+    const stack = [{ node: (selected ?? doc.body) as Node, parent: root, depth: 0, listLevel }];
     const visited = new WeakSet<Node>();
     while (stack.length) {
       const { node, parent, depth, listLevel } = stack.pop()!;

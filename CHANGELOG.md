@@ -1,6 +1,14 @@
 # Changelog
 
-## 1.4.2 — unreleased
+## 1.4.3 — unreleased
+
+- Add desktop element selection with preview, clipboard copy and file export for one selected block in Chrome and Firefox.
+- Add an Element header to selected-block exports in both formats and at every compression level.
+- Match the picker panel to the popup theme and keep it minimal while choosing a block.
+- Simplify preview and filter pages, expand the editor to the available height and keep preview actions at the bottom.
+- Replace non-English test examples while preserving Unicode coverage.
+
+## 1.4.2
 
 - Add compact Find and replace controls to Preview & edit, with literal text search, match counts, case matching, forward/backward navigation and replacement of one or all matches.
 - Scroll the editor automatically to selected matches, including wrapped text and navigation after replacement.

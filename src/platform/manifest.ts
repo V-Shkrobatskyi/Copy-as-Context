@@ -10,7 +10,7 @@ export function browserManifest(target: string): UserManifest {
     description: 'Copy a compact semantic representation of the current page for LLM chats.',
     permissions: target === 'firefox'
       ? ['activeTab', 'scripting', 'clipboardWrite', 'storage']
-      : ['debugger', 'clipboardWrite', 'downloads', 'storage'],
+      : ['debugger', 'activeTab', 'scripting', 'clipboardWrite', 'downloads', 'storage'],
     ...(target === 'firefox' ? {} : { minimum_chrome_version: '125' }),
     ...(target === 'firefox' ? {
       optional_permissions: ['downloads'],

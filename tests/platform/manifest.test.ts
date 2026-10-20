@@ -7,7 +7,7 @@ import { browserManifest } from '@/src/platform/manifest';
 describe('browser capabilities', () => {
   it('keeps Chrome debugger permissions and omits Firefox settings', () => {
     const manifest = browserManifest('chrome');
-    expect(manifest.permissions).toEqual(['debugger', 'clipboardWrite', 'downloads', 'storage']);
+    expect(manifest.permissions).toEqual(['debugger', 'activeTab', 'scripting', 'clipboardWrite', 'downloads', 'storage']);
     expect(manifest.browser_specific_settings).toBeUndefined();
     expect(manifest.host_permissions).toBeUndefined();
     expect(manifest.minimum_chrome_version).toBe('125');

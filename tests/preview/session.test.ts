@@ -34,6 +34,28 @@ afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.resetModules(); 
 async function flush() { await Promise.resolve(); await Promise.resolve(); }
 
 describe('preview transport', () => {
+  it('delivers a selection to its authenticated save document without activating it', async () => {
+    const { openSelectionSave } = await import('@/src/preview-session');
+    const task = openSelectionSave({ ...payload, scope: 'selection' });
+    await flush();
+    const targetUrl = `chrome-extension://test/selection-save.html#${token}`;
+    expect(api.tabs.create).toHaveBeenCalledWith({ url: targetUrl, active: false });
+    const target = port({ sender: { id: 'test', url: targetUrl, tab: { id: 2 } } });
+    onConnect.fire(target); target.onMessage.fire({ type: 'preview-accepted-v1', token });
+    await task;
+    expect(api.tabs.update).not.toHaveBeenCalled(); expect(onConnect.listeners.size).toBe(0);
+  });
+  it('supports background delivery without window and removes the pending tab on cancellation', async () => {
+    vi.stubGlobal('window', undefined);
+    const { openPreview } = await import('@/src/preview-session');
+    const controller = new AbortController();
+    const task = openPreview({ ...payload, scope: 'selection' }, controller.signal);
+    const rejected = expect(task).rejects.toThrow('preview-cancelled');
+    await flush(); controller.abort(); await rejected;
+    expect(api.tabs.remove).toHaveBeenCalledWith(2);
+    expect(onConnect.listeners.size).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
   it('delivers only to the created document and activates after acknowledgement, releasing listeners', async () => {
     const { openPreview } = await import('@/src/preview-session');
     const task = openPreview(payload);

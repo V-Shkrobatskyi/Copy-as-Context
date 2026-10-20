@@ -51,6 +51,10 @@ function update(): void {
 }
 
 function accept(payload: PreviewPayload): void {
+  if (payload.scope === 'selection') {
+    document.querySelector('h1')!.textContent = 'Selected element context';
+    document.title = 'Selected element context — Copy as Context';
+  }
   original = payload.content;
   compression = payload.compression;
   format = payload.format;
@@ -65,6 +69,8 @@ function accept(payload: PreviewPayload): void {
   warnings.hidden = !warnings.textContent;
   document.querySelector<HTMLElement>('#maximum-note')!.hidden = compression !== 'maximum';
   panel.hidden = false;
+  document.querySelector<HTMLElement>('#editor-actions')!.hidden = false;
+  reset.hidden = false;
   status.textContent = 'Preview ready. Nothing has been copied.';
   update();
 }
@@ -180,5 +186,7 @@ window.addEventListener('pagehide', () => {
   findReplace.clear();
   findReplace.dispose();
   panel.hidden = true;
+  document.querySelector<HTMLElement>('#editor-actions')!.hidden = true;
+  reset.hidden = true;
 });
 window.addEventListener('pageshow', event => { if (event.persisted) unavailable(); });

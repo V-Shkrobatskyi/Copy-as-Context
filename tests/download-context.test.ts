@@ -6,7 +6,7 @@ import { contextBlob, contextDownloadOptions } from '@/src/download-context';
 
 describe('local context downloads', () => {
   it.each(['semantic-text', 'markdown'] as const)('preserves Unicode, delimiters and newlines in a local Blob for %s', async (format) => {
-    const content = 'Context 🙂 東京 Україна\n# heading & percent% comma, + ? <web_page>\n';
+    const content = 'Context 🙂 ∑ ∞\n# heading & percent% comma, + ? <web_page>\n';
     const options = contextDownloadOptions('blob:synthetic-download', format, new Date(2026, 9, 4, 12, 34, 56));
     expect(options.filename).toBe(`2026.10.04_123456.${format === 'markdown' ? 'md' : 'txt'}`);
     expect(options.saveAs).toBe(true);

@@ -40,9 +40,9 @@ function errorCode(error: unknown): CaptureErrorCode {
 interface CapturedFrame { frameId: number; snapshot: FrameSnapshot; node: SemanticNode; boundary?: SemanticNode; children: CapturedFrame[] }
 
 /** Capture only selected documents, sequentially, with one budget and operation identity. */
-export function createFirefoxCapturer(client: FirefoxFrameClient): (tab: CaptureTab, capturedAt: string) => Promise<CaptureOutcome> {
+export function createFirefoxCapturer(client: FirefoxFrameClient): (tab: CaptureTab, capturedAt: string, selection?: string, signal?: AbortSignal) => Promise<CaptureOutcome> {
   const inFlight = new Set<number>();
-  return async (tab, capturedAt) => {
+  return async (tab, capturedAt, selection, signal) => {
     if (inFlight.has(tab.id)) return failure('capture-failed');
     inFlight.add(tab.id);
     const operation = crypto.randomUUID();
@@ -66,7 +66,7 @@ export function createFirefoxCapturer(client: FirefoxFrameClient): (tab: Capture
       try {
         if (wait <= 0) throw new FrameFailure('capture-timeout');
         const value = await Promise.race([promise, new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new FrameFailure('capture-timeout')), wait); })]);
-        if (closed || navigation || Date.now() >= deadline) throw new FrameFailure(navigation ? 'page-changed' : 'capture-timeout');
+        if (closed || navigation || signal?.aborted || Date.now() >= deadline) throw new FrameFailure(navigation || signal?.aborted ? 'page-changed' : 'capture-timeout');
         return value;
       } finally { clearTimeout(timer); }
     };
@@ -90,7 +90,7 @@ export function createFirefoxCapturer(client: FirefoxFrameClient): (tab: Capture
       seen.add(frameId); documents++;
       installed.add(frameId);
       await bounded(client.execute({ target: { tabId: tab.id, frameIds: [frameId] }, world: 'ISOLATED', files: ['/frame-capture.js'] }));
-      const snapshot = await command(frameId, { mode: 'capture', operation,
+      const snapshot = await command(frameId, { mode: 'capture', operation, ...(frameId === 0 && selection ? { selection } : {}),
         limits: { ...remaining, maxDepth: Math.max(0, LIMITS.maxDepth - baseDepth) }, maxOwners: LIMITS.owners - ownerCount, ...(frameId !== 0 && allowedOrigin !== undefined ? { allowedOrigin } : {}) });
       if (!isFrameSnapshot(snapshot, operation, frameId !== 0)) throw new FrameFailure('invalid-tree');
       remaining.maxNodes -= snapshot.work.nodes;

@@ -152,7 +152,7 @@ describe('automatic email filters', () => {
 
   it('handles repeated addresses, mailto links, punctuation and malformed near misses', () => {
     expect(redactSemanticTree(tree('Mail <abcd@example.test>, mailto:abcd@example.test.')).tree.title).toBe('Mail <ab**@exa****.test>, mailto:ab**@exa****.test.');
-    for (const input of ['person at example.test', 'a..b@example.test', '.abc@example.test', 'abc.@example.test', 'abc@example', 'abc@example.test_invalid', 'éabc@example.test']) {
+    for (const input of ['person at example.test', 'a..b@example.test', '.abc@example.test', 'abc.@example.test', 'abc@example', 'abc@example.test_invalid', '\u00E9abc@example.test']) {
       expect(redactSemanticTree(tree(input)).tree.title).toBe(input);
     }
   });

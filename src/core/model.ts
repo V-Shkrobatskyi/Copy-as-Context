@@ -36,5 +36,7 @@ export interface SemanticTree {
   capturedAt?: string;
   /** Browser name, platform and available version supplied by the extension runtime. */
   browser?: string;
+  /** Tag of the block captured through the element picker; absent for full-page captures. */
+  selectedElementTag?: string;
   root: SemanticNode;
 }
