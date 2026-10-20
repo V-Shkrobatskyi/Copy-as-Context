@@ -1,7 +1,13 @@
 # Changelog
 
-## 1.4.3 — unreleased
+## 1.4.4 — unreleased
 
+- Prevent sensitive form values from leaking through ancestor names, custom ARIA textboxes and named field descendants.
+- Match encoded URL parameter names in built-in and custom privacy filters while preserving unrelated URL text.
+- Update Vite and override vulnerable shell-quote and source-map-js dependencies used by development tools.
+- Resolve Chrome selections from the extension's retained isolated-world reference and verify node identity before export.
+- Keep backticks and untrusted markup literal in Markdown field values and links.
+- Share download handling across save pages and release pending operations on history erasure, cancellation or page unload.
 - Add desktop element selection with preview, clipboard copy and file export for one selected block in Chrome and Firefox.
 - Add an Element header to selected-block exports in both formats and at every compression level.
 - Match the picker panel to the popup theme and keep it minimal while choosing a block.
