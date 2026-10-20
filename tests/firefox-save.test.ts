@@ -31,7 +31,7 @@ it.each(['complete', 'interrupted'] as const)('keeps the Firefox save document a
   vi.doMock('wxt/browser', () => ({ browser: {
     runtime: { id: 'extension-id', getURL: (path: string) => `moz-extension://id${path}`, onMessage: { addListener: (listener: typeof receive) => { receive = listener; } } },
     tabs: { getCurrent: vi.fn().mockResolvedValue({ id: 7 }), remove: removeTab, update: updateTab },
-    downloads: { download, search: vi.fn().mockResolvedValue([{ state: 'in_progress' }]), onChanged: { addListener: (listener: typeof changed) => { changed = listener; }, removeListener } },
+    downloads: { download, search: vi.fn().mockResolvedValue([{ state: 'in_progress' }]), onChanged: { addListener: (listener: typeof changed) => { changed = listener; }, removeListener }, onErased: { addListener: vi.fn(), removeListener: vi.fn() } },
   } }));
   await import('../entrypoints/save/main');
   const message = { type: 'save-firefox-export', token: 'synthetic-token', content: 'Synthetic context 🙂 ∑', format: 'markdown' };

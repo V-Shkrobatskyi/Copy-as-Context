@@ -142,7 +142,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
     querySelector: <T extends Element>(selector: string): T | null =>
       (elements.get(selector) as unknown as T | undefined) ?? null,
   });
-  vi.stubGlobal('window', { addEventListener: vi.fn(), close: vi.fn() });
+  vi.stubGlobal('window', { addEventListener: vi.fn(), removeEventListener: vi.fn(), close: vi.fn() });
   vi.stubGlobal('navigator', { clipboard: { writeText: clipboardWrite }, userAgent: options?.android ? 'Firefox Android' : 'Firefox Desktop' });
   const extensionApi = {
     tabs: { create: vi.fn().mockResolvedValue({ id: 2 }), remove: vi.fn().mockResolvedValue(undefined) },
@@ -151,7 +151,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
       getURL: (path: string) => `chrome-extension://test/${path}`,
     },
     downloads: options?.downloadsUnavailable ? undefined : {
-      download, search: downloadSearch, onChanged: downloadChanged,
+      download, search: downloadSearch, onChanged: downloadChanged, onErased: { addListener: vi.fn(), removeListener: vi.fn() },
     },
     storage: {
       local: {
