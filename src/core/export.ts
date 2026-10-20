@@ -32,12 +32,12 @@ export function prepareExport(
   // Without is already normalized; serializers and redaction do not mutate it.
   const selectedTree = compressionLevel === 'without' ? tree : compressSemanticTree(tree, compressionLevel);
   const redaction = redactForExport(selectedTree, redactSensitiveData, redactionSettings);
-  const attribution = renderExportAttribution(compressionLevel, redactSensitiveData);
+  const attribution = renderExportAttribution(compressionLevel, redactSensitiveData, redactionSettings);
   const selected = compressionLevel === 'maximum'
     ? serializeMaximum(redaction.tree, format, attribution) : serialize(redaction.tree, format, attribution);
   const baseline = compressionLevel === 'without'
     ? selected.characterCount
-    : countCharacters(redactForExport(tree, redactSensitiveData, redactionSettings).tree, format, renderExportAttribution('without', redactSensitiveData));
+    : countCharacters(redactForExport(tree, redactSensitiveData, redactionSettings).tree, format, renderExportAttribution('without', redactSensitiveData, redactionSettings));
   const characterCount = selected.characterCount;
   const rawRatio = baseline === 0
     ? null
