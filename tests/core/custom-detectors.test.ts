@@ -44,7 +44,13 @@ describe('custom credential detectors', () => {
     expect(imported).toEqual(validateRedactionSettings(custom));
     expect(redactSemanticTree(fixture, imported)).toEqual(redactSemanticTree(fixture));
     for (const level of COMPRESSION_LEVELS) {
-      expect(prepareExport(fixture, level, format, true, imported)).toEqual(prepareExport(fixture, level, format, true));
+      const customExport = prepareExport(fixture, level, format, true, imported);
+      const defaultExport = prepareExport(fixture, level, format, true);
+      // Equivalent detectors preserve content and metrics, but record different configurations.
+      expect(customExport).toEqual({ ...defaultExport, serialized: {
+        ...defaultExport.serialized,
+        content: defaultExport.serialized.content.replace('/d (created by', '/m (created by'),
+      } });
     }
     const result = redactSemanticTree(fixture, imported);
     expect(redactSemanticTree(result.tree, imported)).toEqual({ tree: result.tree, redactionCount: 0 });
