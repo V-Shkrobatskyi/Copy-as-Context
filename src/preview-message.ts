@@ -39,7 +39,10 @@ export function isPreviewPayload(value: unknown): value is PreviewPayload {
 }
 
 export function captureWarningText(warnings: readonly CaptureWarningCode[]): string {
+  const frameHint = import.meta.env.BROWSER === 'firefox'
+    ? ' To capture frames from other sites, enable "Include frames from other sites" in the extension popup, then capture again. Some frames may still be unavailable.'
+    : '';
   return warnings.map(code => code === 'embedded-frames'
     ? 'Embedded frames are not included.' : code === 'embedded-frames-partial'
-      ? 'Some embedded documents could not be captured.' : 'Canvas content is not included.').join(' ');
+      ? `Some embedded documents could not be captured.${frameHint}` : 'Canvas content is not included.').join(' ');
 }

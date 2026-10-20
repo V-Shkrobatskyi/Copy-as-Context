@@ -184,12 +184,24 @@ describe('preview editor', () => {
     expect(element('compression-metrics').textContent).toContain(reductionRatio === null ? 'unavailable' : '0% smaller');
   });
 
+  it('explains how to include other-site frames in Firefox previews', async () => {
+    vi.resetModules(); await loadEditor(true);
+    accept(payload);
+    expect(element('warnings').textContent).toContain('Some embedded documents could not be captured.');
+    expect(element('warnings').textContent).toContain('enable "Include frames from other sites" in the extension popup, then capture again.');
+    accept({ ...payload, warnings: ['canvas-content'] });
+    expect(element('warnings').textContent).toBe('Canvas content is not included.');
+    accept({ ...payload, warnings: [] });
+    expect(element('warnings').hidden).toBe(true);
+  });
+
   it('shows safe plain text and original metadata without copying automatically', () => {
     accept(payload);
     expect(editor().value).toBe(payload.content);
     expect(element('editor-panel').hidden).toBe(false);
     expect(element('settings').textContent).toContain('3 automatic redactions in the original export');
     expect(element('warnings').textContent).toContain('Some embedded documents');
+    expect(element('warnings').textContent).not.toContain('Include frames from other sites');
     expect(element('maximum-note').hidden).toBe(true);
     expect(document.querySelector('#editor-panel script')).toBeNull();
     expect(writeText).not.toHaveBeenCalled();
