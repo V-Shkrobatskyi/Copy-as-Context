@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { sourceAllowed } from '../../policy/sources';
 import { captureDomPage } from '../dom/capture';
 import type { DomCaptureWork } from '../dom/capture';
 import type { SemanticNode } from '../../core';
@@ -45,6 +46,9 @@ export function createFrameHandler(doc: Document, frameId: (target: Element | Wi
       } satisfies FrameVerification;
     }
     if (command.mode !== 'capture' || previous || leases.size >= 2 || !doc.defaultView || !doc.documentElement) return undefined;
+    if (!sourceAllowed(doc.location.href, command.controls?.sources, doc.defaultView?.origin ?? 'null')) {
+      return { operation: command.operation, generation: crypto.randomUUID(), outcome: { ok: false, error: { code: 'policy-blocked', message: 'Capture of this source is disabled by site restrictions.' } }, owners: [], work: { nodes: 0, visited: 0, nameWork: 0, characters: 0, milliseconds: 0 } } satisfies FrameSnapshot;
+    }
     const limits = command.limits;
     if (!limits || Object.keys(limits).some(key => !(key in LIMITS)) ||
       Object.entries(limits).some(([key, value]) => !Number.isFinite(value) || value < 0 || value > LIMITS[key as keyof typeof LIMITS]) ||
@@ -89,6 +93,7 @@ export function createFrameHandler(doc: Document, frameId: (target: Element | Wi
     let work: DomCaptureWork = { nodes: 0, visited: 0, nameWork: 0, characters: 0, milliseconds: 0 };
     const outcome = captureDomPage(doc, limits, {
       ...(selected ? { root: selected } : {}),
+      dataControls: command.controls?.data,
       embedded: frameId(doc.defaultView) !== 0,
       includeFrame(element) { return !['hidden', 'technical'].includes(frameVisibility(element)); },
       onFrame(element, node) {

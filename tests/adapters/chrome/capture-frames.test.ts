@@ -13,7 +13,7 @@ function harness(options: {
   hidden?: boolean; technical?: boolean; unknown?: boolean; missingOwner?: boolean; changed?: 'root' | 'child';
   childError?: boolean; nested?: boolean; invalidChild?: boolean; enableError?: boolean; cleanupError?: boolean;
   rootResponse?: unknown; password?: boolean; noFrames?: boolean;
-  selectionContext?: 'missing' | 'duplicate' | 'destroyed'; selectionReplaced?: boolean;
+  selectionContext?: 'missing' | 'duplicate' | 'stale' | 'destroyed'; selectionReplaced?: boolean;
 } = {}) {
   const calls: { method: string; session?: string; params?: Record<string, unknown> }[] = [];
   let event: Event | undefined;
@@ -45,10 +45,10 @@ function harness(options: {
           { ...context, id: 4, uniqueId: 'spoofed-page', auxData: { ...context.auxData, type: 'default', isDefault: true } },
         ]) event?.(target, 'Runtime.executionContextCreated', { context: invalid });
         if (options.selectionContext !== 'missing') event?.(target, 'Runtime.executionContextCreated', { context });
-        if (options.selectionContext === 'duplicate') event?.(target, 'Runtime.executionContextCreated', { context: { ...context, id: 8, uniqueId: 'duplicate' } });
+        if (options.selectionContext === 'duplicate' || options.selectionContext === 'stale') event?.(target, 'Runtime.executionContextCreated', { context: { ...context, id: 8, uniqueId: 'duplicate' } });
         callback({}); return;
       }
-      if (method === 'Runtime.evaluate') { callback({ result: { objectId: 'selected' } }); return; }
+      if (method === 'Runtime.evaluate') { callback(options.selectionContext === 'stale' && params?.uniqueContextId === 'duplicate' ? { result: { type: 'object', subtype: 'null', value: null } } : { result: { objectId: 'selected' } }); return; }
       if (method === 'DOM.describeNode') { callback({ node: { backendNodeId: 30, nodeName: 'SECTION' } }); return; }
       if (method === 'Target.setAutoAttach' && params?.autoAttach) {
         if (!target.sessionId && !options.noFrames) event?.({ tabId: target.tabId }, 'Target.attachedToTarget', { sessionId: 'child-session', targetInfo: { type: 'iframe' } });
@@ -59,7 +59,7 @@ function harness(options: {
         if (inventories === 2 && options.selectionContext === 'destroyed') event?.(target, 'Runtime.executionContextDestroyed', { executionContextId: 7 });
         const id = target.sessionId === 'nested-session' ? 'nested' : target.sessionId ? 'child' : 'root';
         if (inventories === 2 && options.changed) event?.({ tabId: target.tabId, sessionId: target.sessionId }, 'Page.frameNavigated', { frame: { id: options.changed } });
-        callback({ frameTree: { frame: { id, loaderId: 'loader', ...(id !== 'root' ? { parentId: id === 'child' ? 'root' : 'child' } : {}) } } }); return;
+        callback({ frameTree: { frame: { id, loaderId: 'loader', url: `https://${id}.test/`, securityOrigin: `https://${id}.test`, ...(id !== 'root' ? { parentId: id === 'child' ? 'root' : 'child' } : {}) } } }); return;
       }
       if (method === 'Accessibility.getFullAXTree') {
         if (target.sessionId && options.childError) { callback(undefined, 'Frame removed'); return; }
@@ -101,7 +101,15 @@ describe('Chrome embedded document coordinator', () => {
   it.each(['missing', 'duplicate', 'destroyed'] as const)('rejects %s picker contexts without falling back to the page world', async selectionContext => {
     const h = harness({ noFrames: true, selectionContext });
     expect(await createFrameCapturer(h.client)(42, 'opaque')).toMatchObject({ ok: false, error: { code: 'page-changed' } });
-    expect(h.calls.filter(call => call.method === 'Runtime.evaluate')).toHaveLength(selectionContext === 'destroyed' ? 1 : 0);
+    expect(h.calls.filter(call => call.method === 'Runtime.evaluate')).toHaveLength(selectionContext === 'destroyed' ? 1 : selectionContext === 'duplicate' ? 2 : 0);
+    expect(h.calls.at(-1)?.method).toBe('detach');
+  });
+
+  it('ignores a stale authenticated world when exactly one world retains the current picker token', async () => {
+    const h = harness({ noFrames: true, selectionContext: 'stale' });
+    expect(await createFrameCapturer(h.client)(42, 'opaque')).toMatchObject({ ok: true });
+    const calls = h.calls.filter(call => call.method === 'Runtime.evaluate');
+    expect(calls.map(call => call.params?.uniqueContextId)).toEqual(['picker-world', 'duplicate', 'picker-world']);
     expect(h.calls.at(-1)?.method).toBe('detach');
   });
 
@@ -317,4 +325,35 @@ describe('Chrome embedded document coordinator', () => {
     expect(h.calls.at(-1)?.method).toBe('detach');
     expect(h.listeners()).toEqual([undefined, undefined]);
   });
+});
+
+it.each([{ AllowedCaptureSources: [] }, { personal: { AllowedCaptureSources: [] } }])('blocks a forbidden root before requesting AX and still releases the debugger (%j)', async sources => {
+  const h = harness();
+  const result = await createFrameCapturer(h.client)(42, undefined, undefined, { sources });
+  expect(result).toMatchObject({ ok: false, error: { code: 'policy-blocked' } });
+  expect(h.calls.some(c => c.method === 'Accessibility.getFullAXTree')).toBe(false);
+  expect(h.calls.at(-1)?.method).toBe('detach');
+});
+
+it.each([{ AllowedCaptureSources: ['https://root.test'] }, { personal: { AllowedCaptureSources: ['https://root.test'] } }])('omits forbidden children without requesting their AX snapshots or exposing owner labels (%j)', async sources => {
+  const h = harness();
+  const result = await createFrameCapturer(h.client)(42, undefined, undefined, { sources });
+  // The inventory fixture supplies root.test and child.test origins.
+  expect(result.ok).toBe(true);
+  expect(h.calls.filter(c => c.method === 'Accessibility.getFullAXTree' && c.session)).toHaveLength(0);
+  expect(JSON.stringify(result)).not.toContain('Child title');
+  expect(JSON.stringify(result)).not.toContain('Widget');
+  expect(result).toMatchObject({ warnings: ['source-policy-omitted'] });
+});
+
+it('excludes duplicated editable AX values from descendants and ancestor accessible names', async () => {
+  const h = harness({ noFrames: true, rootResponse: { nodes: [
+    { nodeId: 'root', frameId: 'root', role: { value: 'RootWebArea' }, childIds: ['button'] },
+    { nodeId: 'button', role: { value: 'button' }, name: { value: 'Submit SECRET-CURRENT' }, childIds: ['edit'] },
+    { nodeId: 'edit', role: { value: 'textbox' }, name: { value: 'Comment' }, value: { value: 'SECRET-CURRENT' }, childIds: ['text'] },
+    { nodeId: 'text', role: { value: 'StaticText' }, name: { value: 'SECRET-CURRENT' } },
+  ] } });
+  const result = await createFrameCapturer(h.client)(42, undefined, undefined, { data: { includeTitle: true, includeFormValues: false, pageUrl: 'full', linkUrls: 'full' } });
+  expect(result.ok).toBe(true); expect(JSON.stringify(result)).not.toContain('SECRET-CURRENT');
+  expect(JSON.stringify(result)).toContain('Comment'); expect(JSON.stringify(result)).toContain('Submit');
 });

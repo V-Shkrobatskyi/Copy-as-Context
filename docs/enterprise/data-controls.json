@@ -1,0 +1,18 @@
+{
+  "PolicyVersion": 1,
+  "AllowedCaptureSources": [
+    "https://*.example.test"
+  ],
+  "BlockedCaptureSources": [
+    "https://private.example.test"
+  ],
+  "IncludePageTitle": false,
+  "PageUrlMode": "origin",
+  "LinkUrlMode": "without-query",
+  "IncludeFormValues": false,
+  "LoggingLevel": "error",
+  "LogMaxEvents": 500,
+  "LogMaxBytes": 1048576,
+  "LogMaxAgeHours": 24,
+  "TechnicalLogClearAllowed": false
+}

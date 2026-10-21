@@ -7,6 +7,13 @@ import { validatePolicy } from '@/src/policy/model';
 
 const schema = JSON.parse(readFileSync('public/managed-schema.json', 'utf8'));
 describe('Chrome managed schema compatibility', () => {
+  it('validates independent clear permissions as booleans', () => {
+    for (const key of ['CaptureHistoryClearAllowed', 'TechnicalLogClearAllowed']) {
+      expect(schema.properties[key].type).toBe('boolean');
+      for (const value of [true, false]) expect(validatePolicy({ [key]: value })).toMatchObject({ [key]: value });
+      expect(() => validatePolicy({ [key]: 'false' })).toThrow(key);
+    }
+  });
   it('uses Chrome’s supported schema dialect, including object-valued additionalProperties only', () => {
     const attributes: Record<string, string[]> = {
       object: ['properties', 'required', 'additionalProperties'], array: ['items'],
@@ -24,7 +31,7 @@ describe('Chrome managed schema compatibility', () => {
     expect(schema.properties.DisabledBuiltinFilters.items.enum).toEqual(BUILTIN_FILTERS.map(filter => filter.id));
   });
   it('keeps every documented preset valid at the runtime boundary', () => {
-    for (const file of ['recommended.json', 'required-redaction.json', 'strict.json', 'builtin-filters.json']) {
+    for (const file of ['recommended.json', 'required-redaction.json', 'strict.json', 'builtin-filters.json', 'data-controls.json']) {
       const preset = JSON.parse(readFileSync(`docs/enterprise/${file}`, 'utf8'));
       expect(() => validatePolicy(preset)).not.toThrow();
       for (const key of Object.keys(preset)) expect(schema.properties).toHaveProperty(key);

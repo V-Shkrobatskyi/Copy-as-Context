@@ -31,7 +31,7 @@ beforeEach(() => {
   mocks.api.storage = { managed: { get: vi.fn().mockResolvedValue({}) } };
   mocks.api.runtime = { id: 'extension', onConnect: event(), onMessage: event(), getPlatformInfo: vi.fn().mockResolvedValue({ os: 'linux' }) };
   mocks.api.permissions = { request: vi.fn().mockResolvedValue(true), contains: vi.fn().mockResolvedValue(true) };
-  mocks.api.tabs = { query: vi.fn().mockResolvedValue([{ id: 42, url: 'https://example.test/', title: 'Test page' }]), onUpdated: event(), onRemoved: event() };
+  mocks.api.tabs = { get: vi.fn().mockResolvedValue({ id: 42, url: 'https://example.test/' }), query: vi.fn().mockResolvedValue([{ id: 42, url: 'https://example.test/', title: 'Test page' }]), onUpdated: event(), onRemoved: event() };
   mocks.api.scripting = { executeScript: vi.fn(async (details: any) => {
     if (details.files) return [{ frameId: 0, documentId: 'doc' }];
     if (details.func.name === 'selectedElementInfo') return [{ frameId: 0, documentId: 'doc', result: documentValid ? { tagName: 'div' } : undefined }];
@@ -107,7 +107,7 @@ describe('background-owned selection sessions', () => {
     expect(await coordinator.start(preferences)).toEqual({ ok: true });
     mocks.api.tabs.query.mockResolvedValue([{ id: 999, url: 'https://other.test/' }]);
     active.onMessage.emit({ type: 'capture' }); await flush();
-    expect(mocks.capture).toHaveBeenCalledWith({ id: 42, title: 'Test page', url: 'https://example.test/' }, expect.any(String), expect.any(String), expect.any(AbortSignal));
+    expect(mocks.capture).toHaveBeenCalledWith({ id: 42, title: 'Test page', url: 'https://example.test/' }, expect.any(String), expect.any(String), expect.any(AbortSignal), expect.objectContaining({ data: expect.any(Object), sources: expect.any(Object) }));
     expect(mocks.preview).toHaveBeenCalledWith(expect.objectContaining({ scope: 'selection', content: expect.stringContaining('Selected content') }), expect.any(AbortSignal));
     expect(mocks.preview.mock.calls[0]![0].content).toContain('Element: Selected block <div>');
     expect(mocks.preview.mock.calls[0]![0]).not.toHaveProperty('tree');

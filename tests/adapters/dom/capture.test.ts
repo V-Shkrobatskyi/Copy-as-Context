@@ -163,3 +163,12 @@ describe('DOM result validation', () => {
     expect(isDomCaptureOutcome(deep)).toBe(false);
   });
 });
+
+it('does not read current values or editable descendants when form values are excluded', () => {
+  const doc = documentFor('<main><label>Account<input value="SECRET-INPUT"></label><label>Notes<textarea>SECRET-TEXTAREA</textarea></label><button><span contenteditable="true">SECRET-EDITABLE</span>Submit</button><select aria-label="Choice"><option selected>SECRET-CHOICE</option></select><input type="checkbox" checked aria-label="Agree"><div contenteditable="plaintext-only" aria-label="Comment">SECRET-PLAIN</div></main>');
+  for (const control of doc.querySelectorAll('input,textarea,select')) Object.defineProperty(control, 'value', { get() { throw new Error('Current value must not be read'); } });
+  const result = captureDomPage(doc, DOM_CAPTURE_LIMITS, { dataControls: { includeTitle: true, pageUrl: 'full', linkUrls: 'full', includeFormValues: false } });
+  expect(result.ok).toBe(true); expect(isDomCaptureOutcome(result)).toBe(true);
+  expect(JSON.stringify(result)).not.toContain('SECRET'); expect(JSON.stringify(result)).not.toContain('checked'); expect(JSON.stringify(result)).not.toContain('selected');
+  expect(JSON.stringify(result)).toContain('Account'); expect(JSON.stringify(result)).toContain('Comment');
+});

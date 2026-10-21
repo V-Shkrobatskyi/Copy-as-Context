@@ -24,7 +24,7 @@ export interface FrameSnapshot {
   work: DomCaptureWork;
 }
 export type FrameCommand = { operation: string } & (
-  { mode: 'capture'; limits: DomCaptureLimits; maxOwners: number; allowedOrigin?: string; selection?: string } |
+  { mode: 'capture'; controls?: import('../types').CaptureControls; limits: DomCaptureLimits; maxOwners: number; allowedOrigin?: string; selection?: string } |
   { mode: 'verify'; generation: string } |
   { mode: 'release' }
 );

@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { isManaged } from '@/src/policy/model';
+
 import './style.css';
 import { readPolicy, watchPolicy, policyMessage, type PolicySnapshot } from '@/src/policy/runtime';
 import { assertAction, applyManagedBuiltinStates, hasManagedFilters, managedBuiltinState, mergeManagedFilters, PolicyError } from '@/src/policy/model';
@@ -265,7 +267,7 @@ async function load(restoreNavigation = false): Promise<void> {
     policySnapshot = snapshot;
     assertAction(snapshot.policy, 'customize');
     const note = document.querySelector<HTMLElement>('#organization-policy');
-    if (note) { note.hidden = !snapshot.revision; note.textContent = snapshot.revision ? `Managed by your organization. Required filters are read-only.${snapshot.policy.UserRedactionRulesAllowed === false ? ' Personal filter changes are disabled.' : ''}${snapshot.policy.UserPreferencesSaveAllowed === false ? ' Saving personal filters is disabled.' : ''}` : ''; }
+    if (note) { note.hidden = !isManaged(snapshot.policy); note.textContent = isManaged(snapshot.policy) ? `Managed by your organization. Required filters are read-only.${snapshot.policy.UserRedactionRulesAllowed === false ? ' Personal filter changes are disabled.' : ''}${snapshot.policy.UserPreferencesSaveAllowed === false ? ' Saving personal filters is disabled.' : ''}` : ''; }
     const restored = restoreNavigation ? readFilterDemoDraft() : undefined;
     const settings = snapshot.policy.UserRedactionRulesAllowed === false ? defaultRedactionSettings() : restored?.settings ?? await loadPersonalRedactionSettings();
     if (disposed || generation !== loadGeneration) return;

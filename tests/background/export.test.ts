@@ -17,7 +17,7 @@ async function loadBackground(target = 'chrome') {
   vi.stubGlobal('defineBackground', (start: () => void) => start());
   const storage = { managed: { get: vi.fn().mockResolvedValue({}) }, local: { get: vi.fn().mockResolvedValue({}) } };
   const chromeApi = { storage, runtime: { sendMessage: vi.fn(), id: 'synthetic-chrome-id', getURL: (path: string) => `chrome-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
-    tabs: { query: vi.fn().mockResolvedValue([{ id: 42, title: 'Synthetic', url: 'https://example.test/' }]) } };
+    tabs: { get: vi.fn().mockResolvedValue({ id: 42, url: 'https://example.test/' }), query: vi.fn().mockResolvedValue([{ id: 42, title: 'Synthetic', url: 'https://example.test/' }]) } };
   vi.stubGlobal('chrome', chromeApi);
   const firefoxApi = {
     storage,
@@ -50,6 +50,13 @@ async function loadBackground(target = 'chrome') {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.resetModules(); capture.mockReset(); });
 
 describe('background export boundary', () => {
+  it.each(['chrome', 'firefox'])('rejects personally blocked pages before content capture in %s', async target => {
+    const background = await loadBackground(target);
+    background.storage.local.get.mockResolvedValue({ 'capture-sources-v1': { allowlistEnabled: false, allowed: [], blocked: ['https://example.test'] } });
+    const response = await background.request({ type: 'capture-active-tab', compression: 'compact', format: 'semantic-text', redactSensitiveData: false });
+    expect(response).toMatchObject({ ok: false, error: { code: 'policy-blocked', message: expect.stringContaining('personal site settings') } });
+    expect(capture).not.toHaveBeenCalled(); expect(background.firefoxApi.scripting.executeScript).not.toHaveBeenCalled();
+  });
   it.each(['chrome', 'firefox'])('loads saved custom filters for every request in %s', async target => {
     const background = await loadBackground(target);
     capture.mockResolvedValue({ ok: true, tree: { schemaVersion: 1, root: { role: 'page', children: [{ role: 'StaticText', name: 'Acme', children: [] }] } } });
@@ -72,7 +79,7 @@ describe('background export boundary', () => {
     background.api.tabs.query.mockResolvedValue([{ id: 42, url }]);
     const settings = { ...defaultRedactionSettings(), customRules: [{ id: 'client', name: 'Client', type: 'text', text: 'Acme', enabled: true, caseSensitive: false }] };
     background.api.runtime.sendMessage.mockResolvedValue({ settings, capture: { ok: true, tree: { schemaVersion: 1, sourceUrl: url, root: { role: 'page', children: [{ role: 'StaticText', name: 'Acme', children: [] }] } } } });
-    background.storage.local.get.mockRejectedValue(new Error('Saved filters unavailable'));
+    background.storage.local.get.mockImplementation(async (key: string) => { if ((key === 'data-controls-v1' || key === 'capture-sources-v1')) return {}; throw new Error('Saved filters unavailable'); });
     const request = { type: 'capture-active-tab', compression: 'without', format: 'semantic-text', redactSensitiveData: true };
     const response = await background.request(request);
     expect(response.ok).toBe(true);
@@ -91,7 +98,7 @@ describe('background export boundary', () => {
     const background = await loadBackground();
     background.storage.local.get.mockRejectedValue(new Error('synthetic private details'));
     const request = { type: 'capture-active-tab', compression: 'compact', format: 'semantic-text', redactSensitiveData: true };
-    expect(await background.request(request)).toMatchObject({ ok: false, error: { code: 'redaction-settings' } });
+    expect(await background.request(request)).toMatchObject({ ok: false, error: { code: 'policy-blocked' } });
     expect(capture).not.toHaveBeenCalled();
     background.storage.local.get.mockResolvedValue({ 'redaction-filters-v1': { version: 99 } });
     expect(await background.request(request)).toMatchObject({ ok: false, error: { code: 'redaction-settings' } });
@@ -141,7 +148,7 @@ describe('background export boundary', () => {
     const background = await loadBackground();
     for (const privacy of [true, false]) {
       const response = await background.request({ type: 'capture-active-tab', compression: 'without', format: 'markdown', redactSensitiveData: privacy });
-      expect(capture).toHaveBeenCalledWith(42);
+      expect(capture).toHaveBeenCalledWith(42, undefined, undefined, expect.objectContaining({ data: expect.any(Object), sources: expect.any(Object) }));
       expect(response.ok).toBe(true);
       expect(response).not.toHaveProperty('tree');
       if (response.ok) {
@@ -244,4 +251,15 @@ it.each(['chrome', 'firefox'])('enforces both forced-on and forced-off built-ins
   const response = await background.request({ type: 'capture-active-tab', compression: 'compact', format: 'semantic-text', redactSensitiveData: true });
   expect(response.ok).toBe(true);
   if (response.ok) { expect(response.export.serialized.content).not.toContain('person@example.test'); expect(response.export.serialized.content).toContain('Bearer abcdefghijklmnop'); }
+});
+
+it('applies mandatory data exclusions and sends only source rules to the capture adapter', async () => {
+  const background = await loadBackground();
+  background.storage.managed.get.mockResolvedValue({ PolicyVersion: 1, IncludeFormValues: false, IncludePageTitle: false, PageUrlMode: 'omit', LinkUrlMode: 'omit', RequiredBuiltinFilters: ['email-hide'] });
+  capture.mockResolvedValue({ ok: true, tree: { schemaVersion: 1, title: 'PRIVATE-TITLE', sourceUrl: 'https://private.test/', root: { role: 'page', children: [{ role: 'textbox', name: 'Account', value: 'PRIVATE-VALUE', children: [] }] } } });
+  const response = await background.request({ type: 'capture-active-tab', compression: 'maximum', format: 'semantic-text', redactSensitiveData: true });
+  expect(response.ok).toBe(true);
+  expect(JSON.stringify(response)).not.toContain('PRIVATE-'); expect(JSON.stringify(response)).not.toContain('private.test');
+  expect(capture.mock.calls[0]![3].sources).not.toHaveProperty('RequiredBuiltinFilters');
+  expect(response).toHaveProperty('operationId', expect.stringMatching(/^[0-9a-f-]{36}$/));
 });

@@ -1,6 +1,9 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import type { HistoryPolicy } from '../history/model';
+import { PAGE_URL_MODES, LINK_URL_MODES, DEFAULT_DATA_CONTROLS, type DataControls } from '../core/data-controls';
+import { validateSourcePatterns, type SourceRules } from './sources';
 import { COMPRESSION_LEVELS, DEFAULT_COMPRESSION_LEVEL, type CompressionLevel } from '../core/contracts';
 import type { SupportedExportFormat } from '../core/export';
 import { BUILTIN_FILTERS, defaultRedactionSettings, validateRedactionSettings, type BuiltinFilterId, type CustomRedactionRule, type RedactionSettings } from '../core/privacy/settings';
@@ -11,7 +14,16 @@ export interface ExportPreferences {
   compression: CompressionLevel;
   redactSensitiveData: boolean;
 }
-export interface EnterprisePolicy {
+export interface EnterprisePolicy extends SourceRules, HistoryPolicy {
+  IncludePageTitle?: boolean;
+  PageUrlMode?: DataControls['pageUrl'];
+  LinkUrlMode?: DataControls['linkUrls'];
+  IncludeFormValues?: boolean;
+  LoggingLevel?: 'off' | 'error' | 'info' | 'debug';
+  TechnicalLogClearAllowed?: boolean;
+  LogMaxEvents?: number;
+  LogMaxBytes?: number;
+  LogMaxAgeHours?: number;
   PolicyVersion?: 1;
   ElementPickerAllowed?: boolean;
   PreviewAllowed?: boolean;
@@ -45,10 +57,24 @@ export function validatePolicy(raw: unknown): EnterprisePolicy {
     if (source.PolicyVersion !== 1) invalid('PolicyVersion');
     result.PolicyVersion = 1;
   }
-  for (const key of ['ElementPickerAllowed', 'PreviewAllowed', 'FilterSettingsAllowed', 'FileExportAllowed', 'ClipboardExportAllowed', 'UserRedactionRulesAllowed', 'UserPreferencesSaveAllowed'] as const) {
+  for (const key of ['ElementPickerAllowed', 'PreviewAllowed', 'FilterSettingsAllowed', 'FileExportAllowed', 'ClipboardExportAllowed', 'UserRedactionRulesAllowed', 'UserPreferencesSaveAllowed', 'IncludePageTitle', 'IncludeFormValues', 'CaptureHistoryEnabled', 'CaptureHistorySettingsLocked', 'CaptureHistoryClearAllowed', 'TechnicalLogClearAllowed'] as const) {
     if (source[key] === undefined) continue;
     if (typeof source[key] !== 'boolean') invalid(key);
     result[key] = source[key];
+  }
+  for (const key of ['AllowedCaptureSources', 'BlockedCaptureSources'] as const) {
+    if (source[key] !== undefined) { try { result[key] = validateSourcePatterns(source[key]); } catch { invalid(key); } }
+  }
+  for (const [key, values] of [['PageUrlMode', PAGE_URL_MODES], ['LinkUrlMode', LINK_URL_MODES], ['LoggingLevel', ['off', 'error', 'info', 'debug']]] as const) {
+    if (source[key] !== undefined) {
+      if (!(values as readonly unknown[]).includes(source[key])) invalid(key);
+      Object.assign(result, { [key]: source[key] });
+    }
+  }
+  for (const [key, max] of [['LogMaxEvents', 1000], ['LogMaxBytes', 2097152], ['LogMaxAgeHours', 168], ['CaptureHistoryRetentionDays', 365], ['CaptureHistoryMaxMiB', 50]] as const) {
+    if (source[key] === undefined) continue;
+    if (!Number.isSafeInteger(source[key]) || Number(source[key]) < (key === 'LogMaxBytes' ? 2 : 1) || Number(source[key]) > max) invalid(key);
+    result[key] = source[key] as number;
   }
   function list<T extends string>(key: string, allowed: readonly T[]): T[] | undefined {
     if (source[key] === undefined) return undefined;
@@ -110,8 +136,12 @@ export function resolvePreferences(policy: EnterprisePolicy, personal: Partial<E
     redactSensitiveData: mode === 'force-on' || mode === 'user-controlled' && (personal.redactSensitiveData ?? true),
   };
 }
-export type PolicyAction = 'capture' | 'copy' | 'save' | 'preview' | 'picker' | 'customize';
+export type PolicyAction = 'capture' | 'copy' | 'save' | 'preview' | 'picker' | 'customize' | 'diagnostics-copy' | 'diagnostics-save';
 export function assertAction(policy: EnterprisePolicy, action: PolicyAction): void {
+  if (action === 'diagnostics-copy' || action === 'diagnostics-save') {
+    if (action === 'diagnostics-copy' && policy.ClipboardExportAllowed === false || action === 'diagnostics-save' && policy.FileExportAllowed === false) throw new PolicyError('Diagnostic export is disabled by your administrator.');
+    return;
+  }
   if (action === 'customize') {
     if (policy.FilterSettingsAllowed === false) throw new PolicyError('Filter settings are disabled by your administrator.');
     return;
@@ -150,4 +180,15 @@ export function mergeManagedFilters(policy: EnterprisePolicy, personal: Redactio
   try {
     return validateRedactionSettings({ ...builtins, customRules: [...managed, ...users] });
   } catch { throw new PolicyError('Unable to apply organization filters. Check the combined filter limits.'); }
+}
+
+/** Organization modes are minimum exclusions; a personal choice can be stricter. */
+export function resolveDataControls(policy: EnterprisePolicy, personal: DataControls = DEFAULT_DATA_CONTROLS): DataControls {
+  const stricter = <T extends string>(modes: readonly T[], a: T, b: T | undefined): T => modes[Math.max(modes.indexOf(a), b === undefined ? 0 : modes.indexOf(b))]!;
+  return { includeTitle: personal.includeTitle && policy.IncludePageTitle !== false,
+    includeFormValues: personal.includeFormValues && policy.IncludeFormValues !== false,
+    pageUrl: stricter(PAGE_URL_MODES, personal.pageUrl, policy.PageUrlMode), linkUrls: stricter(LINK_URL_MODES, personal.linkUrls, policy.LinkUrlMode) };
+}
+export function dataControlsLocked(policy: EnterprisePolicy): boolean {
+  return policy.IncludePageTitle === false || policy.IncludeFormValues === false || !!policy.PageUrlMode && policy.PageUrlMode !== 'full' || !!policy.LinkUrlMode && policy.LinkUrlMode !== 'full';
 }

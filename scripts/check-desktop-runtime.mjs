@@ -107,7 +107,7 @@ async function launch(target) {
       const timer = setTimeout(() => reject(new Error(`${target} did not start its automation endpoint: ${text.slice(-1500)}`)), 20_000);
       const fail = (error) => { clearTimeout(timer); reject(error); };
       child.once('error', fail);
-      child.once('exit', (code) => fail(new Error(`${target} exited during startup (${code})`)));
+      child.once('exit', (code) => fail(new Error(`${target} exited during startup (${code}): ${text.slice(-1500)}`)));
       const data = (buffer) => {
         text = (text + buffer.toString()).slice(-8000);
         const match = text.match(target === 'firefox' ? /WebDriver BiDi listening on (ws:\/\/[^\s]+)/u : /DevTools listening on (ws:\/\/[^\s]+)/u);
@@ -206,6 +206,57 @@ try {
           // WebDriver cannot provide trusted input in this privileged extension tab.
           // A fresh profile has no optional downloads grant; never modify the manifest to bypass it.
           const downloadsGranted = await extensionEvaluate('browser.permissions.contains({ permissions: ["downloads"] })');
+          await protocol.send('browsingContext.navigate', { context: popup, url: `moz-extension://${fixtureExtensionUuid}/diagnostics.html`, wait: 'complete' });
+          const diagnostics = JSON.parse(await extensionEvaluate(`(async () => {
+            const request = (action, extra = {}) => browser.runtime.sendMessage({ type: 'diagnostics', action, ...extra });
+            const before = await request('read');
+            if (!before.ok || before.report.policyState !== 'unmanaged' || !before.report.journal.available) throw new Error('Diagnostics or IndexedDB unavailable');
+            await request('level', { level: 'info' });
+            await request('event', { event: { code: 'capture-complete', result: 'error', reason: 'failed' } });
+            const included = await request('read', { includeLog: true });
+            if (!included.report.events?.length) throw new Error('Local event did not persist');
+            const ordinary = await request('read');
+            if (ordinary.report.events !== undefined) throw new Error('Report included journal without consent');
+            const invalid = await request('event', { event: { code: 'capture-complete', result: 'error', url: 'https://synthetic-private.test' } });
+            if (invalid.ok) throw new Error('Unapproved event field accepted');
+            await request('clear');
+            if ((await request('read')).report.journal.count !== 0) throw new Error('Journal clear failed');
+            await request('level', { level: 'error' });
+            const history = await request('history-read');
+            if (!history.ok || history.history.settings.enabled || history.history.count !== 0) throw new Error('History must start off and empty');
+            const settings = { enabled: true, retentionDays: 365, maxMiB: 50 };
+            if (!(await request('history-settings', { settings })).ok) throw new Error('History settings save failed');
+            const savedHistory = await request('history-read');
+            if (JSON.stringify(savedHistory.history.settings) !== JSON.stringify(settings)) throw new Error('History settings did not persist');
+            const exportedHistory = await request('history-export', { destination: 'copy' });
+            if (!exportedHistory.ok || JSON.parse(exportedHistory.json).entries.length) throw new Error('History export failed');
+            if (!(await request('history-clear')).ok) throw new Error('History clear failed');
+            await request('history-settings', { settings: { enabled: false, retentionDays: 60, maxMiB: 10 } });
+            const sourceDefaults = await request('sources-read');
+            if (!sourceDefaults.ok || sourceDefaults.settings.allowlistEnabled || sourceDefaults.settings.blocked.length) throw new Error('Personal source defaults are not unrestricted');
+            const sourceSettings = { allowlistEnabled: true, allowed: ['https://*.example.test'], blocked: ['https://private.example.test'] };
+            if (!(await request('sources-save', { settings: sourceSettings })).ok) throw new Error('Personal source save failed');
+            if (JSON.stringify((await request('sources-read')).settings) !== JSON.stringify(sourceSettings)) throw new Error('Personal sources did not persist');
+            if ((await request('sources-save', { settings: { ...sourceSettings, blocked: ['https://private.test/path'] } })).ok) throw new Error('Invalid source pattern accepted');
+            await request('sources-save', { settings: { allowlistEnabled: false, allowed: [], blocked: [] } });
+            document.querySelector('#refresh').click();
+            return JSON.stringify({ page: true, indexedDB: true, journalWriteReadClear: true, optInReportEvents: true, rejectsUnknownEventFields: true, captureHistorySettingsExportClear: true, personalSourcesSettings: true });
+          })()`));
+          for (let attempt = 0; attempt < 30; attempt++) {
+            if (await extensionEvaluate('document.querySelector("#report").textContent.includes("reportVersion")')) break;
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          assert.equal(await extensionEvaluate('document.querySelector("#include-log").checked'), false);
+          if (options.report) {
+            try {
+              const screenshot = await protocol.send('browsingContext.captureScreenshot', { context: popup });
+              await writeFile(options.report.replace(/\.json$/u, '') + '-diagnostics.png', Buffer.from(screenshot.data, 'base64'));
+              diagnostics.screenshot = 'saved';
+            } catch (error) {
+              if (!/unsupported operation.*privileged scope/u.test(String(error))) throw error;
+              diagnostics.screenshot = 'unsupported-privileged-scope';
+            }
+          }
           await protocol.send('browsingContext.close', { context: popup });
           await protocol.send('webExtension.uninstall', { extension });
 
@@ -270,7 +321,7 @@ try {
           }
           await protocol.send('browsingContext.close', { context: popup });
           await protocol.send('webExtension.uninstall', { extension: downloadFixtureId });
-          return { temporaryInstall: true, popupDocument: true, missingActiveTabGrant: 'injection-rejected', tabDocumentSenderRejected: true, reloadAndStorage: true, popupLayout: options['popup-layout'], viewports, optionalDownloadsGranted: downloadsGranted, downloadsProbe: 'save-document-blob-in-isolated-downloads-fixture', expiredBlobRejected: blobRejected, savedDownloads };
+          return { temporaryInstall: true, popupDocument: true, diagnostics, missingActiveTabGrant: 'injection-rejected', tabDocumentSenderRejected: true, reloadAndStorage: true, popupLayout: options['popup-layout'], viewports, optionalDownloadsGranted: downloadsGranted, downloadsProbe: 'save-document-blob-in-isolated-downloads-fixture', expiredBlobRejected: blobRejected, savedDownloads };
         };
         evaluate = async (expression) => {
           const response = await protocol.send('script.evaluate', { expression, target: { context, sandbox: 'copy-as-context-quality' }, awaitPromise: true });

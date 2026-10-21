@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { technicalEvent } from './diagnostics/client';
 import { readPolicy } from './policy/runtime';
 import { assertAction, mergeManagedFilters, PolicyError } from './policy/model';
 import { browser } from 'wxt/browser';
@@ -19,12 +20,15 @@ export async function saveRedactionSettings(settings: RedactionSettings): Promis
   const { policy } = await readPolicy();
   assertAction(policy, 'customize');
   if (policy.UserPreferencesSaveAllowed === false || policy.UserRedactionRulesAllowed === false) throw new PolicyError('Saving personal filters is disabled by your administrator.');
-  await browser.storage.local.set({ [REDACTION_SETTINGS_KEY]: validateRedactionSettings(settings) });
+  try { await browser.storage.local.set({ [REDACTION_SETTINGS_KEY]: validateRedactionSettings(settings) }); technicalEvent({ code: 'filters-save', result: 'success' }); }
+  catch (error) { technicalEvent({ code: 'filters-save', result: 'error', reason: 'failed' }); throw error; }
 }
 
 /** Corporate rules are merged only at execution, never written to personal storage. */
 export async function loadRedactionSettings(): Promise<RedactionSettings> {
   const { policy } = await readPolicy();
   const personal = policy.UserRedactionRulesAllowed === false ? defaultRedactionSettings() : await loadPersonalRedactionSettings();
-  return mergeManagedFilters(policy, personal);
+  const result = mergeManagedFilters(policy, personal);
+  technicalEvent({ code: 'filters-load', result: 'success' });
+  return result;
 }

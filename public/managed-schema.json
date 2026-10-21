@@ -209,6 +209,105 @@
           "personal-fields"
         ]
       }
+    },
+    "IncludePageTitle": {
+      "type": "boolean",
+      "description": "Allow document titles. False excludes titles regardless of redaction."
+    },
+    "IncludeFormValues": {
+      "type": "boolean",
+      "description": "Allow current form values and selection states. False retains labels and structure."
+    },
+    "PageUrlMode": {
+      "type": "string",
+      "enum": [
+        "full",
+        "without-query",
+        "origin",
+        "omit"
+      ],
+      "description": "Minimum exclusion of document URLs. A personal setting may be stricter."
+    },
+    "LinkUrlMode": {
+      "type": "string",
+      "enum": [
+        "full",
+        "without-query",
+        "omit"
+      ],
+      "description": "Minimum exclusion of structured link URLs."
+    },
+    "LoggingLevel": {
+      "type": "string",
+      "enum": [
+        "off",
+        "error",
+        "info",
+        "debug"
+      ],
+      "description": "Required local technical logging level. Managed debug continues until changed by the administrator."
+    },
+    "LogMaxEvents": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Upper retention limit for the local technical journal."
+    },
+    "LogMaxBytes": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 2097152,
+      "description": "Upper retention limit for the local technical journal."
+    },
+    "LogMaxAgeHours": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 168,
+      "description": "Upper retention limit for the local technical journal."
+    },
+    "AllowedCaptureSources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Origin patterns: http://host, https://host, *://host; optional *. subdomains and :port or :*. Maximum 500 patterns. Deny takes priority. Empty allowlist blocks all external sources. Non-web and opaque sources are blocked when restrictions are active.",
+      "sensitiveValue": true
+    },
+    "BlockedCaptureSources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Origin patterns: http://host, https://host, *://host; optional *. subdomains and :port or :*. Maximum 500 patterns. Deny takes priority. Empty allowlist blocks all external sources. Non-web and opaque sources are blocked when restrictions are active.",
+      "sensitiveValue": true
+    },
+    "CaptureHistoryEnabled": {
+      "type": "boolean",
+      "description": "Require capture metadata history on or off. Default is off when not configured."
+    },
+    "CaptureHistorySettingsLocked": {
+      "type": "boolean",
+      "description": "Prevent personal capture-history setting changes. Unspecified locked fields use defaults."
+    },
+    "CaptureHistoryRetentionDays": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 365,
+      "description": "Require history retention from 1 to 365 days. Default: 60."
+    },
+    "CaptureHistoryMaxMiB": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50,
+      "description": "Require compact history JSON size limit from 1 to 50 MiB. Default: 10."
+    },
+    "CaptureHistoryClearAllowed": {
+      "type": "boolean",
+      "description": "Allow manual capture-history clearing. Default: true. Automatic retention still applies."
+    },
+    "TechnicalLogClearAllowed": {
+      "type": "boolean",
+      "description": "Allow manual technical-journal clearing. Default: true. Automatic retention still applies."
     }
   }
 }

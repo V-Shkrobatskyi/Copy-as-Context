@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { technicalEvent } from './diagnostics/client';
 import { PolicyError } from './policy/model';
 import { checkPolicy, type PolicyContext } from './policy/runtime';
 import { browser } from 'wxt/browser';
@@ -11,8 +12,13 @@ import { contextBlob, contextDownloadOptions } from './download-context';
 export async function saveContextFile(content: string, format: SupportedExportFormat, signal?: AbortSignal, context?: PolicyContext): Promise<void> {
   await checkPolicy('save', context);
   if (context && context.format !== format) throw new PolicyError('Export format does not match the prepared context. Prepare the context again.');
+  return downloadBlob(contextBlob(content, format), contextDownloadOptions('', format).filename, signal, context?.operationId);
+}
+
+/** Own the blob and listeners until a download completes, fails or is cancelled. */
+export async function downloadBlob(blob: Blob, filename: string, signal?: AbortSignal, operation?: string): Promise<void> {
   if (signal?.aborted) throw new Error('download-cancelled');
-  const url = URL.createObjectURL(contextBlob(content, format));
+  const url = URL.createObjectURL(blob);
   let changed: Parameters<typeof browser.downloads.onChanged.addListener>[0] | undefined;
   let erased: Parameters<typeof browser.downloads.onErased.addListener>[0] | undefined;
   let cancel!: (error: Error) => void;
@@ -22,7 +28,7 @@ export async function saveContextFile(content: string, format: SupportedExportFo
   signal?.addEventListener('abort', onCancel, { once: true });
   if (typeof window !== 'undefined') window.addEventListener('pagehide', onCancel, { once: true });
   try {
-    const id = await Promise.race([browser.downloads.download(contextDownloadOptions(url, format)), cancelled]);
+    const id = await Promise.race([browser.downloads.download({ url, filename, saveAs: true }), cancelled]);
     await Promise.race([new Promise<void>((resolve, reject) => {
       const check = (state?: string, error?: string) => {
         if (state === 'interrupted' || error) reject(new Error('download-interrupted'));
@@ -38,6 +44,10 @@ export async function saveContextFile(content: string, format: SupportedExportFo
         else check(items[0].state, items[0].error);
       }, reject);
     }), cancelled]);
+    technicalEvent({ code: 'download-complete', result: 'success', operation });
+  } catch (error) {
+    technicalEvent({ code: 'download-complete', result: 'error', reason: 'failed', operation });
+    throw error;
   } finally {
     if (changed) browser.downloads.onChanged.removeListener(changed);
     if (erased) browser.downloads.onErased.removeListener(erased);

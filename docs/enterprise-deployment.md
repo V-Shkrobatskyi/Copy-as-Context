@@ -176,3 +176,54 @@ Policy revisions are SHA-256 fingerprints of the normalized configuration; captu
 ## Security boundaries
 
 This controls Copy as Context in the managed browser. It does not stop manual page copying, another browser, a modified extension, an administrator of the operating system, or pasting allowed clipboard content into a text editor and saving it. It does not restrict where copied data is pasted. Redaction is heuristic and cannot guarantee discovery of every secret or personal value. Use browser/device management and organizational DLP for broader requirements.
+
+## Source, data and diagnostic policies
+
+These are additive version 1 fields. Deploy them only with a build that supports this feature; older builds ignore unknown fields. See [data controls and diagnostics](data-controls-and-diagnostics.md) and the [synthetic preset](enterprise/data-controls.json).
+
+| Policy | Type | Behavior |
+| --- | --- | --- |
+| `AllowedCaptureSources` | Array of origin patterns | Missing: no allowlist. Empty: reject all external sources. Maximum 500 entries, 512 characters each. |
+| `BlockedCaptureSources` | Array of origin patterns | Deny takes priority over allow. Same limits. |
+| `IncludePageTitle` | Boolean | False excludes main/nested document titles. Default: true. |
+| `PageUrlMode` | `full`, `without-query`, `origin`, `omit` | Minimum exclusion of document URL metadata, in increasing strictness. Default: full. |
+| `LinkUrlMode` | `full`, `without-query`, `omit` | Minimum exclusion of structured link URLs. Default: full. |
+| `IncludeFormValues` | Boolean | False excludes current values, editable descendants and checked/selected states. Default: true. |
+| `LoggingLevel` | `off`, `error`, `info`, `debug` | Force the local technical journal level. Missing: personal choice, default Error. Managed Debug remains active until policy changes. |
+| `LogMaxEvents` | Integer 1–1000 | Maximum retained event count. Default: 1000. |
+| `LogMaxBytes` | Integer 2–2097152 | Maximum serialized event bytes. Default: 2 MiB. |
+| `TechnicalLogClearAllowed` | Boolean | False blocks manual journal clearing in the UI and background. Default: true. Automatic retention continues. |
+| `LogMaxAgeHours` | Integer 1–168 | Maximum retained age. Default: seven days. |
+
+Patterns are `http://host`, `https://host` or `*://host`, optionally with `*.` before the hostname (includes both the base host and its subdomains), and optionally with `:port` or `:*`. Examples: `https://example.test`, `https://*.example.test:8443`, `*://localhost:*`. An omitted port matches only the scheme's standard port; `:*` matches all ports. With wildcard scheme and an explicit numeric port, that port matches literally. A single final `/` is accepted and normalized away. There are no path/query/fragment patterns, credentials, `<all_urls>` or regular expressions. Hostnames use URL/IDN normalization, case folding and terminal-dot normalization; matching respects hostname boundaries. Duplicate patterns are collapsed.
+
+When any nonempty deny list or an allowlist is present, external capture supports only HTTP/HTTPS origins and nested blob documents with a known HTTP/HTTPS origin. `file:`, `data:`, `about:blank`, `srcdoc`, sandboxed opaque origins and unknown origins are blocked conservatively; inherited origins are not guessed. Without source rules, current browser capture behavior is preserved. The exact extension-owned synthetic filter demo remains available as an internal scenario, with data exclusions still applied. This exception cannot target an external page.
+
+Users can add personal source restrictions in Diagnostics & data controls. A source must satisfy both personal and organization allowed lists, and either blocked list takes priority. Personal settings cannot override organization restrictions; `UserPreferencesSaveAllowed=false` prevents personal changes. Source/data changes invalidate prepared content. Mandatory data exclusions operate even with redaction forced off. A personal preference can be stricter than the organization setting. Forced exclusions make Preview read-only. `FileExportAllowed` and `ClipboardExportAllowed` also apply to diagnostic JSON exports; diagnostics viewing is always separate from Preview/Customize and context format restrictions. `UserPreferencesSaveAllowed` covers saved data and logging choices as well as popup/filter preferences.
+
+## Optional capture metadata history
+
+History is off by default and independent of the content-free technical journal. See [history behavior and privacy boundaries](data-controls-and-diagnostics.md#optional-capture-history).
+
+| Policy | Type | Behavior |
+| --- | --- | --- |
+| `CaptureHistoryEnabled` | Boolean | Force local capture-header history on/off. Missing: personal choice, default off. |
+| `CaptureHistoryRetentionDays` | Integer 1–365 | Force the retention period. Missing: personal choice, default 60 days. |
+| `CaptureHistoryMaxMiB` | Integer 1–50 | Force the compact JSON byte limit in MiB. Missing: personal choice, default 10 MiB. |
+| `CaptureHistoryClearAllowed` | Boolean | False blocks manual history clearing in the UI and background. Default: true. Automatic retention continues. |
+| `CaptureHistorySettingsLocked` | Boolean | Lock all history settings. Unspecified locked values use defaults. Default: false. |
+
+Each explicitly supplied value is mandatory. With no full lock, users can change fields the administrator has not supplied. `UserPreferencesSaveAllowed=false` also prevents saving history preferences. Clear history remains available unless `CaptureHistoryClearAllowed=false`. To prevent users from shortening retention, lock history settings as well. Neither clear permission blocks viewing the diagnostics page. Retention removes oldest entries at the first time/size/count limit; changing limits can delete older entries. Metadata exclusions and required corporate redaction apply to existing history on access as well as future captures. History never enters technical diagnostic reports automatically and exports honor file/clipboard restrictions. These policies do not make the local database an immutable audit log.
+
+Example, in the usual browser-specific wrapper:
+
+```json
+{
+  "CaptureHistoryEnabled": true,
+  "CaptureHistoryRetentionDays": 120,
+  "CaptureHistoryMaxMiB": 20,
+  "CaptureHistorySettingsLocked": true,
+  "CaptureHistoryClearAllowed": false,
+  "TechnicalLogClearAllowed": false
+}
+```

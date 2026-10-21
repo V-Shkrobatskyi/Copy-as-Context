@@ -1,6 +1,17 @@
 # Changelog
 
-## 1.5.0 — unreleased
+## 1.5.1 — unreleased
+
+- Add personal capture-site allowed/blocked lists for page, element and embedded-frame captures, combined with organization restrictions.
+
+- Add independent enterprise restrictions on manual capture-history and technical-journal clearing, enforced in the interface and background.
+
+- Add opt-in local capture-header history with configurable 1–365 day / 1–50 MiB retention, explicit export and managed settings locks.
+- Keep Chrome element exports working when an additional extension context has no matching picker session.
+
+- Add managed capture source allow/deny lists, mandatory metadata and form-value exclusions, and personal data controls across page and element exports.
+- Add a private bounded local technical journal with logging levels, temporary personal Debug, configurable managed retention and explicit clearing.
+- Add a diagnostics page and previewed JSON reports with opt-in journal inclusion, safe policy summaries and export restrictions.
 
 - Add browser-managed enterprise policies for export destinations, formats, compression, redaction, element selection, Preview and Customize access, and personal preference saving.
 - Support mandatory corporate redaction rules and forced on/off states for individual built-in filters without changing their matching definitions.

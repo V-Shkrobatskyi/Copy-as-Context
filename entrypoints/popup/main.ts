@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { isManaged } from '@/src/policy/model';
+
 import { readPolicy, checkPolicy, watchPolicy, policyMessage, type PolicyContext, type PolicySnapshot } from '@/src/policy/runtime';
 import { assertAction, formats, levels, redactionMode, resolvePreferences, PolicyError } from '@/src/policy/model';
 import { openPreview } from '@/src/preview-session';
@@ -9,6 +11,7 @@ import { captureWarningText } from '@/src/preview-message';
 import { openFirefoxSave } from '@/src/firefox-save';
 import { installTouchButtonFeedback } from '@/src/touch-button-feedback';
 import '@popup-style.css';
+import { technicalEvent } from '@/src/diagnostics/client';
 import { browser } from 'wxt/browser';
 
 import {
@@ -131,7 +134,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <p class="status" role="status" aria-live="polite"></p>
       <p class="metrics" aria-live="polite"></p>
     </section>
-    <footer class="help"><span>New here?</span> <a id="guide-link" target="_blank" rel="noopener">View the quick guide</a> · <a id="license-link" href="/license.html" target="_blank" rel="noopener">License</a></footer>
+    <footer class="help"><a id="guide-link" target="_blank" rel="noopener">Guide</a> · <a id="diagnostics-link" href="/diagnostics.html" target="_blank" rel="noopener">Diagnostics &amp; data controls</a> · <a id="license-link" href="/license.html" target="_blank" rel="noopener">License</a></footer>
 
   </main>
 `;
@@ -207,7 +210,7 @@ async function refreshPolicy(): Promise<void> {
     if (policyLoadFailed) showFeedback('Organization policies loaded. Try your action again.');
     policyLoadFailed = false;
     const note = document.querySelector<HTMLElement>('#organization-policy');
-    if (note) { note.hidden = !snapshot.revision; note.textContent = snapshot.revision ? 'Managed by your organization · Policy version 1' : ''; }
+    if (note) { note.hidden = !isManaged(snapshot.policy); note.textContent = isManaged(snapshot.policy) ? 'Managed by your organization · Policy version 1' : ''; }
     const retry = document.querySelector<HTMLElement>('#retry-policy'); if (retry) retry.hidden = true;
     if (formats(snapshot.policy).length && levels(snapshot.policy).length) {
       const effective = resolvePreferences(snapshot.policy, personalSettings);
@@ -239,7 +242,9 @@ const COMPRESSION_VALUES: readonly CompressionLevel[] = ['without', 'detailed', 
 guideLink.href = browser.runtime.getURL('/guide.html');
 const licenseLink = document.querySelector<HTMLAnchorElement>('#license-link')!;
 licenseLink.href = browser.runtime.getURL('/license.html');
-for (const [link, path] of [[guideLink, '/guide.html'], [licenseLink, '/license.html']] as const) {
+const diagnosticsLink = document.querySelector<HTMLAnchorElement>('#diagnostics-link')!;
+diagnosticsLink.href = browser.runtime.getURL('/diagnostics.html');
+for (const [link, path] of [[guideLink, '/guide.html'], [diagnosticsLink, '/diagnostics.html'], [licenseLink, '/license.html']] as const) {
   link.addEventListener('click', event => {
     event.preventDefault();
     void browser.tabs.create({ url: browser.runtime.getURL(path), active: true })
@@ -363,6 +368,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
     if (action === 'save' && firefox) {
       const granted = await browser.permissions.request({ permissions: ['downloads'] });
       if (!granted) {
+        technicalEvent({ code: 'download-complete', result: 'error', reason: 'permission-denied' });
         showFeedback('Download permission was not granted. Use Copy or try Save again.');
         return;
       }
@@ -378,7 +384,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       format: exportFormat,
       redactSensitiveData: redactSensitiveData.checked,
     };
-    const context = { ...request, policyRevision: policySnapshot?.revision };
+    const context = { ...request, operationId: undefined as string | undefined, policyRevision: policySnapshot?.revision };
     await checkPolicy(action, context);
     const response = await browser.runtime.sendMessage(request);
     if (!isCaptureActiveTabResponse(response)) {
@@ -391,6 +397,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
     }
 
     context.policyRevision = response.policyRevision;
+    context.operationId = response.operationId;
     await checkPolicy(action, context);
     const result = response.export;
     let characterCount = result.characterCount;
@@ -398,7 +405,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
     destinationStarted = true;
     if (action === 'preview') {
       await openPreview({
-        policyRevision: response.policyRevision, content: result.serialized.content, compression: request.compression, format: exportFormat,
+        operationId: response.operationId, policyRevision: response.policyRevision, content: result.serialized.content, compression: request.compression, format: exportFormat,
         redactSensitiveData: request.redactSensitiveData, redactionCount: result.redactionCount,
         reductionRatio: result.reductionRatio,
         warnings: response.warnings ?? [],
@@ -410,6 +417,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
     if (action === 'copy') {
       const content = wrapClipboardContext(result.serialized.content, request.compression);
       await navigator.clipboard.writeText(content);
+      technicalEvent({ code: 'clipboard-complete', result: 'success', operation: response.operationId });
       characterCount = content.length;
       approximateTokenCount = Math.ceil(characterCount / 4);
       showFeedback(`Copied ${FORMAT_LABELS[exportFormat]}.`);
@@ -426,6 +434,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       action,
     ) + (warnings ? ` ${warnings}` : '');
   } catch (error) {
+    if (destinationStarted) technicalEvent({ code: action === 'copy' ? 'clipboard-complete' : action === 'preview' ? 'preview-transfer' : 'download-complete', result: 'error', reason: error instanceof PolicyError ? 'policy-blocked' : 'failed' });
     showFeedback(error instanceof PolicyError ? policyMessage(error) : ERROR_MESSAGES[
       destinationStarted ? (action === 'preview' ? 'preview-failed' : action === 'copy' ? 'copy-failed' : 'save-failed') : 'capture-failed'
     ]!);

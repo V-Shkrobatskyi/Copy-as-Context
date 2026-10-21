@@ -69,6 +69,16 @@ for (const target of ['chrome', 'firefox']) {
     assert.ok(previewDocument.window.document.querySelector('button#save'), 'Missing preview Save action');
     assert.ok(previewDocument.window.document.querySelector('#compression-metrics'), 'Missing preview compression metrics');
   } finally { previewDocument.window.close(); }
+  const diagnosticsDocument = new JSDOM(await readFile(new URL('diagnostics.html', directory), 'utf8'));
+  try {
+    assert.equal(diagnosticsDocument.window.document.documentElement.lang, 'en');
+    for (const id of ['data-form', 'include-title', 'include-values', 'level', 'clear', 'include-log', 'report', 'copy', 'save', 'sources-form', 'sources-allowlist', 'sources-allowed', 'sources-blocked', 'save-sources', 'history-form', 'history-enabled', 'history-days', 'history-size', 'history-entries', 'history-copy', 'history-save']) assert.ok(diagnosticsDocument.window.document.getElementById(id), `Missing diagnostics control: ${id}`);
+    assert.equal(diagnosticsDocument.window.document.querySelector('#include-log').checked, false);
+    assert.equal(diagnosticsDocument.window.document.querySelector('#sources-allowlist').checked, false);
+    assert.equal(diagnosticsDocument.window.document.querySelector('#history-enabled').checked, false);
+    assert.equal(diagnosticsDocument.window.document.querySelector('#history-days').max, '365');
+    assert.equal(diagnosticsDocument.window.document.querySelector('#history-size').max, '50');
+  } finally { diagnosticsDocument.window.close(); }
   assert.ok(!manifest.host_permissions?.length);
   assert.ok(!manifest.content_scripts?.length);
   const source = await javascript(fileURLToPath(directory));

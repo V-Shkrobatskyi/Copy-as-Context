@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
-import type { CaptureOutcome } from '../types';
+import type { CaptureControls, CaptureOutcome } from '../types';
 import { createFrameCapturer } from './capture-frames';
 
 export interface ChromeDebuggerSession {
@@ -53,6 +53,6 @@ export const createChromeAccessibilityCapturer = createFrameCapturer;
 const captureWithChrome = createChromeAccessibilityCapturer(chromeDebuggerClient());
 
 /** Captures a tab and eligible embedded documents, then releases all debugger sessions. */
-export function captureChromeAccessibilityTree(tabId: number, selection?: string, signal?: AbortSignal): Promise<CaptureOutcome> {
-  return captureWithChrome(tabId, selection, signal);
+export function captureChromeAccessibilityTree(tabId: number, selection?: string, signal?: AbortSignal, controls?: CaptureControls): Promise<CaptureOutcome> {
+  return captureWithChrome(tabId, selection, signal, controls);
 }

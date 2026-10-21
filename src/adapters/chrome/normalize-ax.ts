@@ -19,26 +19,6 @@ const STATE_PROPERTIES: ReadonlyMap<string, keyof NodeStates> = new Map([
 type InvalidTreeReason = 'empty-nodes' | 'missing-id' | 'conflicting-duplicate-id' | 'missing-child' |
   'shared-child' | 'root-count' | 'cycle' | 'missing-role' | 'disconnected';
 
-/** Structural counters only: never log page text, values, URLs, or CDP IDs. */
-function graphSummary(nodes: ChromeAxNode[]) {
-  const ids = new Set(nodes.map((node) => node.nodeId));
-  const references = nodes.flatMap((node) => node.childIds ?? []);
-  const referencedIds = new Set(references);
-  return {
-    nodes: nodes.length,
-    duplicateIds: nodes.length - ids.size,
-    missingIds: nodes.filter((node) => typeof node.nodeId !== 'string' || node.nodeId.length === 0).length,
-    roots: nodes.filter((node) => !referencedIds.has(node.nodeId)).length,
-    missingChildReferences: references.filter((id) => !ids.has(id)).length,
-    repeatedChildReferences: references.length - referencedIds.size,
-    ignoredNodes: nodes.filter((node) => node.ignored === true).length,
-    missingRoles: nodes.filter((node) => !stringValue(node.role)).length,
-    ignoredMissingRoles: nodes.filter((node) => node.ignored === true && !stringValue(node.role)).length,
-    rootWebAreas: nodes.filter((node) => stringValue(node.role) === 'RootWebArea').length,
-    explicitFrameIds: new Set(nodes.flatMap((node) => node.frameId === undefined ? [] : [node.frameId])).size,
-  };
-}
-
 function stringValue(value: ChromeAxValue | undefined): string | undefined {
   return typeof value?.value === 'string' && value.value.length > 0 ? value.value : undefined;
 }
@@ -126,11 +106,6 @@ export function normalizeChromeAxTree(response: ChromeAxTreeResponse, options: {
   // Preserve the existing child-reference filtering only when a root frame is identified.
   const hasRootFrame = frameNodes.some((node) => node.frameId !== undefined && stringValue(node.role) === 'RootWebArea');
   const invalidTree = (reason: InvalidTreeReason, details: string): CaptureResult => {
-    console.warn('[Copy as Context] AX normalization rejected', {
-      reason,
-      raw: graphSummary(Array.isArray(response.nodes) ? response.nodes : []),
-      filtered: graphSummary(hasRootFrame ? filterChildReferences(frameNodes) : frameNodes),
-    });
     return {
       ok: false,
       error: { code: 'invalid-tree', message: 'Chrome returned an invalid accessibility tree.', details },
@@ -213,6 +188,7 @@ export function normalizeChromeAxTree(response: ChromeAxTreeResponse, options: {
       role: role === 'RootWebArea' ? 'page' : role,
       children,
     };
+    if (properties.get('editable')?.value) normalized.editable = true;
     const name = stringValue(node.name);
     const value = stringValue(node.value);
     const level = numberValue(properties.get('level'));

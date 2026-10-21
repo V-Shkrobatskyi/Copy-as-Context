@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({ get: vi.fn(), localGet: vi.fn(), set: vi.fn(),
 vi.mock('wxt/browser', () => ({ browser: { storage: { managed: { get: mocks.get }, local: { get: mocks.localGet, set: mocks.set }, onChanged: {
   addListener: (fn: (...args: any[]) => void) => mocks.listeners.add(fn), removeListener: (fn: (...args: any[]) => void) => mocks.listeners.delete(fn),
 } } } }));
-import { checkPolicy, readPolicy, watchPolicy } from '@/src/policy/runtime';
+import { checkPolicy, readPolicy, watchPolicy, captureOptions, assertSource } from '@/src/policy/runtime';
 import { loadRedactionSettings, saveRedactionSettings } from '@/src/redaction-settings';
 const prefs = { format: 'markdown', compression: 'compact', redactSensitiveData: true } as const;
 beforeEach(() => { mocks.get.mockReset().mockResolvedValue({}); mocks.localGet.mockReset().mockResolvedValue({}); mocks.set.mockReset(); mocks.listeners.clear(); });
@@ -57,10 +57,10 @@ describe('managed storage enforcement', () => {
   });
   it('loads corporate rules despite unreadable personal filters when personal customization is disabled', async () => {
     mocks.get.mockResolvedValue({ UserRedactionRulesAllowed: false, RequiredBuiltinFilters: ['email-hide'] });
-    mocks.localGet.mockRejectedValue(new Error('Unreadable personal configuration'));
+    mocks.localGet.mockImplementation(async (key: string) => { if ((key === 'data-controls-v1' || key === 'capture-sources-v1')) return {}; throw new Error('Unreadable personal configuration'); });
     const filters = await loadRedactionSettings();
     expect(filters.disabledBuiltins).not.toContain('email-hide');
-    expect(mocks.localGet).not.toHaveBeenCalled();
+    expect(mocks.localGet.mock.calls.every(([key]) => (key === 'data-controls-v1' || key === 'capture-sources-v1'))).toBe(true);
   });
 });
 
@@ -75,4 +75,37 @@ it('keeps managed on/off overrides outside saved preferences and restores person
   expect(mocks.set).not.toHaveBeenCalled(); expect(original).toEqual(defaultRedactionSettings());
   mocks.get.mockResolvedValue({});
   expect(await loadRedactionSettings()).toEqual(original);
+});
+
+it('invalidates prepared contexts when personal data exclusions change without a managed policy', async () => {
+  const old = await readPolicy();
+  mocks.localGet.mockResolvedValue({ 'data-controls-v1': { includeTitle: false, includeFormValues: false, pageUrl: 'origin', linkUrls: 'omit' } });
+  const current = await readPolicy(); expect(current.revision).toMatch(/^[a-f0-9]{64}$/);
+  await expect(checkPolicy('copy', { ...prefs, policyRevision: old.revision })).rejects.toThrow('changed');
+  await expect(checkPolicy('copy', { ...prefs, policyRevision: current.revision })).resolves.toBeDefined();
+});
+
+it('enforces personal sources across main-document checks and adapter controls and invalidates old results', async () => {
+  const old = await readPolicy();
+  mocks.get.mockResolvedValue({ AllowedCaptureSources: ['https://*.company.test'] });
+  mocks.localGet.mockResolvedValue({ 'capture-sources-v1': { allowlistEnabled: false, allowed: [], blocked: ['https://private.company.test'] } });
+  const snapshot = await readPolicy();
+  expect(() => assertSource('https://private.company.test', snapshot)).toThrow('personal site settings');
+  expect(() => assertSource('https://outside.test', snapshot)).toThrow('administrator');
+  expect(() => assertSource('https://team.company.test', snapshot)).not.toThrow();
+  expect(captureOptions(snapshot).sources).toMatchObject({ AllowedCaptureSources: ['https://*.company.test'], personal: { BlockedCaptureSources: ['https://private.company.test'] } });
+  await expect(checkPolicy('copy', { ...prefs, policyRevision: old.revision })).rejects.toThrow('changed');
+  mocks.localGet.mockResolvedValue({ 'capture-sources-v1': { allowlistEnabled: 'invalid' } });
+  await expect(readPolicy()).rejects.toThrow('capture source settings');
+  await expect(readPolicy(false)).resolves.toBeDefined();
+});
+
+it('watches personal source changes and normalizes source-list order for revisions', async () => {
+  const changed = vi.fn(); const stop = watchPolicy(changed);
+  for (const listener of mocks.listeners) listener({ 'capture-sources-v1': {} }, 'local');
+  expect(changed).toHaveBeenCalledOnce(); stop();
+  mocks.localGet.mockResolvedValue({ 'capture-sources-v1': { allowlistEnabled: true, allowed: ['https://b.test', 'https://a.test'], blocked: [] } });
+  const first = await readPolicy();
+  mocks.localGet.mockResolvedValue({ 'capture-sources-v1': { allowlistEnabled: true, allowed: ['https://a.test', 'https://b.test'], blocked: [] } });
+  expect((await readPolicy()).revision).toBe(first.revision);
 });

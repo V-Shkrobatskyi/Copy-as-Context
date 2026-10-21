@@ -646,7 +646,7 @@ it('blocks the directly opened Customize page and clears its rules when access i
   await vi.waitFor(() => expect(get('status').textContent).toContain('Filter settings are disabled'));
   expect(document.querySelector<HTMLElement>('.filters-section')!.hidden).toBe(true);
   expect(get('test-panel').hidden).toBe(true); expect(get('builtins').children.length).toBe(0);
-  expect(getStored).not.toHaveBeenCalled();
+  expect(getStored.mock.calls.every(([key]) => (key === 'data-controls-v1' || key === 'capture-sources-v1'))).toBe(true);
   expect(get<HTMLButtonElement>('save-filters').disabled).toBe(true);
   expect(get<HTMLButtonElement>('close-filters').disabled).toBe(false);
   managedGet.mockResolvedValue({});

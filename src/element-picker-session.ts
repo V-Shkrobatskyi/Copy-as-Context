@@ -1,7 +1,10 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { checkPolicy, watchPolicy } from './policy/runtime';
+import { captureMetadata } from './history/model';
+import { recordCaptureHistory } from './history/client';
+import { technicalEvent } from './diagnostics/client';
+import { checkPolicy, watchPolicy, captureDataControls, captureOptions, assertSource } from './policy/runtime';
 import { browser } from 'wxt/browser';
 import { captureActiveTab } from './adapters/capture';
 import { prepareExport } from './core';
@@ -41,6 +44,7 @@ export function createPickerCoordinator() {
         if (platform.os === 'android') throw new Error('Element selection is currently available on desktop only.');
         const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
         if (tab?.id === undefined || !tab.url || !/^https?:\/\//u.test(tab.url)) throw new Error('Open a regular HTTP or HTTPS page to select a block.');
+        assertSource(tab.url, snapshot);
         sessions.get(tab.id)?.close();
         const token = crypto.randomUUID();
         const tabId = tab.id;
@@ -85,6 +89,8 @@ export function createPickerCoordinator() {
         const capture = async (action: PickerAction) => {
           if (!ready || capturing) return;
           capturing = true;
+          const operation = crypto.randomUUID();
+          technicalEvent({ code: 'capture-start', result: 'started', operation });
           try {
             await checkPolicy('picker', context);
             await checkPolicy(action, context);
@@ -93,11 +99,12 @@ export function createPickerCoordinator() {
               downloadsGranted = false;
               throw new Error('Download permission was not granted. Try Save again.');
             }
+            assertSource((await browser.tabs.get(tabId)).url, snapshot);
             await verify();
             const date = new Date();
             const pad = (value: number) => String(value).padStart(2, '0');
             const capturedAt = `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-            const outcome = await captureActiveTab({ id: tabId, url, title: tab.title }, capturedAt, token, abort.signal);
+            const outcome = await captureActiveTab({ id: tabId, url, title: tab.title }, capturedAt, token, abort.signal, captureOptions(snapshot));
             ensure();
             if (!outcome.ok) throw new Error(outcome.error.message);
             outcome.tree.selectedElementTag = await verify();
@@ -109,13 +116,14 @@ export function createPickerCoordinator() {
             });
             ensure();
             await checkPolicy(action, context);
-            const result = prepareExport(outcome.tree, preferences.compression, preferences.format, preferences.redactSensitiveData, filters);
-            const payload = { policyRevision: snapshot.revision, content: result.serialized.content, scope: 'selection' as const,
+            assertSource((await browser.tabs.get(tabId)).url, snapshot);
+            const result = prepareExport(outcome.tree, preferences.compression, preferences.format, preferences.redactSensitiveData, filters, captureDataControls(snapshot));
+            if (!tab.incognito) recordCaptureHistory(captureMetadata(outcome.tree, captureDataControls(snapshot), preferences.redactSensitiveData, filters, preferences.compression));
+            const payload = { operationId: operation, policyRevision: snapshot.revision, content: result.serialized.content, scope: 'selection' as const,
               compression: preferences.compression, format: preferences.format, redactSensitiveData: preferences.redactSensitiveData,
               redactionCount: result.redactionCount, reductionRatio: result.reductionRatio, warnings: outcome.warnings ?? [],
             };
             if (action === 'copy') {
-              const operation = crypto.randomUUID();
               const acknowledged = new Promise<void>((resolve, reject) => { copyAck = { operation, resolve, reject }; });
               void acknowledged.catch(() => {});
               const timeout = setTimeout(() => copyAck?.reject(new Error('Copy took too long. Try again.')), 8_000);
@@ -126,10 +134,12 @@ export function createPickerCoordinator() {
             } else if (action === 'save') await openSelectionSave(payload, abort.signal);
             else await openPreview(payload, abort.signal);
             ensure();
+            technicalEvent({ code: action === 'copy' ? 'clipboard-complete' : 'picker-complete', result: 'success', operation });
             if (action === 'preview') {
               session?.port?.postMessage({ type: 'complete' }); session?.close();
             } else session?.port?.postMessage({ type: 'exported', message: `${action === 'copy' ? 'Copied selected context.' : 'Saving selected context in a separate tab.'} ${captureWarningText(outcome.warnings ?? [])}`.trim() });
           } catch (error) {
+            technicalEvent({ code: 'picker-complete', result: 'error', reason: 'failed', operation });
             if (!abort.signal.aborted) {
               try { session?.port?.postMessage({ type: 'error', message: error instanceof Error ? error.message : 'Unable to prepare the selection. Try again.' }); }
               catch { session?.close(); }
@@ -212,8 +222,10 @@ export function createPickerCoordinator() {
           }));
           await started; ensure();
         } finally { clearTimeout(startup); }
+        technicalEvent({ code: 'picker-start', result: 'success' });
         return { ok: true };
       } catch (error) {
+        technicalEvent({ code: 'picker-start', result: 'error', reason: 'failed' });
         session?.close();
         if (requestTab !== undefined && requests.get(requestTab) === requestKey) requests.delete(requestTab);
         return { ok: false, error: { message: error instanceof Error ? error.message : 'Unable to start element selection.' } };

@@ -1,6 +1,6 @@
 # Privacy policy for Copy as Context
 
-Last updated: 2026-10-21. Applies to version 1.5.0.
+Last updated: 2026-10-21. Applies to version 1.5.1.
 
 ## Purpose and local processing
 
@@ -13,6 +13,15 @@ An export can contain page text, title, URL, accessible labels, semantic roles, 
 The extension uses this information only to create the export you request. It does not monitor your browsing history in the background or upload captured pages to the developer.
 
 ## Storage and retention
+
+Personal capture-site allowed/blocked lists are stored locally as preferences. They can only add restrictions to organization policy. Actual site lists are excluded from diagnostic JSON reports. They restrict future captures and do not erase existing history.
+
+Capture history is a separate, optional feature, off by default. If you or your organization enable it, the extension keeps captured headers (title, URL, browser, capture time, page/selection scope, selected element tag, extension version and compact export settings), without page/element contents. URL credentials are removed; data exclusions and redaction apply. Titles and full URLs can still contain sensitive information. Private/incognito tabs and the synthetic demo are excluded. Defaults are 60 days and 10 MiB of compact JSON, configurable from 1–365 days and 1–50 MiB, with a further 100,000-entry safety limit. Oldest records expire during history access. History is held in a separate local IndexedDB database. Off stops new records; Clear history removes retained records unless your organization prohibits manual clearing. You may explicitly copy or save its JSON, subject to organization restrictions. History is never included in the technical diagnostic report, uploaded or synchronized automatically. Administrators can enforce values and lock settings. Existing records are sanitized when current restrictions require more metadata removal; deleted data is not restored.
+
+The extension also stores your personal data controls and a bounded local technical journal. The default journal level is Error. Events contain fixed technical codes, timestamps, optional temporary random operation IDs, duration and repeat counts, without page content, URLs, titles, field values, filenames, rule text or raw errors. The journal is stored in extension-origin IndexedDB, with default limits of 1000 events, 2 MiB of serialized event data and seven days; an administrator can lower the limits or set the logging level. Expired entries are removed during journal access. Personal Debug expires after 30 minutes, including across restart. Off stops new entries; Clear journal deletes retained entries unless your organization prohibits manual clearing. Automatic retention continues under these restrictions. Storage and browser shutdown can lose recent entries. No journal is uploaded automatically.
+
+Diagnostics previews a versioned report of local runtime capabilities, safe policy status, restriction flags and counts, effective settings and journal usage. It excludes internal source lists and rule text. Journal events are included only by explicit choice. You choose whether to copy/save this JSON; organization export restrictions apply. The journal is a troubleshooting aid, not browsing history, stored copied content or tamper-proof audit evidence.
+
 
 The extension persists your compression, format, and privacy preferences in browser-local extension storage when you choose Save preferences. It does not maintain a persistent archive of captured pages. Capture data is held temporarily for processing; runtime and browser cleanup determine when memory is reclaimed.
 

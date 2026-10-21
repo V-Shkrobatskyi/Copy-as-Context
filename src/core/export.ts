@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { applyDataControls, type DataControls } from './data-controls';
 import { renderExportAttribution } from './serializers/attribution';
 import type { CompressionLevel, ExportFormat, SerializedContext } from './contracts';
 import type { SemanticTree } from './model';
@@ -21,14 +22,16 @@ export interface PreparedExport {
   redactionCount: number;
 }
 
-/** Runs export in the order compression, optional redaction, then serialization. */
+/** Runs export in the order mandatory data exclusions, compression, optional redaction, then serialization. */
 export function prepareExport(
   tree: SemanticTree,
   compressionLevel: CompressionLevel,
   format: SupportedExportFormat,
   redactSensitiveData = true,
   redactionSettings?: RedactionSettings,
+  dataControls?: DataControls,
 ): PreparedExport {
+  tree = applyDataControls(tree, dataControls);
   // Without is already normalized; serializers and redaction do not mutate it.
   const selectedTree = compressionLevel === 'without' ? tree : compressSemanticTree(tree, compressionLevel);
   const redaction = redactForExport(selectedTree, redactSensitiveData, redactionSettings);
