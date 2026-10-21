@@ -51,6 +51,10 @@ npm run build:firefox
 - **Firefox Desktop:** open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `.output/firefox-mv3/manifest.json`. Temporary installation ends when Firefox closes.
 - **Firefox Android:** use `.output/firefox-mv3` with the [device installation instructions](docs/firefox-android-testing.md).
 
+## Enterprise management
+
+Administrators can configure allowed exports, formats, compression and required redaction using browser-managed policies. See the [enterprise deployment guide](docs/enterprise-deployment.md) for the policy reference, platform templates and rollout verification status.
+
 ## Supported browsers
 
 | Browser | Capture | Export | Minimum |

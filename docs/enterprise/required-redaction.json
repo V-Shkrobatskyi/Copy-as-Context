@@ -1,0 +1,22 @@
+{
+  "PolicyVersion": 1,
+  "RedactionMode": "force-on",
+  "RequiredBuiltinFilters": [
+    "authorization",
+    "jwt",
+    "github",
+    "aws",
+    "email-hide"
+  ],
+  "ManagedRedactionRules": [
+    {
+      "id": "internal-project",
+      "name": "Internal project name",
+      "type": "text",
+      "text": "SYNTHETIC_PROJECT_NAME",
+      "caseSensitive": false,
+      "enabled": true
+    }
+  ],
+  "UserRedactionRulesAllowed": true
+}

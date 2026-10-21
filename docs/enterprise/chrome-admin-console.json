@@ -1,0 +1,51 @@
+{
+  "PolicyVersion": {
+    "Value": 1
+  },
+  "ElementPickerAllowed": {
+    "Value": false
+  },
+  "FileExportAllowed": {
+    "Value": false
+  },
+  "ClipboardExportAllowed": {
+    "Value": true
+  },
+  "AllowedExportFormats": {
+    "Value": [
+      "semantic-text"
+    ]
+  },
+  "ForcedCompression": {
+    "Value": "compact"
+  },
+  "RedactionMode": {
+    "Value": "force-on"
+  },
+  "RequiredBuiltinFilters": {
+    "Value": [
+      "authorization",
+      "jwt",
+      "github",
+      "aws",
+      "email-hide"
+    ]
+  },
+  "UserRedactionRulesAllowed": {
+    "Value": false
+  },
+  "UserPreferencesSaveAllowed": {
+    "Value": false
+  },
+  "PreviewAllowed": {
+    "Value": false
+  },
+  "FilterSettingsAllowed": {
+    "Value": false
+  },
+  "DisabledBuiltinFilters": {
+    "Value": [
+      "email-mask-domain"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "PolicyVersion": 1,
+  "ElementPickerAllowed": false,
+  "FileExportAllowed": false,
+  "ClipboardExportAllowed": true,
+  "AllowedExportFormats": [
+    "semantic-text"
+  ],
+  "ForcedCompression": "compact",
+  "RedactionMode": "force-on",
+  "RequiredBuiltinFilters": [
+    "authorization",
+    "jwt",
+    "github",
+    "aws",
+    "email-hide"
+  ],
+  "UserRedactionRulesAllowed": false,
+  "UserPreferencesSaveAllowed": false,
+  "PreviewAllowed": false,
+  "FilterSettingsAllowed": false,
+  "DisabledBuiltinFilters": [
+    "email-mask-domain"
+  ]
+}
