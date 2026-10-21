@@ -5,6 +5,7 @@ import './style.css';
 import { policyMessage, type PolicyContext } from '@/src/policy/runtime';
 import { PolicyError } from '@/src/policy/model';
 import { browser } from 'wxt/browser';
+import { isDownloadCancellation } from '@/src/download-errors';
 import { saveContextFile } from '@/src/save-context';
 import { FIREFOX_SAVE_MESSAGE } from '@/src/firefox-save';
 import type { SupportedExportFormat } from '@/src/core';
@@ -26,7 +27,8 @@ async function save(content: string, format: SupportedExportFormat, context?: Po
     status.textContent = 'File saved. You can close this tab.';
     await closeTab().catch(() => {});
   } catch (error) {
-    status.textContent = error instanceof PolicyError ? policyMessage(error) : 'Unable to save the file, or saving was cancelled. Close this tab and try Save again from the extension.';
+    if (isDownloadCancellation(error)) { await closeTab().catch(() => {}); return; }
+    status.textContent = error instanceof PolicyError ? policyMessage(error) : 'Unable to save the file. Close this tab and try Save again from the extension.';
     const tab = await browser.tabs.getCurrent();
     if (tab?.id !== undefined) await browser.tabs.update(tab.id, { active: true }).catch(() => {});
   }

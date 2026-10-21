@@ -101,3 +101,26 @@ it('rejects stale prepared contexts and mismatched formats at the final download
   await expect(saveContextFile('Synthetic', 'markdown', undefined, context)).rejects.toThrow('changed');
   expect(download).not.toHaveBeenCalled(); expect(URL.createObjectURL).not.toHaveBeenCalled();
 });
+
+
+it.each([new Error('USER_CANCELED'), new Error('Download canceled by the user'), { message: 'Download canceled by the user' }])('recognizes Save As rejection as cancellation: %j', async error => {
+  download.mockRejectedValue(error);
+  const { task } = await start();
+  const { DownloadCancelledError } = await import('@/src/download-errors');
+  await expect(task).rejects.toBeInstanceOf(DownloadCancelledError);
+  expect(search).not.toHaveBeenCalled(); cleaned();
+});
+
+it.each(['event', 'search'] as const)('recognizes USER_CANCELED from the download %s and releases resources', async source => {
+  if (source === 'search') search.mockResolvedValue([{ state: 'interrupted', error: 'USER_CANCELED' }]);
+  const { task } = await start();
+  if (source === 'event') changed.emit({ id: 12, state: { current: 'interrupted' }, error: { current: 'USER_CANCELED' } });
+  const { DownloadCancelledError } = await import('@/src/download-errors');
+  await expect(task).rejects.toBeInstanceOf(DownloadCancelledError); cleaned();
+});
+
+it('keeps real download failures distinct from cancellation', async () => {
+  const error = new Error('FILE_ACCESS_DENIED'); download.mockRejectedValue(error);
+  const { task } = await start();
+  await expect(task).rejects.toBe(error); cleaned();
+});
