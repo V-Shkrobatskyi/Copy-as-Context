@@ -5,13 +5,12 @@ import { captureMetadata } from './history/model';
 import { recordCaptureHistory } from './history/client';
 import { technicalEvent } from './diagnostics/client';
 import { checkPolicy, watchPolicy, captureDataControls, captureOptions, assertSource } from './policy/runtime';
-import { browser } from 'wxt/browser';
+import { browser, type Browser } from 'wxt/browser';
 import { captureActiveTab } from './adapters/capture';
 import { prepareExport } from './core';
 import { loadRedactionSettings } from './redaction-settings';
 import { resolveBrowserInfo } from './platform/browser-info';
 import { openPreview, openSelectionSave } from './preview-session';
-import { captureWarningText } from './preview-message';
 import { wrapClipboardContext } from './clipboard-context';
 import { PICKER_PORT, PICKER_TTL, PICKER_SAVE_PERMISSION, selectedElementInfo, type PickerPreferences, type PickerAction } from './element-picker-protocol';
 import type { RedactionSettings } from './core/privacy/settings';
@@ -32,7 +31,7 @@ export function createPickerCoordinator() {
   const sessions = new Map<number, Session>();
   const requests = new Map<number, symbol>();
   return {
-    async start(preferences: PickerPreferences): Promise<{ ok: true } | { ok: false; error: { message: string } }> {
+    async start(preferences: PickerPreferences, target?: Browser.tabs.Tab): Promise<{ ok: true } | { ok: false; error: { message: string } }> {
       let session: Session | undefined;
       let requestTab: number | undefined;
       let requestKey: symbol | undefined;
@@ -42,8 +41,12 @@ export function createPickerCoordinator() {
         await checkPolicy('picker', context);
         const platform = await browser.runtime.getPlatformInfo();
         if (platform.os === 'android') throw new Error('Element selection is currently available on desktop only.');
-        const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+        const tab = target ?? (await browser.tabs.query({ active: true, lastFocusedWindow: true }))[0];
         if (tab?.id === undefined || !tab.url || !/^https?:\/\//u.test(tab.url)) throw new Error('Open a regular HTTP or HTTPS page to select a block.');
+        if (target) {
+          const current = await browser.tabs.get(tab.id);
+          if (current.url !== tab.url || !current.active) throw new Error('The page changed. Try the shortcut again.');
+        }
         assertSource(tab.url, snapshot);
         sessions.get(tab.id)?.close();
         const token = crypto.randomUUID();
@@ -135,9 +138,8 @@ export function createPickerCoordinator() {
             else await openPreview(payload, abort.signal);
             ensure();
             technicalEvent({ code: action === 'copy' ? 'clipboard-complete' : 'picker-complete', result: 'success', operation });
-            if (action === 'preview') {
-              session?.port?.postMessage({ type: 'complete' }); session?.close();
-            } else session?.port?.postMessage({ type: 'exported', message: `${action === 'copy' ? 'Copied selected context.' : 'Saving selected context in a separate tab.'} ${captureWarningText(outcome.warnings ?? [])}`.trim() });
+            session?.port?.postMessage({ type: 'complete' });
+            session?.close();
           } catch (error) {
             technicalEvent({ code: 'picker-complete', result: 'error', reason: 'failed', operation });
             if (!abort.signal.aborted) {

@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.5.1 — unreleased
+## 1.5.2 — unreleased
+
+- Close temporary save tabs quietly when Save As is cancelled, and keep genuine download failures distinct.
+
+- Close the element picker after successful Copy or transfer to the save tab, while keeping failed exports available for retry.
+
+- Add desktop keyboard shortcuts for Preview, Copy, Save and element selection, with browser shortcut settings in the popup footer.
 
 - Add personal capture-site allowed/blocked lists for page, element and embedded-frame captures, combined with organization restrictions.
 

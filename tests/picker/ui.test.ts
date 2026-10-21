@@ -34,7 +34,7 @@ function setup(beforeSave?: () => Promise<boolean>) {
 }
 
 describe('element picker interaction', () => {
-  it('copies the prepared reply and restores actions after success without opening Preview', async () => {
+  it('copies the prepared reply and closes the picker after confirmed success', async () => {
     const h = setup(); h.focusedPick();
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(h.dom.window.navigator, 'clipboard', { value: { writeText } });
@@ -46,9 +46,11 @@ describe('element picker interaction', () => {
     await Promise.resolve(); await Promise.resolve();
     expect(writeText).toHaveBeenCalledWith('<web_page>\nSelected context\n</web_page>\n');
     expect(h.channel.send).toHaveBeenCalledWith('copied', { operation: token });
-    h.incoming({ type: 'exported', message: 'Copied selected context.' });
-    expect(h.shadow.host.isConnected).toBe(true);
-    expect(h.button('copy').disabled).toBe(false);
+    expect(h.channel.close).not.toHaveBeenCalled();
+    h.incoming({ type: 'complete' });
+    expect(h.shadow.host.isConnected).toBe(false);
+    expect(h.channel.close).toHaveBeenCalledOnce();
+    expect(h.picker.root()).toBeUndefined();
     expect(h.doc.querySelector(`[${selectionAttribute(token)}]`)).toBeNull();
     h.picker.close();
   });
@@ -62,8 +64,10 @@ describe('element picker interaction', () => {
     expect(h.button('save').disabled).toBe(false);
     h.button('save').click(); await Promise.resolve();
     expect(h.channel.send).toHaveBeenCalledWith('save');
-    h.incoming({ type: 'exported', message: 'Saving selected context.' });
-    expect(h.picker.root()).toBe(h.doc.querySelector('a'));
+    h.incoming({ type: 'complete' });
+    expect(h.picker.root()).toBeUndefined();
+    expect(h.shadow.host.isConnected).toBe(false);
+    expect(h.channel.close).toHaveBeenCalledOnce();
     h.picker.close();
   });
   it('intercepts a pointer over an iframe and selects the whole embedded document without activating it', () => {

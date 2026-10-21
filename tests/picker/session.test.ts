@@ -77,10 +77,13 @@ describe('background-owned selection sessions', () => {
     expect(reply.content).toContain('Selected content');
     expect(reply.content).toContain('Element: Selected block <div>');
     active.onMessage.emit({ type: 'copied', operation: 'stale' }); await flush();
-    expect(active.postMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'exported' }));
-    active.onMessage.emit({ type: 'copied', operation: reply.operation }); await flush();
-    expect(active.postMessage).toHaveBeenCalledWith({ type: 'exported', message: 'Copied selected context.' });
+    expect(active.postMessage).not.toHaveBeenCalledWith({ type: 'complete' });
     expect(active.disconnect).not.toHaveBeenCalled();
+    active.onMessage.emit({ type: 'copied', operation: reply.operation }); await flush();
+    expect(active.postMessage).toHaveBeenCalledWith({ type: 'complete' });
+    expect(active.disconnect).toHaveBeenCalledOnce();
+    expect(mocks.api.runtime.onConnect.listeners.size).toBe(0);
+    expect(mocks.api.tabs.onUpdated.listeners.size).toBe(0);
     expect(mocks.preview).not.toHaveBeenCalled(); expect(mocks.save).not.toHaveBeenCalled();
   });
 
@@ -91,7 +94,26 @@ describe('background-owned selection sessions', () => {
     expect(mocks.save.mock.calls[0]![0].content).not.toContain('<web_page>');
     expect(mocks.save.mock.calls[0]![0].content).toContain('Element: Selected block <div>');
     expect(mocks.preview).not.toHaveBeenCalled();
-    expect(active.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'exported' }));
+    expect(active.postMessage).toHaveBeenCalledWith({ type: 'complete' });
+    expect(active.disconnect).toHaveBeenCalledOnce();
+    expect(mocks.api.runtime.onConnect.listeners.size).toBe(0);
+    expect(mocks.api.tabs.onUpdated.listeners.size).toBe(0);
+  });
+
+  it('keeps the picker session until Save accepts the export and allows retry after a failed handoff', async () => {
+    await coordinator.start(preferences);
+    let rejectSave!: (error: Error) => void;
+    mocks.save.mockReturnValueOnce(new Promise((_resolve, reject) => { rejectSave = reject; }));
+    active.onMessage.emit({ type: 'save' }); await flush();
+    expect(mocks.save).toHaveBeenCalledOnce();
+    expect(active.postMessage).not.toHaveBeenCalledWith({ type: 'complete' });
+    expect(active.disconnect).not.toHaveBeenCalled();
+    rejectSave(new Error('Unable to open the save document.')); await flush();
+    expect(active.postMessage).toHaveBeenCalledWith({ type: 'error', message: 'Unable to open the save document.' });
+    expect(active.disconnect).not.toHaveBeenCalled();
+    active.onMessage.emit({ type: 'save' }); await flush();
+    expect(active.postMessage).toHaveBeenCalledWith({ type: 'complete' });
+    expect(active.disconnect).toHaveBeenCalledOnce();
   });
 
   it('restores the selection after clipboard failure and rejects delayed acknowledgements', async () => {
@@ -101,7 +123,8 @@ describe('background-owned selection sessions', () => {
     active.onMessage.emit({ type: 'copy-failed', operation: reply.operation }); await flush();
     expect(active.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
     active.onMessage.emit({ type: 'copied', operation: reply.operation }); await flush();
-    expect(active.postMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'exported' }));
+    expect(active.postMessage).not.toHaveBeenCalledWith({ type: 'complete' });
+    expect(active.disconnect).not.toHaveBeenCalled();
   });
   it('fixes the target before popup closure and transfers only the prepared export', async () => {
     expect(await coordinator.start(preferences)).toEqual({ ok: true });

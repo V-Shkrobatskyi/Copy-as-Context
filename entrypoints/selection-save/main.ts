@@ -3,6 +3,7 @@
 
 import '../save/style.css';
 import { browser } from 'wxt/browser';
+import { isDownloadCancellation } from '@/src/download-errors';
 import { saveContextFile } from '@/src/save-context';
 import { receivePreview } from '@/src/preview-session';
 import { isPreviewToken, type PreviewPayload } from '@/src/preview-message';
@@ -21,8 +22,9 @@ async function save(payload: PreviewPayload) {
     status.textContent = 'Choose where to save your file. Keep this tab open until saving finishes.';
     await saveContextFile(payload.content, payload.format, undefined, payload);
     await close();
-  } catch {
-    status.textContent = 'Unable to save the file, or saving was cancelled. Close this tab and try Save again from the selection panel.';
+  } catch (error) {
+    if (isDownloadCancellation(error)) { await close().catch(() => {}); return; }
+    status.textContent = 'Unable to save the file. Close this tab and try Save to file again.';
     const tab = await browser.tabs.getCurrent();
     if (tab?.id !== undefined) await browser.tabs.update(tab.id, { active: true }).catch(() => {});
   }

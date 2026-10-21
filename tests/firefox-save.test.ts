@@ -9,7 +9,7 @@ afterEach(() => {
   vi.resetModules();
 });
 
-it.each(['complete', 'interrupted'] as const)('keeps the Firefox save document alive until the download is %s', async state => {
+it.each(['complete', 'interrupted', 'cancelled'] as const)('keeps the Firefox save document alive until the download is %s', async state => {
   vi.useFakeTimers();
   vi.resetModules();
   let receive: (message: unknown, sender: unknown, respond: (value: unknown) => void) => void;
@@ -53,11 +53,14 @@ it.each(['complete', 'interrupted'] as const)('keeps the Firefox save document a
   changed!({ id: 8, state: { current: 'complete' } });
   await vi.advanceTimersByTimeAsync(0);
   expect(revokeUrl).not.toHaveBeenCalled();
-  changed!({ id: 9, state: { current: state } });
+  changed!({ id: 9, state: { current: state === 'cancelled' ? 'interrupted' : state }, ...(state === 'cancelled' ? { error: { current: 'USER_CANCELED' } } : {}) });
   await vi.advanceTimersByTimeAsync(0);
   expect(revokeUrl).toHaveBeenCalledWith('blob:save-document');
   expect(removeListener).toHaveBeenCalledWith(changed!);
-  if (state === 'complete') expect(removeTab).toHaveBeenCalledWith(7);
+  if (state === 'complete' || state === 'cancelled') {
+    expect(removeTab).toHaveBeenCalledWith(7);
+    expect(updateTab).not.toHaveBeenCalled();
+  }
   else {
     expect(removeTab).not.toHaveBeenCalled();
     expect(updateTab).toHaveBeenCalledWith(7, { active: true });

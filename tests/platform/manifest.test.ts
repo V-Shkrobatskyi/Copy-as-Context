@@ -5,6 +5,14 @@ import { describe, expect, it } from 'vitest';
 import { browserManifest } from '@/src/platform/manifest';
 
 describe('browser capabilities', () => {
+  it.each(['chrome', 'firefox'])('declares the same four desktop shortcuts in %s', target => {
+    const commands = browserManifest(target).commands!;
+    expect(Object.keys(commands)).toHaveLength(4);
+    for (const [name, key] of [['preview-context', 'P'], ['copy-page-context', 'C'], ['save-context-file', 'S'], ['select-element', 'E']] as const) {
+      expect(commands[name]).toMatchObject({ suggested_key: { default: `Alt+Shift+${key}`, mac: `Alt+Shift+${key}` }, description: expect.any(String) });
+    }
+  });
+
   it('keeps Chrome debugger permissions and omits Firefox settings', () => {
     const manifest = browserManifest('chrome');
     expect(manifest.permissions).toEqual(['debugger', 'activeTab', 'scripting', 'clipboardWrite', 'downloads', 'storage']);

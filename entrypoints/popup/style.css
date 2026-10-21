@@ -64,7 +64,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .status, .metrics { margin: 0; color: var(--text); font-size: .72rem; line-height: 1.35; }
 .status { font-weight: 700; }
 .metrics { margin-top: 3px; color: var(--muted); }
-.help { margin-top: 13px; padding-top: 10px; border-top: 1px solid var(--border); color: var(--muted); font-size: .7rem; text-align: center; }
+.help { margin-top: 13px; padding-top: 10px; border-top: 1px solid var(--border); color: var(--muted); font-size: .7rem; text-align: center; white-space: nowrap; }
 .help a { color: var(--link); font-weight: 700; text-decoration: none; }
 .save-settings:active:not(:disabled),
 .secondary-action:active:not(:disabled),

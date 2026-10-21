@@ -59,3 +59,14 @@ The isolated panel reuses the popup's shared light/dark palette and packaged SVG
 - After direct actions, the selected block and adjustment buttons remain usable. Cancel/navigation during capture must discard a late result; Copy success must wait for the matching operation acknowledgement.
 
 Native Chrome probe checks the actual clipboard and saved UTF-8 file. The Firefox selection fixture pregrants clipboard-read/download permissions and disables Save As only in its temporary package to verify data and blob lifetime without automating the native chooser. Production chooser/permission prompts still need the normal manual check.
+
+## Export completion
+
+In Chrome and Firefox Desktop, select a block and choose **Copy context**. Confirm
+the clipboard contains only that block with context boundaries, the picker panel
+and outline disappear, and ordinary page clicks work again. Repeat with **Save to
+file**: the picker closes after the temporary save tab accepts the prepared
+export, and that tab remains responsible for the download. Cancel the file dialog
+and verify the temporary save tab closes without becoming active, the source page remains available, and no invisible picker continues to intercept the page. If clipboard
+copying, permission approval, capture or transfer to the save tab fails, the
+selection must remain available with an error and a working retry action.
