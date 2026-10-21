@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.5.1 — unreleased
+## 1.5.2 — unreleased
 
 - Close temporary save tabs quietly when Save As is cancelled, and keep genuine download failures distinct.
 
