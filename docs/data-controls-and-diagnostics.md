@@ -1,6 +1,6 @@
 # Data controls and local diagnostics
 
-Open **Diagnostics & data controls** from the popup. This page is available even when your organization disables Customize or Preview. It does not grant access to those tools.
+Open **Data controls** from the popup. This page is available even when your organization disables Customize or Preview. It does not grant access to those tools.
 
 ## Export data settings
 
