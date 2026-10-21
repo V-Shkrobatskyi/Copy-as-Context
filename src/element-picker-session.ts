@@ -11,7 +11,6 @@ import { prepareExport } from './core';
 import { loadRedactionSettings } from './redaction-settings';
 import { resolveBrowserInfo } from './platform/browser-info';
 import { openPreview, openSelectionSave } from './preview-session';
-import { captureWarningText } from './preview-message';
 import { wrapClipboardContext } from './clipboard-context';
 import { PICKER_PORT, PICKER_TTL, PICKER_SAVE_PERMISSION, selectedElementInfo, type PickerPreferences, type PickerAction } from './element-picker-protocol';
 import type { RedactionSettings } from './core/privacy/settings';
@@ -139,9 +138,8 @@ export function createPickerCoordinator() {
             else await openPreview(payload, abort.signal);
             ensure();
             technicalEvent({ code: action === 'copy' ? 'clipboard-complete' : 'picker-complete', result: 'success', operation });
-            if (action === 'preview') {
-              session?.port?.postMessage({ type: 'complete' }); session?.close();
-            } else session?.port?.postMessage({ type: 'exported', message: `${action === 'copy' ? 'Copied selected context.' : 'Saving selected context in a separate tab.'} ${captureWarningText(outcome.warnings ?? [])}`.trim() });
+            session?.port?.postMessage({ type: 'complete' });
+            session?.close();
           } catch (error) {
             technicalEvent({ code: 'picker-complete', result: 'error', reason: 'failed', operation });
             if (!abort.signal.aborted) {

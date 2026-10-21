@@ -238,11 +238,6 @@ export function installElementPicker(doc: Document, token: string, channel: Pick
         acknowledge('copied');
       }, () => acknowledge('copy-failed'));
     }
-    if (reply.type === 'exported') {
-      selected?.removeAttribute(attribute); busy = false; pendingAction = undefined;
-      if (!host.isConnected) doc.documentElement.append(host);
-      status.textContent = reply.message ?? 'Selected context exported.'; refresh();
-    }
     if (reply.type === 'error') {
       selected?.removeAttribute(attribute); busy = false; pendingAction = undefined;
       if (!host.isConnected) doc.documentElement.append(host);
