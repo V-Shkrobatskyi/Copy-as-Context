@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import './style.css';
+import { policyMessage, type PolicyContext } from '@/src/policy/runtime';
+import { PolicyError } from '@/src/policy/model';
 import { browser } from 'wxt/browser';
 import { saveContextFile } from '@/src/save-context';
 import { FIREFOX_SAVE_MESSAGE } from '@/src/firefox-save';
@@ -17,14 +19,14 @@ async function closeTab(): Promise<void> {
 }
 document.querySelector('#close')!.addEventListener('click', () => void closeTab());
 
-async function save(content: string, format: SupportedExportFormat): Promise<void> {
+async function save(content: string, format: SupportedExportFormat, context?: PolicyContext): Promise<void> {
   try {
     status.textContent = 'Choose where to save your file. Keep this tab open until saving finishes.';
-    await saveContextFile(content, format);
+    await saveContextFile(content, format, undefined, context);
     status.textContent = 'File saved. You can close this tab.';
     await closeTab().catch(() => {});
-  } catch {
-    status.textContent = 'Unable to save the file, or saving was cancelled. Close this tab and try Save again from the extension.';
+  } catch (error) {
+    status.textContent = error instanceof PolicyError ? policyMessage(error) : 'Unable to save the file, or saving was cancelled. Close this tab and try Save again from the extension.';
     const tab = await browser.tabs.getCurrent();
     if (tab?.id !== undefined) await browser.tabs.update(tab.id, { active: true }).catch(() => {});
   }
@@ -36,7 +38,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   started = true;
   // Acknowledge receipt before opening the picker, which may close the sending popup.
   sendResponse({ accepted: true });
-  void save(message.content, message.format);
+  void save(message.content, message.format, message.context);
 });
 
 setTimeout(() => {

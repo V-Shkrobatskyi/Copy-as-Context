@@ -1,12 +1,16 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { PolicyError } from './policy/model';
+import { checkPolicy, type PolicyContext } from './policy/runtime';
 import { browser } from 'wxt/browser';
 import type { SupportedExportFormat } from './core';
 import { contextBlob, contextDownloadOptions } from './download-context';
 
 /** Keep the file URL alive until the browser finishes or cancels the download. */
-export async function saveContextFile(content: string, format: SupportedExportFormat, signal?: AbortSignal): Promise<void> {
+export async function saveContextFile(content: string, format: SupportedExportFormat, signal?: AbortSignal, context?: PolicyContext): Promise<void> {
+  await checkPolicy('save', context);
+  if (context && context.format !== format) throw new PolicyError('Export format does not match the prepared context. Prepare the context again.');
   if (signal?.aborted) throw new Error('download-cancelled');
   const url = URL.createObjectURL(contextBlob(content, format));
   let changed: Parameters<typeof browser.downloads.onChanged.addListener>[0] | undefined;

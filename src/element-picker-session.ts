@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { checkPolicy, watchPolicy } from './policy/runtime';
 import { browser } from 'wxt/browser';
 import { captureActiveTab } from './adapters/capture';
 import { prepareExport } from './core';
@@ -33,6 +34,9 @@ export function createPickerCoordinator() {
       let requestTab: number | undefined;
       let requestKey: symbol | undefined;
       try {
+        const snapshot = await checkPolicy('picker');
+        const context = { ...preferences, policyRevision: snapshot.revision };
+        await checkPolicy('picker', context);
         const platform = await browser.runtime.getPlatformInfo();
         if (platform.os === 'android') throw new Error('Element selection is currently available on desktop only.');
         const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
@@ -82,6 +86,8 @@ export function createPickerCoordinator() {
           if (!ready || capturing) return;
           capturing = true;
           try {
+            await checkPolicy('picker', context);
+            await checkPolicy(action, context);
             if (action === 'save' && import.meta.env.BROWSER === 'firefox' &&
               !await browser.permissions.contains({ permissions: ['downloads'] })) {
               downloadsGranted = false;
@@ -102,8 +108,9 @@ export function createPickerCoordinator() {
               userAgent: globalThis.navigator?.userAgent,
             });
             ensure();
+            await checkPolicy(action, context);
             const result = prepareExport(outcome.tree, preferences.compression, preferences.format, preferences.redactSensitiveData, filters);
-            const payload = { content: result.serialized.content, scope: 'selection' as const,
+            const payload = { policyRevision: snapshot.revision, content: result.serialized.content, scope: 'selection' as const,
               compression: preferences.compression, format: preferences.format, redactSensitiveData: preferences.redactSensitiveData,
               redactionCount: result.redactionCount, reductionRatio: result.reductionRatio, warnings: outcome.warnings ?? [],
             };
@@ -133,7 +140,7 @@ export function createPickerCoordinator() {
           if (!message || typeof message !== 'object' || abort.signal.aborted) return;
           const data = message as { type?: string; operation?: string };
           const type = data.type;
-          if (type === 'ready' && !ready) { ready = true; session?.port?.postMessage({ type: 'active' }); resolveReady(); }
+          if (type === 'ready' && !ready) { ready = true; session?.port?.postMessage({ type: 'active', previewAllowed: snapshot.policy.PreviewAllowed !== false, copyAllowed: snapshot.policy.ClipboardExportAllowed !== false, saveAllowed: snapshot.policy.FileExportAllowed !== false }); resolveReady(); }
           else if (type === 'cancel') session?.close();
           else if (type === 'capture') void capture('preview');
           else if (type === 'copy' || type === 'save') void capture(type);
@@ -146,6 +153,7 @@ export function createPickerCoordinator() {
           if (!message || message.type !== PICKER_SAVE_PERMISSION || message.token !== token) return;
           if (!ready || abort.signal.aborted || sender.id !== browser.runtime.id || sender.tab?.id !== tabId ||
             sender.frameId !== 0 || sender.url !== url || session?.documentId && sender.documentId !== session.documentId) return;
+          if (snapshot.policy.FileExportAllowed === false) { reply({ granted: false }); return; }
           if (downloadsGranted) { reply({ granted: true }); return; }
           // Firefox preserves the content-script click gesture for runtime.onMessage.
           try {
@@ -164,13 +172,14 @@ export function createPickerCoordinator() {
           session!.documentId ??= port.sender.documentId;
           port.onMessage.addListener(onMessage); port.onDisconnect.addListener(onDisconnect);
         };
+        const unwatch = watchPolicy(() => session?.close());
         const updated = (id: number, info: { status?: string; url?: string }) => {
           if (id === tabId && (info.status === 'loading' || info.url !== undefined && info.url !== url)) session?.close();
         };
         const removed = (id: number) => { if (id === tabId) session?.close(); };
         session = { tabId, url, token, abort, close() {
           if (abort.signal.aborted) return;
-          abort.abort(); clearTimeout(timer);
+          abort.abort(); clearTimeout(timer); unwatch();
           rejectReady(new Error('Element selection ended. Open the extension and try again.'));
           browser.runtime.onConnect.removeListener(onConnect);
           browser.runtime.onMessage.removeListener(requestPermission);

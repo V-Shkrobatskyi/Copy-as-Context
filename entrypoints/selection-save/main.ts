@@ -19,7 +19,7 @@ document.querySelector('#close')!.addEventListener('click', () => void close());
 async function save(payload: PreviewPayload) {
   try {
     status.textContent = 'Choose where to save your file. Keep this tab open until saving finishes.';
-    await saveContextFile(payload.content, payload.format);
+    await saveContextFile(payload.content, payload.format, undefined, payload);
     await close();
   } catch {
     status.textContent = 'Unable to save the file, or saving was cancelled. Close this tab and try Save again from the selection panel.';

@@ -44,6 +44,9 @@ export function installElementPicker(doc: Document, token: string, channel: Pick
   let selected: Element | undefined;
   const history: Element[] = [];
   let busy = false;
+  let previewAllowed = true;
+  let copyAllowed = true;
+  let saveAllowed = true;
   let pendingAction: PickerAction | undefined;
   let closed = false;
   let frame = 0;
@@ -89,9 +92,12 @@ export function installElementPicker(doc: Document, token: string, channel: Pick
     button('parent').disabled = busy || !selected || !selectableParent(selected);
     button('back').disabled = busy || history.length === 0;
     button('again').disabled = busy || !selected;
-    button('preview').disabled = busy || !valid(selected);
-    button('copy').disabled = busy || !valid(selected);
-    button('save').disabled = busy || !valid(selected);
+    button('preview').disabled = busy || !valid(selected) || !previewAllowed;
+    button('preview').title = previewAllowed ? 'Preview the selected element context' : 'Preview is disabled by your administrator.';
+    button('copy').disabled = busy || !valid(selected) || !copyAllowed;
+    button('copy').title = copyAllowed ? 'Copy the selected element context' : 'Copying is disabled by your administrator.';
+    button('save').disabled = busy || !valid(selected) || !saveAllowed;
+    button('save').title = saveAllowed ? 'Save the selected element context' : 'File export is disabled by your administrator.';
     schedule();
   };
   const choose = (element: Element) => {
@@ -218,8 +224,8 @@ export function installElementPicker(doc: Document, token: string, channel: Pick
   listen(win, 'pagehide', cancel);
   stops.push(channel.listen(message => {
     if (typeof message !== 'object' || message === null) return;
-    const reply = message as { type?: string; message?: string; content?: unknown; operation?: unknown };
-    if (reply.type === 'active') clearTimeout(startup);
+    const reply = message as { previewAllowed?: boolean; copyAllowed?: boolean; saveAllowed?: boolean } & { type?: string; message?: string; content?: unknown; operation?: unknown };
+    if (reply.type === 'active') { clearTimeout(startup); previewAllowed = reply.previewAllowed !== false; copyAllowed = reply.copyAllowed !== false; saveAllowed = reply.saveAllowed !== false; refresh(); }
     if (reply.type === 'complete') close();
     if (reply.type === 'copy-content' && busy && pendingAction === 'copy' && typeof reply.content === 'string' &&
       reply.content.length <= MAX_PREVIEW_CHARACTERS + 64 && typeof reply.operation === 'string' && isPreviewToken(reply.operation)) {

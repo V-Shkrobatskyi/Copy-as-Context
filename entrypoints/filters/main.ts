@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import './style.css';
+import { readPolicy, watchPolicy, policyMessage, type PolicySnapshot } from '@/src/policy/runtime';
+import { assertAction, applyManagedBuiltinStates, hasManagedFilters, managedBuiltinState, mergeManagedFilters, PolicyError } from '@/src/policy/model';
 import { readFilterDemoDraft, writeFilterDemoDraft } from '@/src/filter-demo-draft';
 import { REGEX_EXAMPLES, compileRegex } from '@/src/core/privacy/regex';
 import { isAutomaticType, PERSONAL_FIELD_TERMS } from '@/src/core/privacy/personal-data';
 import { browser } from 'wxt/browser';
 import { BUILTIN_FILTERS, builtinCaseSensitive, customRuleFromBuiltin, RULE_TYPES, CUSTOM_RULE_TYPES, isCustomRuleType, defaultRedactionSettings, exportRedactionSettings, importRedactionSettings, REDACTION_LIMITS, validateRedactionSettings, type CustomRedactionRule, type RuleType, type RedactionSettings } from '@/src/core/privacy/settings';
 import { filterExample, testRedactionFilters, testRules, type FilterTestContext } from '@/src/core/privacy/test-filters';
-import { loadRedactionSettings, saveRedactionSettings } from '@/src/redaction-settings';
+import { loadPersonalRedactionSettings, saveRedactionSettings } from '@/src/redaction-settings';
 
 const AUTOMATIC_MATCHING_DESCRIPTIONS: Partial<Record<RuleType, string>> = {
   emailMaskDomain: 'ASCII email addresses: name@example.com / name+tag@sub.example.com',
@@ -27,6 +29,8 @@ const fileInput = get<HTMLInputElement>('import-file');
 const navigationDraft = readFilterDemoDraft();
 const demoSession = navigationDraft?.session ?? crypto.randomUUID();
 let hasNavigationDraft = !!navigationDraft;
+let policySnapshot: PolicySnapshot | undefined;
+let loadGeneration = 0;
 let draft = defaultRedactionSettings();
 let baseline: string | undefined;
 let ready = false;
@@ -52,7 +56,7 @@ function refreshTestRules(): void {
   const previous = select.value; select.replaceChildren();
   for (const source of ['builtin', 'custom'] as const) {
     const group = document.createElement('optgroup'); group.label = source === 'builtin' ? 'Built-in filters' : 'Custom filters';
-    for (const item of testRules(draft).filter(item => item.source === source)) {
+    for (const item of testRules(policySnapshot ? applyManagedBuiltinStates(policySnapshot.policy, draft) : draft).filter(item => item.source === source)) {
       const option = document.createElement('option'); option.value = item.key;
       option.textContent = `${item.rule.name || 'Unnamed filter'} — ${RULE_TYPES.find(type => type.id === item.rule.type)?.label ?? 'Text'}${item.rule.enabled ? '' : ' (off)'}`;
       group.append(option);
@@ -68,7 +72,8 @@ function changed(): void {
   updateControls(); syncNavigationDraft();
 }
 function updateControls(): void {
-  const blocked = busy || leaving;
+  const accessBlocked = !policySnapshot || policySnapshot.policy.FilterSettingsAllowed === false;
+  const blocked = busy || leaving || accessBlocked;
   document.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLTextAreaElement | HTMLSelectElement>('button, input, textarea, select').forEach(control => { control.disabled = blocked || control.dataset.fixed === 'true'; });
   for (const id of ['open-demo', 'save-filters', 'add-rule', 'test-filters', 'test-selected', 'load-example', 'load-near-miss', 'export-filters']) {
     get<HTMLButtonElement>(id).disabled = blocked || !ready;
@@ -79,6 +84,25 @@ function updateControls(): void {
   get<HTMLButtonElement>('save-filters').disabled = blocked || !ready || !modified;
   get<HTMLButtonElement>('add-rule').disabled = blocked || !ready || draft.customRules.length >= REDACTION_LIMITS.rules;
   document.querySelectorAll<HTMLButtonElement>('[data-duplicate]').forEach(button => { button.disabled = blocked || !ready || draft.customRules.length >= REDACTION_LIMITS.rules; });
+  const policy = policySnapshot?.policy;
+  const personalBlocked = !policySnapshot || policy?.UserRedactionRulesAllowed === false;
+  for (const control of document.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLTextAreaElement | HTMLSelectElement>('#builtins input, #builtins button, #builtins select, #custom-rules input, #custom-rules button, #custom-rules textarea, #custom-rules select')) {
+    control.disabled ||= personalBlocked || control.closest('tr')?.getAttribute('data-managed') === 'true';
+    if (personalBlocked || control.closest('tr')?.getAttribute('data-managed') === 'true') {
+      control.title = 'Managed by your organization'; control.ariaDescription = control.title;
+    }
+  }
+  for (const id of ['add-rule', 'show-import', 'restore-defaults']) get<HTMLButtonElement>(id).disabled ||= personalBlocked;
+  fileInput.disabled ||= personalBlocked;
+  get<HTMLButtonElement>('save-filters').disabled ||= personalBlocked || policy?.UserPreferencesSaveAllowed === false;
+  get<HTMLButtonElement>('save-filters').ariaDescription = policy?.UserPreferencesSaveAllowed === false ? 'Saving personal filters is disabled by your administrator.' : null;
+  get<HTMLButtonElement>('export-filters').disabled ||= !policySnapshot || policy?.FileExportAllowed === false;
+  get<HTMLButtonElement>('export-filters').ariaDescription = policy?.FileExportAllowed === false ? 'File export is disabled by your administrator.' : null;
+  document.querySelector<HTMLElement>('.filters-section')!.hidden = accessBlocked;
+  get('test-panel').hidden = accessBlocked;
+  if (accessBlocked) get('managed-filters').hidden = true;
+  get<HTMLButtonElement>('reload-filters').disabled = busy || leaving;
+  get<HTMLButtonElement>('close-filters').disabled = leaving;
   get('dirty').textContent = modified ? 'Unsaved changes' : ready ? 'Saved filters' : '';
 }
 
@@ -156,6 +180,18 @@ function render(): void {
     } else {
       const action = cell(row, '—'); action.className = 'builtin-actions'; action.title = 'Automatic built-in filter. Use On to enable or disable it.';
     }
+    const managedState = policySnapshot ? managedBuiltinState(policySnapshot.policy, filter.id) : undefined;
+    if (managedState !== undefined) {
+      row.dataset.managed = 'true';
+      if (managedState) row.dataset.required = 'true';
+      const toggle = row.querySelector<HTMLInputElement>('input[type="checkbox"]'); if (toggle) toggle.checked = managedState;
+      for (const input of row.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')) {
+        input.disabled = true;
+        if (input !== toggle) input.checked = filter.caseSensitive;
+      }
+      row.title = `${managedState ? 'Enabled' : 'Disabled'} by your organization`;
+      for (const input of row.querySelectorAll<HTMLInputElement>('input')) input.ariaDescription = row.title;
+    }
     builtins.append(row);
   }
   const rules = get('custom-rules'); rules.replaceChildren();
@@ -204,25 +240,44 @@ function render(): void {
     remove.addEventListener('click', () => { draft.customRules = draft.customRules.filter(item => item.id !== rule.id); changed(); render(); });
     cell(row, remove); rules.append(row);
   }
+  const managedList = document.querySelector<HTMLElement>('#managed-rules');
+  if (managedList) {
+    managedList.replaceChildren();
+    for (const rule of policySnapshot?.policy.ManagedRedactionRules ?? []) {
+      const item = document.createElement('li');
+      item.textContent = `${rule.name} — ${rule.type}: ${rule.text} (${rule.caseSensitive ? 'case sensitive' : 'case insensitive'}; required, read-only)`;
+      managedList.append(item);
+    }
+    document.querySelector<HTMLElement>('#managed-filters')!.hidden = !managedList.children.length;
+  }
   get('empty-rules').hidden = draft.customRules.length > 0;
   clearTestResult(); refreshTestRules();
   updateControls(); syncNavigationDraft();
 }
 
 async function load(restoreNavigation = false): Promise<void> {
+  const generation = ++loadGeneration;
+  policySnapshot = undefined;
   busy = true; clearTestResult(); updateControls();
   try {
+    const snapshot = await readPolicy();
+    if (generation !== loadGeneration || disposed) return;
+    policySnapshot = snapshot;
+    assertAction(snapshot.policy, 'customize');
+    const note = document.querySelector<HTMLElement>('#organization-policy');
+    if (note) { note.hidden = !snapshot.revision; note.textContent = snapshot.revision ? `Managed by your organization. Required filters are read-only.${snapshot.policy.UserRedactionRulesAllowed === false ? ' Personal filter changes are disabled.' : ''}${snapshot.policy.UserPreferencesSaveAllowed === false ? ' Saving personal filters is disabled.' : ''}` : ''; }
     const restored = restoreNavigation ? readFilterDemoDraft() : undefined;
-    const settings = restored?.settings ?? await loadRedactionSettings();
-    if (disposed) return;
+    const settings = snapshot.policy.UserRedactionRulesAllowed === false ? defaultRedactionSettings() : restored?.settings ?? await loadPersonalRedactionSettings();
+    if (disposed || generation !== loadGeneration) return;
     draft = settings; baseline = restored ? restored.baseline : JSON.stringify(settings); ready = true; modified = baseline === undefined || JSON.stringify(settings) !== baseline;
     feedback(restored && modified ? 'Unsaved filter changes restored.' : ''); render();
     if (location.hash === '#test-panel') get<HTMLDetailsElement>('test-panel').open = true;
-  } catch {
+  } catch (error) {
+    if (generation !== loadGeneration) return;
     ready = false; baseline = undefined; modified = false; draft = defaultRedactionSettings();
     get('builtins').replaceChildren(); get('custom-rules').replaceChildren();
-    feedback('Unable to load saved filters. Retry Reload saved, or restore defaults and save to replace them. Exports with redaction are blocked while saved filters cannot be read.');
-  } finally { busy = false; updateControls(); }
+    feedback(error instanceof PolicyError ? policyMessage(error) : 'Unable to load saved filters. Retry Reload saved, or restore defaults and save to replace them. Exports with redaction are blocked while saved filters cannot be read.');
+  } finally { if (generation === loadGeneration) { busy = false; updateControls(); } }
 }
 get('reload-filters').addEventListener('click', () => {
   if (!busy && (!modified || window.confirm('Discard unsaved filter changes?'))) void load();
@@ -243,7 +298,7 @@ get('save-filters').addEventListener('click', () => {
     busy = true; updateControls();
     try {
       const settings = validateRedactionSettings(draft);
-      if (baseline !== undefined && JSON.stringify(await loadRedactionSettings()) !== baseline) {
+      if (baseline !== undefined && JSON.stringify(await loadPersonalRedactionSettings()) !== baseline) {
         feedback('Filters changed in another tab. Choose Reload saved before saving your changes.'); return;
       }
       await saveRedactionSettings(settings);
@@ -263,7 +318,7 @@ function runTest(selected: boolean): void {
     const context = get<HTMLSelectElement>('test-context').value as FilterTestContext;
     const label = context === 'auto' ? get<HTMLInputElement>('test-field-label').value.trim() : '';
     const sample = get<HTMLTextAreaElement>('test-input').value;
-    const result = testRedactionFilters(draft, sample, label, selected ? get<HTMLSelectElement>('test-rule').value : undefined, context);
+    const result = testRedactionFilters(policySnapshot && hasManagedFilters(policySnapshot.policy) ? mergeManagedFilters(policySnapshot.policy, draft) : draft, sample, label, selected ? get<HTMLSelectElement>('test-rule').value : undefined, context);
     get<HTMLTextAreaElement>('test-output').value = result.output;
     if (result.fieldLabel !== undefined) {
       get('test-label-result').hidden = false;
@@ -296,7 +351,7 @@ for (const [id, nearMiss] of [['load-example', false], ['load-near-miss', true]]
     clearTestResult();
     try {
       const key = get<HTMLSelectElement>('test-rule').value;
-      const item = testRules(draft).find(item => item.key === key);
+      const item = testRules(policySnapshot ? applyManagedBuiltinStates(policySnapshot.policy, draft) : draft).find(item => item.key === key);
       if (!item) throw new Error('No filter selected');
       const example = filterExample(item, nearMiss);
       get<HTMLSelectElement>('test-context').value = 'auto'; get('test-field-context').hidden = false;
@@ -360,11 +415,11 @@ function revokeDownload(): void {
   if (downloadUrl) URL.revokeObjectURL(downloadUrl);
   downloadUrl = undefined;
 }
-get('export-filters').addEventListener('click', () => {
+get('export-filters').addEventListener('click', async () => {
   if (busy || !ready) return;
   let text: string;
-  try { text = exportRedactionSettings(draft); }
-  catch { feedback('Complete each filter before exporting, and stay within the filter limits.'); return; }
+  try { const { policy } = await readPolicy(); assertAction(policy, 'customize'); assertAction(policy, 'save'); text = exportRedactionSettings(draft); }
+  catch (error) { feedback(error instanceof PolicyError ? policyMessage(error) : 'Complete each filter before exporting, and stay within the filter limits.'); return; }
   try {
     revokeDownload();
     downloadUrl = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
@@ -390,9 +445,10 @@ get('close-filters').addEventListener('click', () => {
 });
 window.addEventListener('beforeunload', event => { if (modified && !leaving) { event.preventDefault(); event.returnValue = ''; } });
 window.addEventListener('pagehide', () => {
-  disposed = true; revokeDownload();
+  disposed = true; stopPolicy(); loadGeneration++; revokeDownload();
   get<HTMLTextAreaElement>('test-input').value = ''; clearTestResult();
   get<HTMLInputElement>('test-field-label').value = '';
 });
 window.addEventListener('pageshow', event => { if (event.persisted) { disposed = false; leaving = false; updateControls(); syncNavigationDraft(); } });
+const stopPolicy = watchPolicy(() => { policySnapshot = undefined; ready = false; modified = false; updateControls(); void load(); });
 void load(true);

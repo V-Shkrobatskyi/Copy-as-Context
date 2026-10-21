@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { readPolicy, checkPolicy, watchPolicy, policyMessage, type PolicyContext, type PolicySnapshot } from '@/src/policy/runtime';
+import { assertAction, formats, levels, redactionMode, resolvePreferences, PolicyError } from '@/src/policy/model';
 import { openPreview } from '@/src/preview-session';
 import { PICKER_START } from '@/src/element-picker-protocol';
 import { captureWarningText } from '@/src/preview-message';
@@ -67,12 +69,12 @@ function formatMetrics(
   return `${characterCount} ${countLabel} · ~${approximateTokenCount} tokens · ${reductionLabel} · ${redactions}.`;
 }
 
-async function saveContext(content: string, format: SupportedExportFormat): Promise<void> {
+async function saveContext(content: string, format: SupportedExportFormat, context: PolicyContext): Promise<void> {
   if (firefox) {
-    await openFirefoxSave(content, format);
+    await openFirefoxSave(content, format, context);
     return;
   }
-  await saveContextFile(content, format);
+  await saveContextFile(content, format, undefined, context);
 }
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
@@ -84,6 +86,8 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <p class="intro">Private page context for your next prompt.</p>
       </div>
     </header>
+    <p id="organization-policy" class="field-note" role="status" hidden></p>
+    <button id="retry-policy" type="button" hidden>Retry organization policies</button>
     <section class="action-section" aria-label="Export page context">
       <div class="actions">
         <button id="preview" class="preview-action" type="button">Preview &amp; edit</button>
@@ -148,6 +152,7 @@ function updateSaveAvailability(): void {
   saveButton.title = canSave && firefox
     ? 'Firefox asks for download permission the first time you save a file.'
     : canSave ? '' : 'Saving files is unavailable in this browser. Use Copy page context.';
+  applyPolicyControls();
 }
 if (!canSave) {
   saveButton.disabled = true;
@@ -165,6 +170,69 @@ const controls = [
   compression, semanticTextFormat, markdownFormat, redactSensitiveData,
   saveSettingsButton, copyButton, saveButton, previewButton, selectElementButton, customizeButton,
 ];
+
+let policySnapshot: PolicySnapshot | undefined;
+let personalSettings: StoredPopupSettings = {};
+let policyGeneration = 0;
+let policyLoadFailed = false;
+
+function applyPolicyControls(): void {
+  if (!policySnapshot) { for (const control of controls) control.disabled = true; return; }
+  const p = policySnapshot.policy;
+  const busy = exportPending || !!frameAccessToggle?.pending;
+  for (const control of controls) { control.disabled = busy; control.title = ''; control.ariaDescription = null; }
+  const blocked = (control: HTMLInputElement | HTMLButtonElement, disabled: boolean, reason: string) => {
+    control.disabled ||= disabled;
+    if (disabled) { control.title = reason; control.ariaDescription = reason; }
+  };
+  const unavailable = !formats(p).length || !levels(p).length || p.FileExportAllowed === false && p.ClipboardExportAllowed === false;
+  blocked(copyButton, unavailable || p.ClipboardExportAllowed === false, 'Copying is disabled by your administrator.');
+  blocked(saveButton, unavailable || !canSave || p.FileExportAllowed === false, p.FileExportAllowed === false ? 'File export is disabled by your administrator.' : 'Saving files is unavailable.');
+  blocked(previewButton, unavailable || p.PreviewAllowed === false, p.PreviewAllowed === false ? 'Preview is disabled by your administrator.' : 'Export is disabled by your administrator.');
+  blocked(customizeButton, p.FilterSettingsAllowed === false, 'Filter settings are disabled by your administrator.');
+  blocked(selectElementButton, unavailable || p.ElementPickerAllowed === false, 'Element selection is disabled by your administrator.');
+  blocked(compression, !!p.ForcedCompression || levels(p).length <= 1, 'Compression is managed by your organization.');
+  blocked(semanticTextFormat, !!p.ForcedExportFormat || !formats(p).includes('semantic-text') || formats(p).length <= 1, 'Export format is managed by your organization.');
+  blocked(markdownFormat, !!p.ForcedExportFormat || !formats(p).includes('markdown') || formats(p).length <= 1, 'Export format is managed by your organization.');
+  blocked(redactSensitiveData, redactionMode(p) !== 'user-controlled', 'Redaction is managed by your organization.');
+  const editable = (!p.ForcedCompression && levels(p).length > 1) || (!p.ForcedExportFormat && formats(p).length > 1) || redactionMode(p) === 'user-controlled';
+  blocked(saveSettingsButton, p.UserPreferencesSaveAllowed === false || !editable, 'Saving preferences is managed by your organization.');
+}
+async function refreshPolicy(): Promise<void> {
+  const generation = ++policyGeneration;
+  try {
+    const snapshot = await readPolicy();
+    if (generation !== policyGeneration) return;
+    policySnapshot = snapshot;
+    if (policyLoadFailed) showFeedback('Organization policies loaded. Try your action again.');
+    policyLoadFailed = false;
+    const note = document.querySelector<HTMLElement>('#organization-policy');
+    if (note) { note.hidden = !snapshot.revision; note.textContent = snapshot.revision ? 'Managed by your organization · Policy version 1' : ''; }
+    const retry = document.querySelector<HTMLElement>('#retry-policy'); if (retry) retry.hidden = true;
+    if (formats(snapshot.policy).length && levels(snapshot.policy).length) {
+      const effective = resolvePreferences(snapshot.policy, personalSettings);
+      compression.value = String(COMPRESSION_VALUES.indexOf(effective.compression));
+      semanticTextFormat.checked = effective.format === 'semantic-text'; markdownFormat.checked = effective.format === 'markdown';
+      redactSensitiveData.checked = effective.redactSensitiveData;
+      updateCompressionDescription();
+    }
+    applyPolicyControls();
+  } catch (error) {
+    if (generation !== policyGeneration) return;
+    policySnapshot = undefined; policyLoadFailed = true; applyPolicyControls(); showFeedback(policyMessage(error));
+    const retry = document.querySelector<HTMLElement>('#retry-policy'); if (retry) retry.hidden = false;
+  }
+}
+function rememberSelection(): void {
+  if (!policySnapshot) return;
+  const p = policySnapshot.policy;
+  if (!p.ForcedCompression && levels(p).length > 1) personalSettings.compression = selectedRangeCompression(compression.value);
+  if (!p.ForcedExportFormat && formats(p).length > 1) personalSettings.format = selectedFormat(markdownFormat.checked ? 'markdown' : 'semantic-text');
+  if (redactionMode(p) === 'user-controlled') personalSettings.redactSensitiveData = redactSensitiveData.checked;
+  const effective = resolvePreferences(p, personalSettings);
+  compression.value = String(COMPRESSION_VALUES.indexOf(effective.compression)); updateCompressionDescription();
+}
+for (const control of [compression, semanticTextFormat, markdownFormat, redactSensitiveData]) control.addEventListener('change', rememberSelection);
 
 const COMPRESSION_VALUES: readonly CompressionLevel[] = ['without', 'detailed', 'compact', 'maximum'];
 
@@ -212,6 +280,7 @@ async function loadSettings(): Promise<void> {
   try {
     const stored = await browser.storage.local.get(POPUP_SETTINGS_KEY);
     const settings = readSettings(stored[POPUP_SETTINGS_KEY]);
+    personalSettings = settings ?? {};
     if (settings === undefined) return;
 
     const compressionIndex = settings.compression === undefined
@@ -236,10 +305,18 @@ async function saveSettings(): Promise<void> {
     redactSensitiveData: redactSensitiveData.checked,
   };
   try {
-    await browser.storage.local.set({ [POPUP_SETTINGS_KEY]: settings });
+    const { policy } = await readPolicy();
+    if (policy.UserPreferencesSaveAllowed === false) throw new PolicyError('Saving preferences is disabled by your administrator.');
+    const previous = await browser.storage.local.get(POPUP_SETTINGS_KEY);
+    const saved = { ...readSettings(previous[POPUP_SETTINGS_KEY]) };
+    if (!policy.ForcedCompression && levels(policy).length > 1) saved.compression = settings.compression;
+    if (!policy.ForcedExportFormat && formats(policy).length > 1) saved.format = settings.format;
+    if (redactionMode(policy) === 'user-controlled') saved.redactSensitiveData = settings.redactSensitiveData;
+    await browser.storage.local.set({ [POPUP_SETTINGS_KEY]: saved });
+    personalSettings = saved;
     showFeedback('Settings saved for future popup openings.');
-  } catch {
-    showFeedback('Unable to save settings. Try again.');
+  } catch (error) {
+    showFeedback(error instanceof PolicyError ? policyMessage(error) : 'Unable to save settings. Try again.');
   }
 }
 
@@ -251,6 +328,7 @@ function showFeedback(message: string): void {
 function setPending(pending: boolean, action?: ExportAction): void {
   for (const control of controls) control.disabled = pending;
   saveButton.disabled = pending || !canSave;
+  applyPolicyControls();
   if (pending) {
     metrics.textContent = '';
     showFeedback(action === 'preview' ? 'Preparing preview…' : action === 'copy' ? 'Capturing and copying page context…' : 'Capturing and preparing download…');
@@ -263,6 +341,7 @@ const otherSiteFrames = firefox ? document.querySelector<HTMLInputElement>('#inc
 if (otherSiteFrames) frameAccessToggle = installFrameAccessToggle(otherSiteFrames, showFeedback, pending => {
   for (const control of controls) control.disabled = pending || exportPending;
   saveButton.disabled = pending || exportPending || !canSave;
+  applyPolicyControls();
 });
 
 async function exportPageContext(action: ExportAction): Promise<void> {
@@ -271,6 +350,10 @@ async function exportPageContext(action: ExportAction): Promise<void> {
     return;
   }
   if (exportPending || frameAccessToggle?.pending) return;
+  try {
+    if (!policySnapshot) throw new PolicyError('Organization policies are not ready. Retry loading them.');
+    assertAction(policySnapshot.policy, action);
+  } catch (error) { showFeedback(policyMessage(error)); return; }
   exportPending = true;
   frameAccessToggle?.setPending(true);
   setPending(true, action);
@@ -295,23 +378,27 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       format: exportFormat,
       redactSensitiveData: redactSensitiveData.checked,
     };
+    const context = { ...request, policyRevision: policySnapshot?.revision };
+    await checkPolicy(action, context);
     const response = await browser.runtime.sendMessage(request);
     if (!isCaptureActiveTabResponse(response)) {
       showFeedback(ERROR_MESSAGES['capture-failed']!);
       return;
     }
     if (!response.ok) {
-      showFeedback(ERROR_MESSAGES[response.error.code] ?? ERROR_MESSAGES['capture-failed']!);
+      showFeedback(response.error.code === 'policy-blocked' ? response.error.message : ERROR_MESSAGES[response.error.code] ?? ERROR_MESSAGES['capture-failed']!);
       return;
     }
 
+    context.policyRevision = response.policyRevision;
+    await checkPolicy(action, context);
     const result = response.export;
     let characterCount = result.characterCount;
     let approximateTokenCount = result.approximateTokenCount;
     destinationStarted = true;
     if (action === 'preview') {
       await openPreview({
-        content: result.serialized.content, compression: request.compression, format: exportFormat,
+        policyRevision: response.policyRevision, content: result.serialized.content, compression: request.compression, format: exportFormat,
         redactSensitiveData: request.redactSensitiveData, redactionCount: result.redactionCount,
         reductionRatio: result.reductionRatio,
         warnings: response.warnings ?? [],
@@ -327,7 +414,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       approximateTokenCount = Math.ceil(characterCount / 4);
       showFeedback(`Copied ${FORMAT_LABELS[exportFormat]}.`);
     } else {
-      await saveContext(result.serialized.content, exportFormat);
+      await saveContext(result.serialized.content, exportFormat, context);
       showFeedback(firefox ? 'Saving file in a separate tab.' : `Saved ${FORMAT_LABELS[exportFormat]} file.`);
     }
     const warnings = captureWarningText(response.warnings ?? []);
@@ -338,8 +425,8 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       result.redactionCount,
       action,
     ) + (warnings ? ` ${warnings}` : '');
-  } catch {
-    showFeedback(ERROR_MESSAGES[
+  } catch (error) {
+    showFeedback(error instanceof PolicyError ? policyMessage(error) : ERROR_MESSAGES[
       destinationStarted ? (action === 'preview' ? 'preview-failed' : action === 'copy' ? 'copy-failed' : 'save-failed') : 'capture-failed'
     ]!);
   } finally {
@@ -351,9 +438,13 @@ async function exportPageContext(action: ExportAction): Promise<void> {
 
 customizeButton.addEventListener('click', () => {
   if (exportPending || frameAccessToggle?.pending) return;
-  void browser.tabs.create({ url: browser.runtime.getURL('/filters.html'), active: true })
-    .then(() => window.close())
-    .catch(() => showFeedback('Unable to open filter settings. Try again.'));
+  void (async () => {
+    try {
+      await checkPolicy('customize');
+      await browser.tabs.create({ url: browser.runtime.getURL('/filters.html'), active: true });
+      window.close();
+    } catch (error) { showFeedback(error instanceof PolicyError ? policyMessage(error) : 'Unable to open filter settings. Try again.'); }
+  })();
 });
 previewButton.addEventListener('click', () => void exportPageContext('preview'));
 selectElementButton.addEventListener('click', async () => {
@@ -361,6 +452,8 @@ selectElementButton.addEventListener('click', async () => {
   exportPending = true; setPending(true); frameAccessToggle?.setPending(true);
   showFeedback('Starting element selection…');
   try {
+    if (!policySnapshot) throw new PolicyError('Organization policies are not ready. Retry loading them.');
+    await checkPolicy('picker', { compression: selectedRangeCompression(compression.value), format: selectedFormat(markdownFormat.checked ? 'markdown' : 'semantic-text'), redactSensitiveData: redactSensitiveData.checked, policyRevision: policySnapshot.revision });
     const response = await browser.runtime.sendMessage({ type: PICKER_START,
       compression: selectedRangeCompression(compression.value),
       format: selectedFormat(markdownFormat.checked ? 'markdown' : 'semantic-text'),
@@ -368,17 +461,21 @@ selectElementButton.addEventListener('click', async () => {
     });
     if (response?.ok === true) window.close();
     else showFeedback(typeof response?.error?.message === 'string' ? response.error.message : 'Unable to start element selection. Try again.');
-  } catch { showFeedback('Unable to start element selection. Try again.'); }
+  } catch (error) { showFeedback(error instanceof PolicyError ? policyMessage(error) : 'Unable to start element selection. Try again.'); }
   finally { exportPending = false; frameAccessToggle?.setPending(false); setPending(false); }
 });
 copyButton.addEventListener('click', () => void exportPageContext('copy'));
 saveButton.addEventListener('click', () => void exportPageContext('save'));
-compression.addEventListener('input', updateCompressionDescription);
+compression.addEventListener('input', () => { rememberSelection(); updateCompressionDescription(); });
 saveSettingsButton.addEventListener('click', () => {
   void saveSettings();
 });
 updateCompressionDescription();
-void loadSettings();
+setPending(false);
+void loadSettings().then(refreshPolicy);
+const stopPolicy = watchPolicy(() => { policySnapshot = undefined; applyPolicyControls(); void refreshPolicy(); });
+window.addEventListener('pagehide', stopPolicy, { once: true });
+document.querySelector('#retry-policy')?.addEventListener('click', () => void refreshPolicy());
 
 async function initializeFirefoxPlatform(): Promise<void> {
   if (!firefox) return;
