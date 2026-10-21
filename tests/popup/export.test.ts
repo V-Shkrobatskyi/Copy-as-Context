@@ -53,6 +53,7 @@ interface PopupHarness {
   guideLink: FakeElement;
   diagnosticsLink: FakeElement;
   licenseLink: FakeElement;
+  shortcutsLink: FakeElement;
   status: FakeElement;
   metrics: FakeElement;
   clipboardWrite: ReturnType<typeof vi.fn>;
@@ -109,6 +110,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const guideLink = new FakeElement();
   const diagnosticsLink = new FakeElement();
   const licenseLink = new FakeElement();
+  const shortcutsLink = new FakeElement();
   const redactSensitiveData = new FakeElement();
   const saveSettings = new FakeElement();
   const otherSiteFrames = new FakeElement();
@@ -118,7 +120,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   markdownFormat.value = 'markdown';
   redactSensitiveData.checked = true;
   const elements = new Map<string, FakeElement>([
-    ['#app', app], ['#compression', compression], ['#format', format],
+    ['#shortcuts-link', shortcutsLink], ['#app', app], ['#compression', compression], ['#format', format],
     ['#format-semantic-text', semanticTextFormat], ['#format-markdown', markdownFormat],
     ['#customize', customize], ['#preview', preview], ['#select-element', selectElement], ['.primary-action', copy], ['.secondary-action', save], ['.status', status], ['.metrics', metrics],
     ['.feedback', feedback], ['#compression-description', compressionDescription], ['#guide-link', guideLink], ['#diagnostics-link', diagnosticsLink], ['#license-link', licenseLink],
@@ -155,6 +157,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const managedGet = options?.managedError ? vi.fn().mockRejectedValue(new Error('Private policy error')) : vi.fn().mockResolvedValue(options?.managedPolicy ?? {});
   const policyListeners = new Set<(...args: any[]) => void>();
   const extensionApi = {
+    commands: {},
     tabs: { create: vi.fn().mockResolvedValue({ id: 2 }), remove: vi.fn().mockResolvedValue(undefined) },
     runtime: {
       sendMessage,
@@ -199,7 +202,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   await settle();
   return {
     app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings, otherSiteFrames,
-    copy, save, preview, selectElement, customize, guideLink, diagnosticsLink, licenseLink, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create, managedGet, changePolicy: () => { for (const fn of policyListeners) fn({}, 'managed'); },
+    copy, save, preview, selectElement, customize, guideLink, diagnosticsLink, licenseLink, shortcutsLink, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create, managedGet, changePolicy: () => { for (const fn of policyListeners) fn({}, 'managed'); },
   };
 }
 
@@ -216,6 +219,34 @@ afterEach(() => {
 });
 
 describe('popup export flow', () => {
+  it('uses the native Firefox shortcut manager when available', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true });
+    const { browser } = await import('wxt/browser');
+    const openShortcutSettings = vi.fn().mockResolvedValue(undefined);
+    Object.assign(browser.commands, { openShortcutSettings });
+    popup.shortcutsLink.click(); await settle();
+    expect(openShortcutSettings).toHaveBeenCalledOnce();
+    expect(popup.createTab).not.toHaveBeenCalled();
+    expect(window.close).toHaveBeenCalledOnce();
+  });
+  it('keeps the popup open with instructions when shortcut settings fail to open', async () => {
+    const popup = await loadPopup(successfulCapture());
+    popup.createTab.mockRejectedValueOnce(new Error('Synthetic failure'));
+    popup.shortcutsLink.click(); await settle();
+    expect(window.close).not.toHaveBeenCalled();
+    expect(popup.status.textContent).toContain('chrome://extensions/shortcuts');
+  });
+
+  it.each([{ firefox: false }, { firefox: true }])('opens the browser shortcut settings without exporting: %j', async options => {
+    const popup = await loadPopup(successfulCapture(), options);
+    const event = popup.shortcutsLink.click(); await settle();
+    expect(event.defaultPrevented).toBe(true);
+    expect(popup.createTab).toHaveBeenCalledWith({ url: options.firefox ? 'about:addons' : 'chrome://extensions/shortcuts', active: true });
+    expect(window.close).toHaveBeenCalledOnce();
+    expect(popup.sendMessage).not.toHaveBeenCalled();
+    expect(popup.clipboardWrite).not.toHaveBeenCalled();
+  });
+
   for (const [link, path] of [['guideLink', '/guide.html'], ['diagnosticsLink', '/diagnostics.html'], ['licenseLink', '/license.html']] as const) {
     it.each([{ firefox: false }, { firefox: true }, { firefox: true, android: true }])(`opens ${path} once and closes only after the tab opens: %j`, async options => {
       const popup = await loadPopup(successfulCapture(), options);

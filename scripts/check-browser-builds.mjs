@@ -36,6 +36,10 @@ for (const target of ['chrome', 'firefox']) {
     assert.ok(schema.properties.ManagedRedactionRules);
   }
   assert.ok(manifest.action.default_popup);
+  assert.equal(Object.keys(manifest.commands).length, 4);
+  for (const [name, key] of [['preview-context', 'P'], ['copy-page-context', 'C'], ['save-context-file', 'S'], ['select-element', 'E']]) {
+    assert.deepEqual(manifest.commands[name].suggested_key, { default: `Alt+Shift+${key}`, mac: `Alt+Shift+${key}` });
+  }
   assert.equal(await readFile(new URL('LICENSE', directory), 'utf8'), projectLicense);
   assert.equal(await readFile(new URL('THIRD_PARTY_NOTICES.txt', directory), 'utf8'), thirdPartyNotices);
   const licensePage = await readFile(new URL('license.html', directory), 'utf8');

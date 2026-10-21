@@ -69,6 +69,13 @@ SPDX-License-Identifier: GPL-3.0-only
         <aside class="note"><p><strong>Save preferences</strong> stores your compression, format, and privacy choices for the next time you open the popup.</p></aside>
       </section>
 
+      <section aria-labelledby="shortcuts-heading">
+        <h2 id="shortcuts-heading">Keyboard shortcuts</h2>
+        <p>On Chrome and Firefox Desktop, run actions from the current page without opening the popup: <strong>Alt+Shift+P</strong> for Preview &amp; edit, <strong>Alt+Shift+C</strong> for Copy page context, <strong>Alt+Shift+S</strong> for Save to file, and <strong>Alt+Shift+E</strong> for Select element. On macOS, use <strong>Option+Shift</strong> with the same letters.</p>
+        <p>Shortcuts use saved preferences or defaults, together with current organization policies. Preview, Copy and Save capture the whole page; use the picker panel to export a selected block. Keep the source page focused for Copy. The extension icon briefly shows a check mark on success or <strong>!</strong> on failure; hover over it for details. Save opens a temporary extension tab that closes after saving; keep it open until completion. Firefox asks for download permission when needed. Repeated shortcuts are ignored while an action is running.</p>
+        <p>Choose <strong>Keyboard shortcuts</strong> in the popup footer to change or remove assignments. Chrome uses <code>chrome://extensions/shortcuts</code>. In Firefox, use <strong>Manage Extension Shortcuts</strong> in the tools menu at <code>about:addons</code> if the shortcut manager does not open directly. Browser, system and other extension shortcuts may conflict. Check your assignments and keyboard layout, especially if Alt+Shift switches input languages.</p>
+      </section>
+
       <section aria-labelledby="filters-heading">
         <h2 id="filters-heading">Customize redaction filters</h2>
         <p>Choose <strong>Customize</strong> inside <strong>Redact sensitive data</strong>. The table lists the existing filters. Toggle a row, or choose <strong>+ Add filter</strong> to add a named literal text filter in the same table, such as a client name or internal domain. Edit custom filters directly in their rows. Enable <strong>Case sensitive</strong> when letter case matters. Literal types do not interpret Regex or wildcard syntax. Choose Regex when you need pattern matching. Matches become <code>[REDACTED]</code>; overlapping filters may hide the same text. Password input values are always omitted by capture.</p>

@@ -22,7 +22,7 @@ async function save(payload: PreviewPayload) {
     await saveContextFile(payload.content, payload.format, undefined, payload);
     await close();
   } catch {
-    status.textContent = 'Unable to save the file, or saving was cancelled. Close this tab and try Save again from the selection panel.';
+    status.textContent = 'Unable to save the file, or saving was cancelled. Close this tab and try Save to file again.';
     const tab = await browser.tabs.getCurrent();
     if (tab?.id !== undefined) await browser.tabs.update(tab.id, { active: true }).catch(() => {});
   }

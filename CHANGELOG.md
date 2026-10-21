@@ -2,6 +2,8 @@
 
 ## 1.5.1 — unreleased
 
+- Add desktop keyboard shortcuts for Preview, Copy, Save and element selection, with browser shortcut settings in the popup footer.
+
 - Add personal capture-site allowed/blocked lists for page, element and embedded-frame captures, combined with organization restrictions.
 
 - Add independent enterprise restrictions on manual capture-history and technical-journal clearing, enforced in the interface and background.

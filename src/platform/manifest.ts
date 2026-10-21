@@ -8,6 +8,12 @@ export function browserManifest(target: string): UserManifest {
   return {
     name: 'Copy as Context',
     description: 'Copy a compact semantic representation of the current page for LLM chats.',
+    commands: {
+      'preview-context': { description: 'Preview and edit page context', suggested_key: { default: 'Alt+Shift+P', mac: 'Alt+Shift+P' } },
+      'copy-page-context': { description: 'Copy page context', suggested_key: { default: 'Alt+Shift+C', mac: 'Alt+Shift+C' } },
+      'save-context-file': { description: 'Save page context to file', suggested_key: { default: 'Alt+Shift+S', mac: 'Alt+Shift+S' } },
+      'select-element': { description: 'Select an element', suggested_key: { default: 'Alt+Shift+E', mac: 'Alt+Shift+E' } },
+    },
     permissions: target === 'firefox'
       ? ['activeTab', 'scripting', 'clipboardWrite', 'storage']
       : ['debugger', 'activeTab', 'scripting', 'clipboardWrite', 'downloads', 'storage'],

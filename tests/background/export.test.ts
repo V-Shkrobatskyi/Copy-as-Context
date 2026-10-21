@@ -16,11 +16,12 @@ async function loadBackground(target = 'chrome') {
   let listener: ((message: unknown, sender: unknown, reply: (result: unknown) => void) => boolean | void) | undefined;
   vi.stubGlobal('defineBackground', (start: () => void) => start());
   const storage = { managed: { get: vi.fn().mockResolvedValue({}) }, local: { get: vi.fn().mockResolvedValue({}) } };
-  const chromeApi = { storage, runtime: { sendMessage: vi.fn(), id: 'synthetic-chrome-id', getURL: (path: string) => `chrome-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
+  const commands = { onCommand: { addListener: vi.fn() } };
+  const chromeApi = { commands, storage, runtime: { sendMessage: vi.fn(), id: 'synthetic-chrome-id', getURL: (path: string) => `chrome-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
     tabs: { get: vi.fn().mockResolvedValue({ id: 42, url: 'https://example.test/' }), query: vi.fn().mockResolvedValue([{ id: 42, title: 'Synthetic', url: 'https://example.test/' }]) } };
   vi.stubGlobal('chrome', chromeApi);
   const firefoxApi = {
-    storage,
+    commands, storage,
     runtime: { sendMessage: vi.fn(), getBrowserInfo: vi.fn().mockResolvedValue({ name: 'Firefox', version: '157.0' }), getPlatformInfo: vi.fn().mockResolvedValue({ os: 'android' }), id: 'synthetic-firefox-id', getURL: (path: string) => `moz-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
     tabs: {
       query: vi.fn().mockResolvedValue([{ id: 42, url: 'https://example.test/' }]),
@@ -190,7 +191,8 @@ describe('background export boundary', () => {
     expect(background.listener({ type: 'capture-active-tab', compression: 'compact', format: 'semantic-text', redactSensitiveData: true }, background.sender, reply)).toBe(true);
     await vi.waitFor(() => expect(finishCapture).toBeTypeOf('function'));
     finishCapture!({ ok: true, tree: { schemaVersion: 1, root: { role: 'page', children: [] } } });
-    await vi.waitFor(() => expect(reply).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(reply).toHaveBeenCalledOnce());
+    expect(capture).toHaveBeenCalledOnce();
   });
 
   it('ignores capture requests from content scripts, other extensions and non-popup documents', async () => {

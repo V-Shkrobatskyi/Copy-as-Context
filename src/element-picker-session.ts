@@ -5,7 +5,7 @@ import { captureMetadata } from './history/model';
 import { recordCaptureHistory } from './history/client';
 import { technicalEvent } from './diagnostics/client';
 import { checkPolicy, watchPolicy, captureDataControls, captureOptions, assertSource } from './policy/runtime';
-import { browser } from 'wxt/browser';
+import { browser, type Browser } from 'wxt/browser';
 import { captureActiveTab } from './adapters/capture';
 import { prepareExport } from './core';
 import { loadRedactionSettings } from './redaction-settings';
@@ -32,7 +32,7 @@ export function createPickerCoordinator() {
   const sessions = new Map<number, Session>();
   const requests = new Map<number, symbol>();
   return {
-    async start(preferences: PickerPreferences): Promise<{ ok: true } | { ok: false; error: { message: string } }> {
+    async start(preferences: PickerPreferences, target?: Browser.tabs.Tab): Promise<{ ok: true } | { ok: false; error: { message: string } }> {
       let session: Session | undefined;
       let requestTab: number | undefined;
       let requestKey: symbol | undefined;
@@ -42,8 +42,12 @@ export function createPickerCoordinator() {
         await checkPolicy('picker', context);
         const platform = await browser.runtime.getPlatformInfo();
         if (platform.os === 'android') throw new Error('Element selection is currently available on desktop only.');
-        const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+        const tab = target ?? (await browser.tabs.query({ active: true, lastFocusedWindow: true }))[0];
         if (tab?.id === undefined || !tab.url || !/^https?:\/\//u.test(tab.url)) throw new Error('Open a regular HTTP or HTTPS page to select a block.');
+        if (target) {
+          const current = await browser.tabs.get(tab.id);
+          if (current.url !== tab.url || !current.active) throw new Error('The page changed. Try the shortcut again.');
+        }
         assertSource(tab.url, snapshot);
         sessions.get(tab.id)?.close();
         const token = crypto.randomUUID();

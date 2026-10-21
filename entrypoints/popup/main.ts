@@ -134,7 +134,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <p class="status" role="status" aria-live="polite"></p>
       <p class="metrics" aria-live="polite"></p>
     </section>
-    <footer class="help"><a id="guide-link" target="_blank" rel="noopener">Guide</a> · <a id="diagnostics-link" href="/diagnostics.html" target="_blank" rel="noopener">Diagnostics &amp; data controls</a> · <a id="license-link" href="/license.html" target="_blank" rel="noopener">License</a></footer>
+    <footer class="help"><a id="shortcuts-link" href="#">Keyboard shortcuts</a> · <a id="guide-link" target="_blank" rel="noopener">Guide</a> · <a id="diagnostics-link" href="/diagnostics.html" target="_blank" rel="noopener">Diagnostics &amp; data controls</a> · <a id="license-link" href="/license.html" target="_blank" rel="noopener">License</a></footer>
 
   </main>
 `;
@@ -242,6 +242,22 @@ const COMPRESSION_VALUES: readonly CompressionLevel[] = ['without', 'detailed', 
 guideLink.href = browser.runtime.getURL('/guide.html');
 const licenseLink = document.querySelector<HTMLAnchorElement>('#license-link')!;
 licenseLink.href = browser.runtime.getURL('/license.html');
+document.querySelector<HTMLAnchorElement>('#shortcuts-link')!.addEventListener('click', event => {
+  event.preventDefault();
+  void (async () => {
+    try {
+      const commands = browser.commands as typeof browser.commands & { openShortcutSettings?: () => Promise<void> };
+      if (firefox && commands.openShortcutSettings) await commands.openShortcutSettings();
+      else if (firefox) await browser.tabs.create({ url: 'about:addons', active: true });
+      else await browser.tabs.create({ url: 'chrome://extensions/shortcuts', active: true });
+      window.close();
+    } catch {
+      showFeedback(firefox
+        ? 'Open about:addons, then choose Manage Extension Shortcuts from the tools menu.'
+        : 'Open chrome://extensions/shortcuts to change keyboard shortcuts.');
+    }
+  })();
+});
 const diagnosticsLink = document.querySelector<HTMLAnchorElement>('#diagnostics-link')!;
 diagnosticsLink.href = browser.runtime.getURL('/diagnostics.html');
 for (const [link, path] of [[guideLink, '/guide.html'], [diagnosticsLink, '/diagnostics.html'], [licenseLink, '/license.html']] as const) {
