@@ -11,7 +11,7 @@ export function browserManifest(target: string): UserManifest {
     permissions: target === 'firefox'
       ? ['activeTab', 'scripting', 'clipboardWrite', 'storage']
       : ['debugger', 'activeTab', 'scripting', 'clipboardWrite', 'downloads', 'storage'],
-    ...(target === 'firefox' ? {} : { minimum_chrome_version: '125' }),
+    ...(target === 'firefox' ? {} : { minimum_chrome_version: '125', storage: { managed_schema: 'managed-schema.json' } }),
     ...(target === 'firefox' ? {
       optional_permissions: ['downloads'],
       optional_host_permissions: ['http://*/*', 'https://*/*'],

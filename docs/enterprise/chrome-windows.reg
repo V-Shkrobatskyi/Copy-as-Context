@@ -1,0 +1,26 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome\3rdparty\extensions\REPLACE_WITH_CHROME_EXTENSION_ID\policy]
+"PolicyVersion"=dword:00000001
+"ElementPickerAllowed"=dword:00000000
+"PreviewAllowed"=dword:00000000
+"FilterSettingsAllowed"=dword:00000000
+"FileExportAllowed"=dword:00000000
+"ClipboardExportAllowed"=dword:00000001
+"RedactionMode"="force-on"
+"ForcedCompression"="compact"
+"UserRedactionRulesAllowed"=dword:00000000
+"UserPreferencesSaveAllowed"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome\3rdparty\extensions\REPLACE_WITH_CHROME_EXTENSION_ID\policy\AllowedExportFormats]
+"1"="semantic-text"
+
+[HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome\3rdparty\extensions\REPLACE_WITH_CHROME_EXTENSION_ID\policy\RequiredBuiltinFilters]
+"1"="authorization"
+"2"="jwt"
+"3"="github"
+"4"="aws"
+"5"="email-hide"
+
+[HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome\3rdparty\extensions\REPLACE_WITH_CHROME_EXTENSION_ID\policy\DisabledBuiltinFilters]
+"1"="email-mask-domain"

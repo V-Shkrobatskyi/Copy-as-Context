@@ -28,6 +28,7 @@ let coordinator: ReturnType<typeof createPickerCoordinator>;
 
 beforeEach(() => {
   vi.useFakeTimers(); documentValid = true;
+  mocks.api.storage = { managed: { get: vi.fn().mockResolvedValue({}) } };
   mocks.api.runtime = { id: 'extension', onConnect: event(), onMessage: event(), getPlatformInfo: vi.fn().mockResolvedValue({ os: 'linux' }) };
   mocks.api.permissions = { request: vi.fn().mockResolvedValue(true), contains: vi.fn().mockResolvedValue(true) };
   mocks.api.tabs = { query: vi.fn().mockResolvedValue([{ id: 42, url: 'https://example.test/', title: 'Test page' }]), onUpdated: event(), onRemoved: event() };
@@ -171,4 +172,29 @@ describe('background-owned selection sessions', () => {
     expect(await coordinator.start({ ...preferences, redactSensitiveData: true })).toMatchObject({ ok: false });
     expect(mocks.api.scripting.executeScript).not.toHaveBeenCalled();
   });
+});
+
+
+it('refuses element selection under corporate policy before injection', async () => {
+  mocks.api.storage.managed.get.mockResolvedValue({ ElementPickerAllowed: false });
+  expect(await coordinator.start(preferences)).toMatchObject({ ok: false, error: { message: expect.stringContaining('disabled by your administrator') } });
+  expect(mocks.api.scripting.executeScript).not.toHaveBeenCalled();
+});
+it('rejects a prohibited picker file action even if a message bypasses its disabled button', async () => {
+  mocks.api.storage.managed.get.mockResolvedValue({ FileExportAllowed: false });
+  await coordinator.start(preferences);
+  expect(active.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'active', saveAllowed: false }));
+  active.onMessage.emit({ type: 'save' }); await vi.waitFor(() => expect(active.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })));
+  expect(mocks.capture).not.toHaveBeenCalled(); expect(mocks.save).not.toHaveBeenCalled();
+  expect(active.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'error', message: expect.stringContaining('File export is disabled') }));
+});
+
+
+it('blocks picker preview independently of copying and saving', async () => {
+  mocks.api.storage.managed.get.mockResolvedValue({ PreviewAllowed: false });
+  await coordinator.start(preferences);
+  expect(active.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'active', previewAllowed: false }));
+  active.onMessage.emit({ type: 'capture' });
+  await vi.waitFor(() => expect(active.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'error', message: expect.stringContaining('Preview is disabled') })));
+  expect(mocks.capture).not.toHaveBeenCalled(); expect(mocks.preview).not.toHaveBeenCalled();
 });

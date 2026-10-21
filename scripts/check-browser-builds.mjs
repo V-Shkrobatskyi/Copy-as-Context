@@ -27,6 +27,14 @@ for (const target of ['chrome', 'firefox']) {
   const directory = new URL(`../.output/${build}/`, import.meta.url);
   const manifest = JSON.parse(await readFile(new URL('manifest.json', directory), 'utf8'));
   assert.equal(manifest.manifest_version, 3);
+  if (firefox) assert.equal(manifest.storage, undefined);
+  else {
+    assert.equal(manifest.storage.managed_schema, 'managed-schema.json');
+    const schema = JSON.parse(await readFile(new URL(manifest.storage.managed_schema, directory), 'utf8'));
+    assert.equal(schema.type, 'object');
+    assert.equal(schema.additionalProperties, undefined);
+    assert.ok(schema.properties.ManagedRedactionRules);
+  }
   assert.ok(manifest.action.default_popup);
   assert.equal(await readFile(new URL('LICENSE', directory), 'utf8'), projectLicense);
   assert.equal(await readFile(new URL('THIRD_PARTY_NOTICES.txt', directory), 'utf8'), thirdPartyNotices);

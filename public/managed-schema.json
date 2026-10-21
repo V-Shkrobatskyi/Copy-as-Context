@@ -1,0 +1,214 @@
+{
+  "type": "object",
+  "properties": {
+    "ElementPickerAllowed": {
+      "type": "boolean",
+      "title": "ElementPickerAllowed",
+      "description": "Allow selecting individual page elements."
+    },
+    "FileExportAllowed": {
+      "type": "boolean",
+      "title": "FileExportAllowed",
+      "description": "Allow file exports, including filter files."
+    },
+    "ClipboardExportAllowed": {
+      "type": "boolean",
+      "title": "ClipboardExportAllowed",
+      "description": "Allow copying captured context."
+    },
+    "UserRedactionRulesAllowed": {
+      "type": "boolean",
+      "title": "UserRedactionRulesAllowed",
+      "description": "Allow personal filter customizations."
+    },
+    "UserPreferencesSaveAllowed": {
+      "type": "boolean",
+      "title": "UserPreferencesSaveAllowed",
+      "description": "Allow saving personal preferences and filters."
+    },
+    "PolicyVersion": {
+      "type": "integer",
+      "enum": [
+        1
+      ],
+      "description": "Policy contract version. Only version 1 is supported."
+    },
+    "AllowedExportFormats": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "semantic-text",
+          "markdown"
+        ]
+      },
+      "description": "Allowed values. An empty list disables export."
+    },
+    "DefaultExportFormat": {
+      "type": "string",
+      "enum": [
+        "semantic-text",
+        "markdown"
+      ],
+      "description": "Recommended default; a permitted personal choice takes precedence."
+    },
+    "ForcedExportFormat": {
+      "type": "string",
+      "enum": [
+        "semantic-text",
+        "markdown"
+      ],
+      "description": "Required value; must be in the allowed list."
+    },
+    "AllowedCompressionLevels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "without",
+          "detailed",
+          "compact",
+          "maximum"
+        ]
+      },
+      "description": "Allowed values. An empty list disables export."
+    },
+    "DefaultCompression": {
+      "type": "string",
+      "enum": [
+        "without",
+        "detailed",
+        "compact",
+        "maximum"
+      ],
+      "description": "Recommended default; a permitted personal choice takes precedence."
+    },
+    "ForcedCompression": {
+      "type": "string",
+      "enum": [
+        "without",
+        "detailed",
+        "compact",
+        "maximum"
+      ],
+      "description": "Required value; must be in the allowed list."
+    },
+    "RedactionMode": {
+      "type": "string",
+      "enum": [
+        "user-controlled",
+        "force-on",
+        "force-off"
+      ],
+      "description": "Force redaction on or off, or allow user control. Required filters imply force-on."
+    },
+    "RequiredBuiltinFilters": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "sensitive-fields",
+          "authorization",
+          "jwt",
+          "github",
+          "aws",
+          "openai",
+          "assignments",
+          "query-values",
+          "email-mask-domain",
+          "email-hide",
+          "phone-mask",
+          "phone-numbers",
+          "payment-cards",
+          "iban",
+          "personal-fields-mask",
+          "personal-fields"
+        ]
+      },
+      "description": "Required built-in filters, using their original matching semantics."
+    },
+    "ManagedRedactionRules": {
+      "type": "array",
+      "description": "Required custom filters. Maximum 400 combined managed and personal rules; enabled must be true. Runtime validates limits and Regex.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "literalText",
+              "fieldLabels",
+              "fieldWords",
+              "urlParameters",
+              "regex",
+              "authorization",
+              "jwt",
+              "assignedSecrets"
+            ]
+          },
+          "caseSensitive": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Must be true; enforced by the extension."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "text",
+          "type",
+          "caseSensitive",
+          "enabled"
+        ]
+      },
+      "sensitiveValue": true
+    },
+    "PreviewAllowed": {
+      "type": "boolean",
+      "title": "PreviewAllowed",
+      "description": "Allow opening Preview & edit, including selection previews."
+    },
+    "FilterSettingsAllowed": {
+      "type": "boolean",
+      "title": "FilterSettingsAllowed",
+      "description": "Allow opening Customize filter settings, including direct navigation."
+    },
+    "DisabledBuiltinFilters": {
+      "type": "array",
+      "description": "Built-in filter IDs that must be off. Must not overlap RequiredBuiltinFilters. Unlisted IDs keep their current behavior.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "sensitive-fields",
+          "authorization",
+          "jwt",
+          "github",
+          "aws",
+          "openai",
+          "assignments",
+          "query-values",
+          "email-mask-domain",
+          "email-hide",
+          "phone-mask",
+          "phone-numbers",
+          "payment-cards",
+          "iban",
+          "personal-fields-mask",
+          "personal-fields"
+        ]
+      }
+    }
+  }
+}

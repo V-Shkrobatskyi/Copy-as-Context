@@ -1,0 +1,33 @@
+{
+  "policies": {
+    "3rdparty": {
+      "Extensions": {
+        "{e97aa566-cac0-4e2c-81f7-0ab664bf86ce}": {
+          "PolicyVersion": 1,
+          "ElementPickerAllowed": false,
+          "FileExportAllowed": false,
+          "ClipboardExportAllowed": true,
+          "AllowedExportFormats": [
+            "semantic-text"
+          ],
+          "ForcedCompression": "compact",
+          "RedactionMode": "force-on",
+          "RequiredBuiltinFilters": [
+            "authorization",
+            "jwt",
+            "github",
+            "aws",
+            "email-hide"
+          ],
+          "UserRedactionRulesAllowed": false,
+          "UserPreferencesSaveAllowed": false,
+          "PreviewAllowed": false,
+          "FilterSettingsAllowed": false,
+          "DisabledBuiltinFilters": [
+            "email-mask-domain"
+          ]
+        }
+      }
+    }
+  }
+}

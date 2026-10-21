@@ -15,7 +15,7 @@ vi.mock('../../src/adapters/chrome/capture', () => ({ captureChromeAccessibility
 async function loadBackground(target = 'chrome') {
   let listener: ((message: unknown, sender: unknown, reply: (result: unknown) => void) => boolean | void) | undefined;
   vi.stubGlobal('defineBackground', (start: () => void) => start());
-  const storage = { local: { get: vi.fn().mockResolvedValue({}) } };
+  const storage = { managed: { get: vi.fn().mockResolvedValue({}) }, local: { get: vi.fn().mockResolvedValue({}) } };
   const chromeApi = { storage, runtime: { sendMessage: vi.fn(), id: 'synthetic-chrome-id', getURL: (path: string) => `chrome-extension://test${path}`, onMessage: { addListener: (callback: typeof listener) => { listener = callback; } } },
     tabs: { query: vi.fn().mockResolvedValue([{ id: 42, title: 'Synthetic', url: 'https://example.test/' }]) } };
   vi.stubGlobal('chrome', chromeApi);
@@ -196,4 +196,52 @@ describe('background export boundary', () => {
     expect(reply).not.toHaveBeenCalled();
     expect(capture).not.toHaveBeenCalled();
   });
+});
+
+
+describe('enterprise capture boundary', () => {
+  const request = { type: 'capture-active-tab', compression: 'compact', format: 'semantic-text', redactSensitiveData: true };
+  it('rejects a request that turns off forced redaction before reading the page', async () => {
+    const background = await loadBackground();
+    background.storage.managed.get.mockResolvedValue({ RedactionMode: 'force-on' });
+    expect(await background.request({ ...request, redactSensitiveData: false })).toMatchObject({ ok: false, error: { code: 'policy-blocked' } });
+    expect(capture).not.toHaveBeenCalled();
+  });
+  it.each(['chrome', 'firefox'])('applies mandatory corporate rules and returns a revision in %s', async target => {
+    const background = await loadBackground(target);
+    background.storage.managed.get.mockResolvedValue({ ManagedRedactionRules: [{ id: 'company', name: 'Company', type: 'text', text: 'Acme', enabled: true, caseSensitive: false }] });
+    const result = { ok: true, tree: { schemaVersion: 1, root: { role: 'page', children: [{ role: 'StaticText', name: 'Acme', children: [] }] } } };
+    capture.mockResolvedValue(result);
+    background.firefoxApi.scripting.executeScript.mockResolvedValue([{ frameId: 0, result }]);
+    const response = await background.request(request);
+    expect(response).toMatchObject({ ok: true, policyRevision: expect.stringMatching(/^[a-f0-9]{64}$/) });
+    if (response.ok) { expect(response.export.serialized.content).not.toContain('Acme'); expect(response.export.serialized.content).toContain('[REDACTED]'); }
+  });
+  it('discards a capture when policy changes while it is pending', async () => {
+    const background = await loadBackground();
+    capture.mockImplementation(async () => {
+      background.storage.managed.get.mockResolvedValue({ FileExportAllowed: false });
+      return { ok: true, tree: { schemaVersion: 1, root: { role: 'page', children: [] } } };
+    });
+    expect(await background.request(request)).toMatchObject({ ok: false, error: { code: 'policy-blocked' } });
+  });
+  it('does not bypass a failed or invalid policy read', async () => {
+    const background = await loadBackground();
+    background.storage.managed.get.mockRejectedValue(new Error('Synthetic policy read failure'));
+    expect(await background.request(request)).toMatchObject({ ok: false, error: { code: 'policy-blocked' } });
+    background.storage.managed.get.mockResolvedValue({ PolicyVersion: 999 });
+    expect(await background.request(request)).toMatchObject({ ok: false, error: { code: 'policy-blocked' } });
+    expect(capture).not.toHaveBeenCalled();
+  });
+});
+
+
+it.each(['chrome', 'firefox'])('enforces both forced-on and forced-off built-ins at the %s capture boundary', async target => {
+  const background = await loadBackground(target);
+  background.storage.managed.get.mockResolvedValue({ RequiredBuiltinFilters: ['email-hide'], DisabledBuiltinFilters: ['authorization'] });
+  const result = { ok: true, tree: { schemaVersion: 1, root: { role: 'page', children: [{ role: 'StaticText', name: 'person@example.test Bearer abcdefghijklmnop', children: [] }] } } };
+  capture.mockResolvedValue(result); background.firefoxApi.scripting.executeScript.mockResolvedValue([{ frameId: 0, result }]);
+  const response = await background.request({ type: 'capture-active-tab', compression: 'compact', format: 'semantic-text', redactSensitiveData: true });
+  expect(response.ok).toBe(true);
+  if (response.ok) { expect(response.export.serialized.content).not.toContain('person@example.test'); expect(response.export.serialized.content).toContain('Bearer abcdefghijklmnop'); }
 });

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { checkPolicy } from './policy/runtime';
 import { browser } from 'wxt/browser';
 
 import { isPreviewPayload, PREVIEW_PORT_PREFIX, PREVIEW_TIMEOUT_MS, type PreviewPayload } from './preview-message';
@@ -9,6 +10,8 @@ type PreviewPort = ReturnType<typeof browser.runtime.connect>;
 
 /** Transfer to one authenticated document, then activate it after receipt. */
 export async function openPreview(payload: PreviewPayload, signal?: AbortSignal): Promise<void> {
+  if (!isPreviewPayload(payload)) throw new Error('invalid-preview');
+  await checkPolicy('preview', payload);
   return openExportDocument(payload, '/preview.html', true, signal);
 }
 

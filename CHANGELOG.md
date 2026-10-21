@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.4.4 — unreleased
+## 1.5.0 — unreleased
+
+- Add browser-managed enterprise policies for export destinations, formats, compression, redaction, element selection, Preview and Customize access, and personal preference saving.
+- Support mandatory corporate redaction rules and forced on/off states for individual built-in filters without changing their matching definitions.
+- Apply policy checks across capture and export routes, invalidate stale prepared context after policy changes, and make previews read-only when redaction is required.
+- Show managed settings and administrator restrictions in the interface, and add deployment documentation and configuration templates for Chrome and Firefox.
 
 - Prevent sensitive form values from leaking through ancestor names, custom ARIA textboxes and named field descendants.
 - Match encoded URL parameter names in built-in and custom privacy filters while preserving unrelated URL text.

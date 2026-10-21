@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { checkPolicy, policyMessage } from '@/src/policy/runtime';
+import { PolicyError, mergeManagedFilters } from '@/src/policy/model';
 import { browser } from 'wxt/browser';
 import { captureFilterDemo } from '@/src/adapters/filter-demo';
 import { isOwnFilterDemo } from '@/src/filter-demo-protocol';
@@ -78,6 +80,9 @@ export default defineBackground(() => {
     console.info('[Copy as Context] Capture request received.');
 
     void (async () => {
+      const snapshot = await checkPolicy('capture');
+      const context = { ...message, policyRevision: snapshot.revision };
+      await checkPolicy('capture', context);
       const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
       const tab = tabs[0];
       const demo = isOwnFilterDemo(tab?.url, browser.runtime.getURL('/demo.html'));
@@ -100,7 +105,7 @@ export default defineBackground(() => {
       if (demo) {
         const captured = await captureFilterDemo(target, capturedAt);
         result = captured;
-        if (captured.ok) filters = captured.filters;
+        if (captured.ok) filters = mergeManagedFilters(snapshot.policy, captured.filters);
       } else result = await captureActiveTab(target, capturedAt);
       reportCaptureResult(result);
       if (result.ok) {
@@ -111,14 +116,15 @@ export default defineBackground(() => {
           userAgentData: (globalThis.navigator as Navigator & { userAgentData?: BrowserInfoDependencies['userAgentData'] })?.userAgentData,
         });
       }
+      await checkPolicy('capture', context);
       const response: CaptureActiveTabResponse = result.ok
-        ? { ok: true, export: prepareExport(result.tree, message.compression, message.format, message.redactSensitiveData, filters), ...(result.warnings?.length ? { warnings: result.warnings } : {}), ...(result.frameAccess?.length ? { frameAccess: result.frameAccess } : {}) }
+        ? { ok: true, ...(snapshot.revision ? { policyRevision: snapshot.revision } : {}), export: prepareExport(result.tree, message.compression, message.format, message.redactSensitiveData, filters), ...(result.warnings?.length ? { warnings: result.warnings } : {}), ...(result.frameAccess?.length ? { frameAccess: result.frameAccess } : {}) }
         : result;
       sendResponse(response);
-    })().catch(() => {
+    })().catch((error: unknown) => {
       const result: CaptureActiveTabResponse = {
         ok: false,
-        error: { code: 'capture-failed', message: 'Unable to prepare this page’s context.' },
+        error: error instanceof PolicyError ? { code: 'policy-blocked', message: policyMessage(error) } : { code: 'capture-failed', message: 'Unable to prepare this page’s context.' },
       };
       reportCaptureResult(result);
       try {

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { webcrypto } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Blob as NodeBlob } from 'node:buffer';
@@ -12,6 +13,8 @@ import { readFilterDemoDraft, writeFilterDemoDraft } from '@/src/filter-demo-dra
 import { REGEX_EXAMPLES } from '@/src/core/privacy/regex';
 
 const key = 'redaction-filters-v1';
+const managedGet = vi.fn();
+const managedListeners = new Set<(...args: any[]) => void>();
 let stored: unknown;
 let getStored: ReturnType<typeof vi.fn>;
 let setStored: ReturnType<typeof vi.fn>;
@@ -41,6 +44,8 @@ function selectFile(text: string, size = text.length): void {
   file.dispatchEvent(new Event('change'));
 }
 beforeEach(async () => {
+  vi.stubGlobal('crypto', webcrypto);
+  managedGet.mockReset().mockResolvedValue({}); managedListeners.clear();
   document.body.innerHTML = readFileSync(resolve('entrypoints/filters/index.html'), 'utf8').split('<body>')[1]!.split('</body>')[0]!;
   stored = undefined; sessionStorage.clear();
   getStored = vi.fn().mockImplementation(async () => ({ [key]: structuredClone(stored) }));
@@ -51,7 +56,7 @@ beforeEach(async () => {
   removeTab = vi.fn().mockResolvedValue(undefined);
   updateTab = vi.fn().mockResolvedValue({ id: 7 });
   createTab = vi.fn().mockResolvedValue({ id: 9 }); sendRuntime = vi.fn().mockResolvedValue(undefined); demoListeners = new Set();
-  vi.doMock('wxt/browser', () => ({ browser: { storage: { local: { get: getStored, set: setStored } }, runtime: { id: 'test-extension', getURL: (path: string) => `chrome-extension://test${path}`, sendMessage: sendRuntime, onMessage: { addListener: (listener: any) => demoListeners.add(listener), removeListener: (listener: any) => demoListeners.delete(listener) } }, tabs: { getCurrent: getCurrentTab, remove: removeTab, create: createTab, update: updateTab } } }));
+  vi.doMock('wxt/browser', () => ({ browser: { storage: { managed: { get: managedGet }, onChanged: { addListener: (fn: (...args: any[]) => void) => managedListeners.add(fn), removeListener: (fn: (...args: any[]) => void) => managedListeners.delete(fn) }, local: { get: getStored, set: setStored } }, runtime: { id: 'test-extension', getURL: (path: string) => `chrome-extension://test${path}`, sendMessage: sendRuntime, onMessage: { addListener: (listener: any) => demoListeners.add(listener), removeListener: (listener: any) => demoListeners.delete(listener) } }, tabs: { getCurrent: getCurrentTab, remove: removeTab, create: createTab, update: updateTab } } }));
   events = new Map();
   vi.spyOn(window, 'addEventListener').mockImplementation((type: string, listener: any) => { events.set(type, listener); });
   vi.spyOn(window, 'confirm').mockReturnValue(true);
@@ -582,7 +587,7 @@ describe('Customize filter settings', () => {
     vi.stubGlobal('Blob', NodeBlob);
     let downloaded: HTMLAnchorElement | undefined;
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { downloaded = this; });
-    click('export-filters');
+    click('export-filters'); await settle();
     expect(downloaded?.download).toBe('copy-as-context-filters.json');
     expect(downloaded?.href).toBe('blob:filters');
     const exported = JSON.parse(await createObjectURL.mock.calls[0]![0].text());
@@ -596,13 +601,76 @@ describe('Customize filter settings', () => {
     expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith('blob:filters');
   });
 
-  it('recovers from a download failure without showing success or copying JSON', () => {
+  it('recovers from a download failure without showing success or copying JSON', async () => {
     vi.stubGlobal('URL', { createObjectURL: vi.fn(() => { throw new Error('private details'); }), revokeObjectURL: vi.fn() });
-    click('export-filters');
+    click('export-filters'); await settle();
     expect(get('status').textContent).toContain('Unable to download');
     expect(get('status').textContent).not.toContain('private details');
     expect(clipboard).not.toHaveBeenCalled();
     expect(get<HTMLButtonElement>('export-filters').disabled).toBe(false);
   });
 
+});
+
+
+describe('managed filter settings', () => {
+  it('shows mandatory filters read-only and retains them after importing personal defaults', async () => {
+    managedGet.mockResolvedValue({ RequiredBuiltinFilters: ['authorization'], ManagedRedactionRules: [{ id: 'company', name: 'Company rule', type: 'text', text: 'SYNTHETIC_PROJECT', enabled: true, caseSensitive: false }] });
+    for (const fn of managedListeners) fn({}, 'managed');
+    await vi.waitFor(() => expect(get('managed-rules').textContent).toContain('Company rule'));
+    const row = document.querySelector<HTMLTableRowElement>('tr[data-required="true"]')!;
+    expect(row).not.toBeNull(); expect(row.querySelector<HTMLInputElement>('input')!.disabled).toBe(true);
+    expect(get('managed-filters').hidden).toBe(false);
+    selectFile(exportRedactionSettings(defaultRedactionSettings())); await settle();
+    expect(get('managed-rules').textContent).toContain('SYNTHETIC_PROJECT');
+    expect(document.querySelector<HTMLInputElement>('tr[data-required="true"] input')!.disabled).toBe(true);
+  });
+  it('disables personal changes and filter downloads according to policy', async () => {
+    managedGet.mockResolvedValue({ UserRedactionRulesAllowed: false, FileExportAllowed: false });
+    for (const fn of managedListeners) fn({}, 'managed');
+    await vi.waitFor(() => expect(get('organization-policy').textContent).toContain('Personal filter changes are disabled'));
+    expect(get<HTMLButtonElement>('add-rule').disabled).toBe(true);
+    expect(get<HTMLButtonElement>('show-import').disabled).toBe(true);
+    expect(get<HTMLButtonElement>('restore-defaults').disabled).toBe(true);
+    expect(get<HTMLButtonElement>('save-filters').disabled).toBe(true);
+    expect(get<HTMLButtonElement>('export-filters').disabled).toBe(true);
+    expect(setStored).not.toHaveBeenCalled();
+  });
+});
+
+
+it('blocks the directly opened Customize page and clears its rules when access is revoked', async () => {
+  managedGet.mockResolvedValue({ FilterSettingsAllowed: false });
+  getStored.mockClear();
+  for (const fn of managedListeners) fn({}, 'managed');
+  await vi.waitFor(() => expect(get('status').textContent).toContain('Filter settings are disabled'));
+  expect(document.querySelector<HTMLElement>('.filters-section')!.hidden).toBe(true);
+  expect(get('test-panel').hidden).toBe(true); expect(get('builtins').children.length).toBe(0);
+  expect(getStored).not.toHaveBeenCalled();
+  expect(get<HTMLButtonElement>('save-filters').disabled).toBe(true);
+  expect(get<HTMLButtonElement>('close-filters').disabled).toBe(false);
+  managedGet.mockResolvedValue({});
+  for (const fn of managedListeners) fn({}, 'managed');
+  await vi.waitFor(() => expect(get('builtins').children.length).toBeGreaterThan(0));
+  expect(document.querySelector<HTMLElement>('.filters-section')!.hidden).toBe(false);
+});
+
+
+it('shows policy-enabled and policy-disabled built-ins read-only and keeps them after personal resets', async () => {
+  managedGet.mockResolvedValue({ RequiredBuiltinFilters: ['email-hide'], DisabledBuiltinFilters: ['authorization'] });
+  for (const fn of managedListeners) fn({}, 'managed');
+  await vi.waitFor(() => expect(document.querySelectorAll('tr[data-managed="true"]')).toHaveLength(2));
+  function verify() {
+    const rows = [...document.querySelectorAll<HTMLTableRowElement>('tr[data-managed="true"]')];
+    const on = rows.find(row => row.dataset.required === 'true')!.querySelector<HTMLInputElement>('input')!;
+    const off = rows.find(row => row.dataset.required !== 'true')!.querySelector<HTMLInputElement>('input')!;
+    expect(on.checked).toBe(true); expect(on.disabled).toBe(true);
+    expect(off.checked).toBe(false); expect(off.disabled).toBe(true);
+    expect([...get<HTMLSelectElement>('test-rule').options].find(option => option.textContent?.includes('Authorization values'))!.textContent).toContain('(off)');
+  }
+  verify();
+  vi.spyOn(window, 'confirm').mockReturnValue(true); click('restore-defaults'); verify();
+  selectFile(exportRedactionSettings(defaultRedactionSettings())); await settle(); verify();
+  managedGet.mockResolvedValue({}); for (const fn of managedListeners) fn({}, 'managed');
+  await vi.waitFor(() => expect(document.querySelectorAll('tr[data-managed="true"]')).toHaveLength(0));
 });

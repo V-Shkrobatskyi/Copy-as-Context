@@ -15,7 +15,7 @@ export interface CaptureActiveTabRequest {
   redactSensitiveData: boolean;
 }
 
-export type CaptureActiveTabResponse = { ok: true; export: PreparedExport; warnings?: CaptureWarningCode[]; frameAccess?: string[] } | { ok: false; error: CaptureError };
+export type CaptureActiveTabResponse = { ok: true; export: PreparedExport; policyRevision?: string; warnings?: CaptureWarningCode[]; frameAccess?: string[] } | { ok: false; error: CaptureError };
 
 export function isCaptureActiveTabRequest(value: unknown): value is CaptureActiveTabRequest {
   if (typeof value !== 'object' || value === null) return false;

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { webcrypto } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PREVIEW_PORT_PREFIX, PREVIEW_TIMEOUT_MS, MAX_PREVIEW_CHARACTERS, isPreviewPayload, type PreviewPayload } from '@/src/preview-message';
 
@@ -26,12 +27,12 @@ beforeEach(() => {
   api = { runtime: { id: 'test', lastError: undefined, onConnect, getURL: (path: string) => `chrome-extension://test${path}`, connect: vi.fn() },
     tabs: { create: vi.fn().mockResolvedValue({ id: 2 }), update: vi.fn().mockResolvedValue({}), remove: vi.fn().mockResolvedValue(undefined) } };
   vi.doMock('wxt/browser', () => ({ browser: api }));
-  vi.stubGlobal('crypto', { randomUUID: () => token });
+  vi.stubGlobal('crypto', { randomUUID: () => token, subtle: webcrypto.subtle });
   vi.stubGlobal('window', { addEventListener: vi.fn((_type, fn) => { pageHide = fn; }), removeEventListener: vi.fn() });
 });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.resetModules(); });
 
-async function flush() { await Promise.resolve(); await Promise.resolve(); }
+async function flush() { for (let i = 0; i < 12; i++) await Promise.resolve(); }
 
 describe('preview transport', () => {
   it('delivers a selection to its authenticated save document without activating it', async () => {
@@ -188,4 +189,12 @@ describe('preview transport', () => {
     expect(accept).not.toHaveBeenCalled();
     expect(vi.getTimerCount()).toBe(0);
   });
+});
+
+
+it('does not create a preview tab when administrator policy denies preview', async () => {
+  api.storage = { managed: { get: vi.fn().mockResolvedValue({ PreviewAllowed: false }) } };
+  const { openPreview } = await import('@/src/preview-session');
+  await expect(openPreview(payload)).rejects.toThrow('Preview is disabled');
+  expect(api.tabs.create).not.toHaveBeenCalled(); expect(onConnect.listeners.size).toBe(0);
 });

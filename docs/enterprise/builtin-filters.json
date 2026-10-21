@@ -1,0 +1,11 @@
+{
+  "PolicyVersion": 1,
+  "RequiredBuiltinFilters": [
+    "email-hide",
+    "phone-numbers"
+  ],
+  "DisabledBuiltinFilters": [
+    "email-mask-domain",
+    "phone-mask"
+  ]
+}

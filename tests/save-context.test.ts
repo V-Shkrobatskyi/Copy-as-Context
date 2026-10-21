@@ -7,6 +7,7 @@ function event<T>() {
     removeListener: (fn: (value: T) => void) => listeners.delete(fn),
     emit: (value: T) => { for (const fn of [...listeners]) fn(value); } };
 }
+const managedGet = vi.fn();
 let changed: ReturnType<typeof event<any>>;
 let erased: ReturnType<typeof event<number>>;
 let download: ReturnType<typeof vi.fn>;
@@ -14,13 +15,14 @@ let search: ReturnType<typeof vi.fn>;
 let revoke: ReturnType<typeof vi.spyOn>;
 let owner: EventTarget;
 beforeEach(() => {
+  managedGet.mockReset().mockResolvedValue({});
   changed = event(); erased = event();
   download = vi.fn().mockResolvedValue(12);
   search = vi.fn().mockResolvedValue([{ state: 'in_progress' }]);
   vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
   revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
   owner = new EventTarget(); vi.stubGlobal('window', owner);
-  vi.doMock('wxt/browser', () => ({ browser: { downloads: { download, search, onChanged: changed, onErased: erased } } }));
+  vi.doMock('wxt/browser', () => ({ browser: { storage: { managed: { get: managedGet } }, downloads: { download, search, onChanged: changed, onErased: erased } } }));
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.resetModules(); });
 async function start(signal?: AbortSignal) {
@@ -78,5 +80,24 @@ it('does not initiate a download for an already cancelled operation', async () =
   const controller = new AbortController(); controller.abort();
   const { task } = await start(controller.signal);
   await expect(task).rejects.toThrow('download-cancelled');
+  expect(download).not.toHaveBeenCalled(); expect(URL.createObjectURL).not.toHaveBeenCalled();
+});
+
+
+it('blocks corporate file restrictions before creating a blob or starting a download', async () => {
+  managedGet.mockResolvedValue({ FileExportAllowed: false });
+  const { task } = await start();
+  await expect(task).rejects.toThrow('File export is disabled');
+  expect(URL.createObjectURL).not.toHaveBeenCalled(); expect(download).not.toHaveBeenCalled();
+});
+it('rejects stale prepared contexts and mismatched formats at the final download boundary', async () => {
+  managedGet.mockResolvedValue({ RedactionMode: 'force-on', AllowedExportFormats: ['markdown'] });
+  const { readPolicy } = await import('@/src/policy/runtime');
+  const { saveContextFile } = await import('@/src/save-context');
+  const snapshot = await readPolicy();
+  const context = { policyRevision: snapshot.revision, format: 'markdown', compression: 'compact', redactSensitiveData: true } as const;
+  await expect(saveContextFile('Synthetic', 'semantic-text', undefined, context)).rejects.toThrow('does not match');
+  managedGet.mockResolvedValue({ RedactionMode: 'force-on', FileExportAllowed: true });
+  await expect(saveContextFile('Synthetic', 'markdown', undefined, context)).rejects.toThrow('changed');
   expect(download).not.toHaveBeenCalled(); expect(URL.createObjectURL).not.toHaveBeenCalled();
 });

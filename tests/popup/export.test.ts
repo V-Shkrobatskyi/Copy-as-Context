@@ -60,6 +60,8 @@ interface PopupHarness {
   sendMessage: ReturnType<typeof vi.fn>;
   requestPermission: ReturnType<typeof vi.fn>;
   createTab: ReturnType<typeof vi.fn>;
+  managedGet: ReturnType<typeof vi.fn>;
+  changePolicy(): void;
 }
 
 const SECRET = 'synthetic-popup-password-value';
@@ -76,6 +78,8 @@ function successfulCapture(): CaptureResult {
 }
 
 async function loadPopup(response: CaptureResult | unknown, options?: {
+  managedPolicy?: Record<string, unknown>;
+  managedError?: boolean;
   clipboardError?: boolean;
   downloadError?: boolean;
   storedSettings?: unknown;
@@ -144,6 +148,8 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   });
   vi.stubGlobal('window', { addEventListener: vi.fn(), removeEventListener: vi.fn(), close: vi.fn() });
   vi.stubGlobal('navigator', { clipboard: { writeText: clipboardWrite }, userAgent: options?.android ? 'Firefox Android' : 'Firefox Desktop' });
+  const managedGet = options?.managedError ? vi.fn().mockRejectedValue(new Error('Private policy error')) : vi.fn().mockResolvedValue(options?.managedPolicy ?? {});
+  const policyListeners = new Set<(...args: any[]) => void>();
   const extensionApi = {
     tabs: { create: vi.fn().mockResolvedValue({ id: 2 }), remove: vi.fn().mockResolvedValue(undefined) },
     runtime: {
@@ -154,6 +160,8 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
       download, search: downloadSearch, onChanged: downloadChanged, onErased: { addListener: vi.fn(), removeListener: vi.fn() },
     },
     storage: {
+      managed: { get: managedGet },
+      onChanged: { addListener: (fn: (...args: any[]) => void) => policyListeners.add(fn), removeListener: (fn: (...args: any[]) => void) => policyListeners.delete(fn) },
       local: {
         get: vi.fn().mockResolvedValue({ 'popup-settings': options?.storedSettings }),
         set: storageSet,
@@ -187,7 +195,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   await settle();
   return {
     app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings, otherSiteFrames,
-    copy, save, preview, selectElement, customize, guideLink, licenseLink, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create,
+    copy, save, preview, selectElement, customize, guideLink, licenseLink, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create, managedGet, changePolicy: () => { for (const fn of policyListeners) fn({}, 'managed'); },
   };
 }
 
@@ -234,6 +242,7 @@ describe('popup export flow', () => {
     let finish!: (value: unknown) => void;
     popup.sendMessage.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
     popup.selectElement.click();
+    await settle();
     expect(popup.sendMessage).toHaveBeenCalledWith({ type: 'element-picker-start-v1', compression: 'detailed', format: 'markdown', redactSensitiveData: true });
     expect(popup.selectElement.disabled).toBe(true);
     expect(window.close).not.toHaveBeenCalled();
@@ -352,6 +361,7 @@ describe('popup export flow', () => {
     let finish!: (value: unknown) => void;
     popup.sendMessage.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
     popup.copy.click(); popup.copy.click(); popup.save.click();
+    await settle();
     expect(popup.sendMessage).toHaveBeenCalledOnce();
     finish({ ok: true, export: prepareExport(result.tree, 'compact', 'semantic-text'), warnings: ['embedded-frames', 'canvas-content'] });
     await settle();
@@ -629,4 +639,49 @@ describe('popup export flow', () => {
     expect(popup.copy.disabled).toBe(false);
   });
 
+});
+
+
+describe('managed popup', () => {
+  it('shows forced values, blocks restricted actions, and cannot save managed preferences', async () => {
+    const popup = await loadPopup(successfulCapture(), { managedPolicy: { ForcedCompression: 'maximum', ForcedExportFormat: 'markdown', RedactionMode: 'force-on', FileExportAllowed: false, ElementPickerAllowed: false, UserPreferencesSaveAllowed: false } });
+    await vi.waitFor(() => expect(popup.compression.value).toBe('3'));
+    expect(popup.compression.disabled).toBe(true); expect(popup.markdown.checked).toBe(true);
+    expect(popup.redactSensitiveData.checked).toBe(true); expect(popup.redactSensitiveData.disabled).toBe(true);
+    expect(popup.save.disabled).toBe(true); expect(popup.selectElement.disabled).toBe(true); expect(popup.copy.disabled).toBe(false);
+    popup.saveSettings.click(); popup.save.click(); popup.selectElement.click(); await settle();
+    expect(popup.storageSet).not.toHaveBeenCalled(); expect(popup.download).not.toHaveBeenCalled(); expect(popup.sendMessage).not.toHaveBeenCalled();
+    const { readPolicy } = await import('@/src/policy/runtime');
+    const snapshot = await readPolicy();
+    const captured = successfulCapture(); if (!captured.ok) throw new Error('Synthetic capture failed');
+    popup.sendMessage.mockResolvedValueOnce({ ok: true, policyRevision: snapshot.revision, export: prepareExport(captured.tree, 'maximum', 'markdown', true) });
+    popup.copy.click(); await vi.waitFor(() => expect(popup.clipboardWrite).toHaveBeenCalledOnce());
+  });
+  it('uses corporate defaults only in the absence of a permitted personal choice', async () => {
+    const popup = await loadPopup(successfulCapture(), { managedPolicy: { DefaultCompression: 'maximum', DefaultExportFormat: 'markdown' } });
+    await vi.waitFor(() => expect(popup.compression.value).toBe('3'));
+    expect(popup.markdown.checked).toBe(true); expect(popup.compression.disabled).toBe(false);
+  });
+  it('preserves a permitted saved choice over corporate defaults', async () => {
+    const popup = await loadPopup(successfulCapture(), { managedPolicy: { DefaultCompression: 'maximum' }, storedSettings: { compression: 'detailed' } });
+    await vi.waitFor(() => expect(popup.copy.disabled).toBe(false)); expect(popup.compression.value).toBe('1');
+  });
+  it('blocks all export on policy read failure and recovers after a successful refresh', async () => {
+    const popup = await loadPopup(successfulCapture(), { managedError: true });
+    expect(popup.copy.disabled).toBe(true); expect(popup.save.disabled).toBe(true); expect(popup.status.textContent).toContain('Unable to load organization policies');
+    popup.copy.click(); await settle(); expect(popup.sendMessage).not.toHaveBeenCalled();
+    popup.managedGet.mockResolvedValue({}); popup.changePolicy();
+    await vi.waitFor(() => expect(popup.copy.disabled).toBe(false));
+    popup.copy.click(); await settle(); expect(popup.clipboardWrite).toHaveBeenCalledOnce();
+  });
+});
+
+
+it('blocks Preview and Customize at their operation boundaries as well as disabling the buttons', async () => {
+  const popup = await loadPopup(successfulCapture(), { managedPolicy: { PreviewAllowed: false, FilterSettingsAllowed: false } });
+  await vi.waitFor(() => expect(popup.copy.disabled).toBe(false));
+  expect(popup.preview.disabled).toBe(true); expect(popup.customize.disabled).toBe(true);
+  popup.preview.click(); popup.customize.click(); await settle();
+  expect(popup.sendMessage).not.toHaveBeenCalled(); expect(popup.createTab).not.toHaveBeenCalled();
+  expect(previewMock).not.toHaveBeenCalled();
 });

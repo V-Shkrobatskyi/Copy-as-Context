@@ -26,6 +26,7 @@ export const CAPTURE_ERROR_CODES = [
   'page-changed',
   'invalid-tree',
   'redaction-settings',
+  'policy-blocked',
 ] as const;
 export type CaptureErrorCode = (typeof CAPTURE_ERROR_CODES)[number];
 
