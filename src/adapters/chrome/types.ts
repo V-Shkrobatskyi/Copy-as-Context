@@ -6,6 +6,7 @@
  * It stays adapter-local so CDP identifiers and properties cannot leak into the core.
  */
 export interface ChromeAxValue {
+  sources?: { type?: string; superseded?: boolean }[];
   type?: string;
   value?: string | number | boolean | null;
 }

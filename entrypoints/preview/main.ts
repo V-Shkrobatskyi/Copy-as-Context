@@ -1,9 +1,12 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { isManaged } from '@/src/policy/model';
+
 import './style.css';
 import { checkPolicy, watchPolicy, policyMessage, type PolicyContext, type PolicySnapshot } from '@/src/policy/runtime';
-import { redactionMode, PolicyError } from '@/src/policy/model';
+import { redactionMode, dataControlsLocked, PolicyError } from '@/src/policy/model';
+import { technicalEvent } from '@/src/diagnostics/client';
 import { browser } from 'wxt/browser';
 import { wrapClipboardContext } from '@/src/clipboard-context';
 import { captureWarningText, isPreviewToken, MAX_PREVIEW_CHARACTERS, type PreviewPayload } from '@/src/preview-message';
@@ -22,6 +25,7 @@ const reset = document.querySelector<HTMLButtonElement>('#reset')!;
 let policyContext: PolicyContext | undefined;
 let policySnapshot: PolicySnapshot | undefined;
 let policyReady = false;
+let invalidated = false;
 let policyGeneration = 0;
 let original: string | undefined;
 let compression: PreviewPayload['compression'] = 'compact';
@@ -33,7 +37,7 @@ let pending = false;
 let leaving = false;
 let metricTimer: ReturnType<typeof setTimeout> | undefined;
 let stopReceiving: (() => void) | undefined;
-const findReplace = setupFindReplace(editor, () => original !== undefined && !pending && policyReady && !!policySnapshot && redactionMode(policySnapshot.policy) !== 'force-on');
+const findReplace = setupFindReplace(editor, () => original !== undefined && !pending && policyReady && !!policySnapshot && redactionMode(policySnapshot.policy) !== 'force-on' && !dataControlsLocked(policySnapshot.policy));
 
 function dirty(): boolean { return original !== undefined && editor.value !== original; }
 
@@ -41,7 +45,7 @@ function update(): void {
   const length = editor.value.length;
   const changed = dirty();
   edited.hidden = !changed;
-  const locked = !policyReady || !!policySnapshot && redactionMode(policySnapshot.policy) === 'force-on';
+  const locked = !policyReady || !!policySnapshot && (redactionMode(policySnapshot.policy) === 'force-on' || dataControlsLocked(policySnapshot.policy));
   editor.readOnly = pending || locked;
   reset.disabled = pending || locked || !changed;
   copy.disabled = !policyReady || policySnapshot?.policy.ClipboardExportAllowed === false || pending || !editor.value.trim() || length > MAX_PREVIEW_CHARACTERS;
@@ -66,6 +70,7 @@ async function refreshPolicy(): Promise<void> {
   policyReady = false; update();
   try {
     const snapshot = await checkPolicy('preview', policyContext);
+    if (invalidated) throw new PolicyError('Data controls or organization policies changed. Prepare the context again.');
     if (generation !== policyGeneration || !policyContext) return;
     panel.hidden = false; document.querySelector<HTMLElement>('#editor-actions')!.hidden = false; reset.hidden = false;
     policySnapshot = snapshot; policyReady = true;
@@ -73,10 +78,10 @@ async function refreshPolicy(): Promise<void> {
     status.textContent = 'Preview ready. Nothing has been copied.';
     const note = document.querySelector<HTMLElement>('#organization-policy');
     if (note) {
-      note.hidden = !snapshot.revision;
-      note.textContent = snapshot.revision ? (redactionMode(snapshot.policy) === 'force-on' ? 'Managed by your organization. Required redaction makes this preview read-only.' : 'Managed by your organization') : '';
+      note.hidden = !isManaged(snapshot.policy);
+      note.textContent = isManaged(snapshot.policy) ? ((redactionMode(snapshot.policy) === 'force-on' || dataControlsLocked(snapshot.policy)) ? 'Managed by your organization. Organization data controls make this preview read-only.' : 'Managed by your organization') : '';
     }
-    if (redactionMode(snapshot.policy) === 'force-on' && original !== undefined) editor.value = original;
+    if ((redactionMode(snapshot.policy) === 'force-on' || dataControlsLocked(snapshot.policy)) && original !== undefined) editor.value = original;
     update();
   } catch (error) {
     if (generation === policyGeneration) {
@@ -87,10 +92,15 @@ async function refreshPolicy(): Promise<void> {
     }
   }
 }
-const stopPolicy = watchPolicy(() => { policyReady = false; update(); void refreshPolicy(); });
+const stopPolicy = watchPolicy(() => {
+  invalidated ||= original !== undefined;
+  if (invalidated) { original = undefined; editor.value = ''; findReplace.clear(); }
+  policyReady = false; update(); void refreshPolicy();
+});
 document.querySelector('#retry-policy')?.addEventListener('click', () => void refreshPolicy());
 function accept(payload: PreviewPayload): void {
-  policyContext = { format: payload.format, compression: payload.compression, redactSensitiveData: payload.redactSensitiveData, policyRevision: payload.policyRevision };
+  invalidated = false;
+  policyContext = { operationId: payload.operationId, format: payload.format, compression: payload.compression, redactSensitiveData: payload.redactSensitiveData, policyRevision: payload.policyRevision };
   if (payload.scope === 'selection') {
     document.querySelector('h1')!.textContent = 'Selected element context';
     document.title = 'Selected element context — Copy as Context';
@@ -127,6 +137,7 @@ editor.addEventListener('input', () => {
 
 copy.addEventListener('click', () => {
   if (pending || !policyReady || original === undefined) return;
+  const generation = policyGeneration;
   const content = editor.value;
   if (!content.trim()) { status.textContent = 'Enter some context before copying.'; update(); return; }
   if (content.length > MAX_PREVIEW_CHARACTERS) { status.textContent = 'The context is too large. Remove text before copying.'; update(); return; }
@@ -140,10 +151,13 @@ copy.addEventListener('click', () => {
   void (async () => {
     try {
       const snapshot = await checkPolicy('copy', policyContext);
-      if (redactionMode(snapshot.policy) === 'force-on' && content !== original) throw new PolicyError('Required redaction makes this preview read-only. Prepare the context again.');
+      if (invalidated || generation !== policyGeneration) throw new PolicyError('Data controls changed. Prepare the context again.');
+      if ((redactionMode(snapshot.policy) === 'force-on' || dataControlsLocked(snapshot.policy)) && content !== original) throw new PolicyError('Organization data controls make this preview read-only. Prepare the context again.');
       await navigator.clipboard.writeText(wrapped);
+      technicalEvent({ code: 'clipboard-complete', result: 'success', operation: policyContext?.operationId });
       status.textContent = `${changed ? 'Copied edited context.' : 'Copied page context.'} ${wrapped.length} characters copied · ~${Math.ceil(wrapped.length / 4)} tokens (including boundaries).`;
     } catch (error) {
+      technicalEvent({ code: 'clipboard-complete', result: 'error', operation: policyContext?.operationId, reason: error instanceof PolicyError ? 'policy-blocked' : 'failed' });
       status.textContent = error instanceof PolicyError ? policyMessage(error) : 'Unable to copy the page context. Check browser clipboard access and try again.';
     } finally {
       pending = false;
@@ -155,6 +169,7 @@ copy.addEventListener('click', () => {
 
 save.addEventListener('click', () => {
   if (pending || !policyReady || !canSave || original === undefined) return;
+  const generation = policyGeneration;
   const content = editor.value;
   if (!content.trim() || content.length > MAX_PREVIEW_CHARACTERS) { update(); return; }
   const changed = content !== original;
@@ -166,11 +181,13 @@ save.addEventListener('click', () => {
     try {
       // Request permission within the click gesture; the editor remains open for the picker.
       if (firefox && !await browser.permissions.request({ permissions: ['downloads'] })) {
+        technicalEvent({ code: 'download-complete', result: 'error', reason: 'permission-denied', operation: policyContext?.operationId });
         status.textContent = 'Download permission was not granted. Use Copy or try Save again.';
         return;
       }
       const snapshot = await checkPolicy('save', policyContext);
-      if (redactionMode(snapshot.policy) === 'force-on' && content !== original) throw new PolicyError('Required redaction makes this preview read-only. Prepare the context again.');
+      if (invalidated || generation !== policyGeneration) throw new PolicyError('Data controls changed. Prepare the context again.');
+      if ((redactionMode(snapshot.policy) === 'force-on' || dataControlsLocked(snapshot.policy)) && content !== original) throw new PolicyError('Organization data controls make this preview read-only. Prepare the context again.');
       await saveContextFile(content, format, undefined, policyContext);
       status.textContent = `${changed ? 'Saved edited context.' : 'Saved page context.'} ${content.length} characters saved · ~${Math.ceil(content.length / 4)} tokens (without boundaries).`;
     } catch (error) {

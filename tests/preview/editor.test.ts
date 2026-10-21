@@ -418,3 +418,15 @@ it('hides an existing preview and blocks export when preview access is revoked',
   button('copy').click(); button('save').click(); await readyPolicy();
   expect(writeText).not.toHaveBeenCalled(); expect(saveFile).not.toHaveBeenCalled();
 });
+
+it('discards an invalidated preview permanently even if the original policy is restored', async () => {
+  accept(payload); await readyPolicy();
+  expect(editor().value).toContain(payload.content);
+  managedGet.mockResolvedValue({ IncludeFormValues: false });
+  for (const fn of policyListeners) fn({}, 'managed');
+  await readyPolicy(); expect(editor().value).toBe(''); expect(button('copy').disabled).toBe(true);
+  managedGet.mockResolvedValue({});
+  for (const fn of policyListeners) fn({}, 'managed');
+  await readyPolicy(); expect(editor().value).toBe(''); expect(button('copy').disabled).toBe(true);
+  button('reset').click(); expect(editor().value).toBe('');
+});

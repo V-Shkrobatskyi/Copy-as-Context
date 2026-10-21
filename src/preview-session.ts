@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { technicalEvent } from './diagnostics/client';
 import { checkPolicy } from './policy/runtime';
 import { browser } from 'wxt/browser';
 
@@ -78,12 +79,14 @@ async function openExportDocument(payload: PreviewPayload, path: '/preview.html'
     tabId = tab.id;
     if (tabId === undefined) throw new Error('preview-tab-unavailable');
     await received;
+    technicalEvent({ code: 'preview-transfer', result: 'success', operation: payload.operationId });
     if (signal?.aborted) throw new Error('preview-cancelled');
     // Release the payload and listeners before activation can close the popup.
     cleanup();
     if (activate) await browser.tabs.update(tabId, { active: true });
     if (signal?.aborted) throw new Error('preview-cancelled');
   } catch (error) {
+    technicalEvent({ code: 'preview-transfer', result: 'error', reason: 'failed', operation: payload.operationId });
     cancelled = true;
     if (tabId !== undefined) await browser.tabs.remove(tabId).catch(() => {});
     throw error;

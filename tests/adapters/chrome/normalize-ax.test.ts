@@ -22,7 +22,7 @@ describe('normalizeChromeAxTree', () => {
   beforeEach(() => { vi.spyOn(console, 'warn').mockImplementation(() => {}); });
   afterEach(() => { vi.restoreAllMocks(); });
 
-  it('reports missing roles and pre-filter graph problems without logging page data', () => {
+  it('rejects missing roles without writing uncontrolled console diagnostics', () => {
     const result = normalizeChromeAxTree({ nodes: [
       {
         nodeId: 'private-root-id', frameId: 'private-frame-id',
@@ -35,19 +35,7 @@ describe('normalizeChromeAxTree', () => {
       },
     ] });
     expect(result).toMatchObject({ ok: false, error: { code: 'invalid-tree' } });
-    expect(console.warn).toHaveBeenCalledExactlyOnceWith('[Copy as Context] AX normalization rejected', {
-      reason: 'missing-role',
-      raw: {
-        nodes: 2, duplicateIds: 0, missingIds: 0, roots: 1, missingChildReferences: 1,
-        repeatedChildReferences: 0, ignoredNodes: 1, missingRoles: 1,
-        ignoredMissingRoles: 1, rootWebAreas: 1, explicitFrameIds: 1,
-      },
-      filtered: {
-        nodes: 2, duplicateIds: 0, missingIds: 0, roots: 1, missingChildReferences: 0,
-        repeatedChildReferences: 0, ignoredNodes: 1, missingRoles: 1,
-        ignoredMissingRoles: 1, rootWebAreas: 1, explicitFrameIds: 1,
-      },
-    });
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it('collapses identical repeated dialog records without dropping controls or mutating input', async () => {
@@ -74,16 +62,14 @@ describe('normalizeChromeAxTree', () => {
       { ...button, ...difference },
     ] });
     expect(result).toMatchObject({ ok: false, error: { code: 'invalid-tree' } });
-    expect(console.warn).toHaveBeenCalledWith('[Copy as Context] AX normalization rejected',
-      expect.objectContaining({ reason: 'conflicting-duplicate-id' }));
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it('reports a missing ID separately from duplicates', () => {
     expect(normalizeChromeAxTree({ nodes: [
       { nodeId: '', role: { value: 'RootWebArea' } },
     ] })).toMatchObject({ ok: false, error: { code: 'invalid-tree' } });
-    expect(console.warn).toHaveBeenCalledWith('[Copy as Context] AX normalization rejected',
-      expect.objectContaining({ reason: 'missing-id', raw: expect.objectContaining({ missingIds: 1 }) }));
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it('does not emit rejection diagnostics for a successful capture', () => {

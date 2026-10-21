@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import type { CaptureControls } from '../types';
+import { sourceAllowed } from '../../policy/sources';
 import type { CaptureTab } from '../capture';
 import type { CaptureOutcome } from '../types';
 import type { CaptureErrorCode, SemanticNode } from '../../core';
@@ -29,6 +31,7 @@ const failure = (code: CaptureErrorCode): CaptureOutcome => ({ ok: false, error:
   'capture-limit': 'This page exceeds the capture limits.',
   'invalid-tree': 'The page returned an invalid semantic tree.',
   'unsupported-page': 'This document cannot be captured.',
+  'policy-blocked': 'Capture of this source is disabled by site restrictions.',
 } as Partial<Record<CaptureErrorCode, string>>)[code] ?? 'Unable to capture this page’s semantic structure.' } });
 function errorCode(error: unknown): CaptureErrorCode {
   if (error instanceof FrameFailure) return error.code;
@@ -40,9 +43,9 @@ function errorCode(error: unknown): CaptureErrorCode {
 interface CapturedFrame { frameId: number; snapshot: FrameSnapshot; node: SemanticNode; boundary?: SemanticNode; children: CapturedFrame[] }
 
 /** Capture only selected documents, sequentially, with one budget and operation identity. */
-export function createFirefoxCapturer(client: FirefoxFrameClient): (tab: CaptureTab, capturedAt: string, selection?: string, signal?: AbortSignal) => Promise<CaptureOutcome> {
+export function createFirefoxCapturer(client: FirefoxFrameClient): (tab: CaptureTab, capturedAt: string, selection?: string, signal?: AbortSignal, controls?: CaptureControls) => Promise<CaptureOutcome> {
   const inFlight = new Set<number>();
-  return async (tab, capturedAt, selection, signal) => {
+  return async (tab, capturedAt, selection, signal, controls) => {
     if (inFlight.has(tab.id)) return failure('capture-failed');
     inFlight.add(tab.id);
     const operation = crypto.randomUUID();
@@ -51,6 +54,7 @@ export function createFirefoxCapturer(client: FirefoxFrameClient): (tab: Capture
     const seen = new Set<number>();
     const candidates = new Set<string>();
     let navigation = false;
+    let policyPartial = false;
     let closed = false;
     let documents = 0;
     let ownerCount = 0;
@@ -90,7 +94,7 @@ export function createFirefoxCapturer(client: FirefoxFrameClient): (tab: Capture
       seen.add(frameId); documents++;
       installed.add(frameId);
       await bounded(client.execute({ target: { tabId: tab.id, frameIds: [frameId] }, world: 'ISOLATED', files: ['/frame-capture.js'] }));
-      const snapshot = await command(frameId, { mode: 'capture', operation, ...(frameId === 0 && selection ? { selection } : {}),
+      const snapshot = await command(frameId, { mode: 'capture', operation, ...(controls ? { controls } : {}), ...(frameId === 0 && selection ? { selection } : {}),
         limits: { ...remaining, maxDepth: Math.max(0, LIMITS.maxDepth - baseDepth) }, maxOwners: LIMITS.owners - ownerCount, ...(frameId !== 0 && allowedOrigin !== undefined ? { allowedOrigin } : {}) });
       if (!isFrameSnapshot(snapshot, operation, frameId !== 0)) throw new FrameFailure('invalid-tree');
       remaining.maxNodes -= snapshot.work.nodes;
@@ -139,7 +143,8 @@ export function createFirefoxCapturer(client: FirefoxFrameClient): (tab: Capture
           const code = errorCode(error);
           boundary.children = [];
           boundary.value = code === 'page-changed' ? 'Not captured: document changed' : /limit|timeout/u.test(code) ? 'Not captured: limit exceeded' : 'Not captured: unavailable';
-          if (code === 'permission-denied' && owner.source && candidates.size < LIMITS.owners) candidates.add(owner.source);
+          if (code === 'policy-blocked') { boundary.role = '__omitted-frame'; policyPartial = true; }
+          if (code === 'permission-denied' && (!controls?.sources || sourceAllowed(owner.source.replace(/\/\*$/u, '/'), controls.sources)) && owner.source && candidates.size < LIMITS.owners) candidates.add(owner.source);
         }
       }
     };
@@ -165,6 +170,7 @@ export function createFirefoxCapturer(client: FirefoxFrameClient): (tab: Capture
       }
     };
     try {
+      if (!sourceAllowed(tab.url, controls?.sources)) throw new FrameFailure('policy-blocked');
       const crossOrigin = client.allowCrossOrigin ? await bounded(client.allowCrossOrigin()) : true;
       const root = await read(0);
       if (!crossOrigin && root.snapshot.outcome.ok) allowedOrigin = new URL(root.snapshot.outcome.tree.sourceUrl!).origin;
@@ -174,7 +180,8 @@ export function createFirefoxCapturer(client: FirefoxFrameClient): (tab: Capture
       const outcome = root.snapshot.outcome;
       if (!outcome.ok) return outcome;
       if (navigation || current.url !== undefined && current.url !== outcome.tree.sourceUrl || tab.url !== undefined && tab.url !== outcome.tree.sourceUrl) throw new FrameFailure('page-changed');
-      const warnings = new Set<'canvas-content' | 'embedded-frames-partial'>();
+      const warnings = new Set<'canvas-content' | 'embedded-frames-partial' | 'source-policy-omitted'>();
+      if (policyPartial) warnings.add('source-policy-omitted');
       if (inventoryChanged) warnings.add('embedded-frames-partial');
       const collect = (frame: CapturedFrame): void => {
         if (frame.snapshot.outcome.ok && frame.snapshot.outcome.warnings?.includes('canvas-content')) warnings.add('canvas-content');

@@ -1,0 +1,97 @@
+<!doctype html>
+<!-- Copyright (c) 2026 Vitalii Shkrobatskyi; SPDX-License-Identifier: GPL-3.0-only -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diagnostics — Copy as Context</title>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="brand"><img src="/icon/48.png" width="32" height="32" alt="" /><span>Copy as Context</span></div>
+      <h1>Diagnostics &amp; data controls</h1>
+      <p class="intro">Settings and technical information stay on this device. Nothing is sent automatically.</p>
+    </header>
+    <p id="status" role="status" aria-live="polite" aria-atomic="true">Loading…</p>
+    <section class="diagnostics-section" aria-labelledby="data-heading">
+      <div class="section-heading">
+        <h2 id="data-heading">Export data</h2>
+        <p class="note">Organization restrictions take priority. Changing these settings requires preparing context again.</p>
+      </div>
+      <form id="data-form" class="settings-panel">
+        <div class="settings-grid">
+          <label class="check-option"><input id="include-title" type="checkbox" /> <span>Include document titles</span></label>
+          <label class="check-option"><input id="include-values" type="checkbox" /> <span>Include current form values and selection states</span></label>
+          <label>Page URLs <select id="page-url"><option value="full">Full URL</option><option value="without-query">Without query and fragment</option><option value="origin">Origin only</option><option value="omit">Exclude</option></select></label>
+          <label>Link URLs <select id="link-urls"><option value="full">Full URL</option><option value="without-query">Without query and fragment</option><option value="omit">Exclude</option></select></label>
+        </div>
+        <button type="submit" id="save-data">Save personal data settings</button>
+      </form>
+      <details><summary>Effective data settings</summary><pre id="effective" aria-label="Effective settings and their sources"></pre></details>
+    </section>
+    <section class="diagnostics-section" aria-labelledby="sources-heading">
+      <div class="section-heading">
+        <h2 id="sources-heading">Capture sources</h2>
+        <p class="note">Personal site restrictions apply to pages, selected elements and embedded frames. Organization restrictions also apply and cannot be overridden here. Changing these settings requires preparing context again.</p>
+      </div>
+      <p id="sources-status" class="note" role="status" aria-live="polite">Loading site settings…</p>
+      <form id="sources-form" class="settings-panel">
+        <p id="sources-help" class="note">One origin pattern per line, up to 500 per list. Examples: https://example.com, https://*.example.com (includes the base domain and subdomains), *://example.com. A final / is optional. Optional :port or :*; no paths, query strings or regular expressions. A blocked site always takes priority.</p>
+        <div class="settings-grid source-settings">
+          <label class="check-option"><input id="sources-allowlist" type="checkbox" disabled /><span>Only allow these sites</span></label>
+          <label>Allowed sites<textarea id="sources-allowed" rows="4" maxlength="256500" placeholder="https://*.example.com" aria-describedby="sources-help sources-warning" disabled></textarea></label>
+          <label>Blocked sites<textarea id="sources-blocked" rows="4" maxlength="256500" placeholder="https://private.example.com" aria-describedby="sources-help" disabled></textarea></label>
+        </div>
+        <p id="sources-warning" class="note" hidden>The allowed list is empty. Saving with “Only allow these sites” enabled blocks all external page captures.</p>
+        <p id="sources-organization" class="note"></p>
+        <button id="save-sources" type="submit" disabled>Save personal site settings</button>
+      </form>
+    </section>
+    <section class="diagnostics-section" aria-labelledby="journal-heading">
+      <div class="section-heading">
+        <h2 id="journal-heading">Local technical journal</h2>
+        <p class="note">Contains technical results only, without page content, page addresses, titles or filter rules. Personal Debug expires after 30 minutes. Turning logging off keeps existing entries until they expire or you clear them.</p>
+      </div>
+      <div class="settings-panel">
+        <div class="journal-toolbar">
+          <label>Logging level <select id="level"><option value="off">Off</option><option value="error">Error (default)</option><option value="info">Info</option><option value="debug">Debug (30 minutes)</option></select></label>
+          <div class="action-group"><button id="clear" type="button" disabled aria-describedby="journal-clear-note">Clear journal</button><button id="refresh" type="button">Refresh</button></div>
+        </div>
+        <p id="usage" class="note"></p>
+        <p id="journal-clear-note" class="note" hidden></p>
+      </div>
+      <details><summary>View journal</summary><pre id="journal"></pre></details>
+    </section>
+    <section class="diagnostics-section" aria-labelledby="history-heading">
+      <div class="section-heading">
+        <h2 id="history-heading">Capture history</h2>
+        <p class="note">Optional local history of captured page headers, selected element tags, extension version and export settings. Titles and full URLs can contain sensitive information. Page and element contents are never stored. Data exclusions and required redaction also apply here.</p>
+      </div>
+      <p id="history-status" class="note" role="status" aria-live="polite">Loading capture history…</p>
+      <form id="history-form" class="settings-panel">
+        <div class="settings-grid">
+          <label class="check-option"><input id="history-enabled" type="checkbox" /><span>Record capture history on this device</span></label>
+          <label>Keep for (days, 1–365)<input id="history-days" type="number" min="1" max="365" step="1" value="60" required /></label>
+          <label>Maximum history size (MiB, 1–50)<input id="history-size" type="number" min="1" max="50" step="1" value="10" required /></label>
+        </div>
+        <button id="save-history-settings" type="submit">Save history settings</button>
+        <p id="history-settings-note" class="note">Defaults: off, 60 days, 10 MiB. The oldest entries are removed when a limit is reached. Turning recording off keeps existing entries until expiry or Clear history. Size measures the compact JSON data, not physical database disk usage.</p>
+      </form>
+      <details><summary>View recent captures</summary><p class="note">Showing up to 10 most recent entries. Export includes all retained entries.</p><div id="history-entries"></div></details>
+      <div class="action-group history-actions"><button id="history-refresh" type="button">Refresh history</button><button id="history-clear" type="button" disabled aria-describedby="history-clear-note">Clear history</button><button id="history-copy" type="button">Copy history JSON</button><button id="history-save" type="button">Save history JSON</button></div>
+      <p id="history-clear-note" class="note" hidden></p>
+    </section>
+    <section class="diagnostics-section" aria-labelledby="report-heading">
+      <div class="section-heading">
+        <h2 id="report-heading">Diagnostic report</h2>
+        <p class="note">Review the JSON below before copying or saving it. Internal domain lists and rule text are excluded.</p>
+      </div>
+      <label class="check-option"><input id="include-log" type="checkbox" /> <span>Include technical journal in report</span></label>
+      <pre id="report" tabindex="0" aria-label="Diagnostic JSON report"></pre>
+      <div class="action-group report-actions"><button id="copy" type="button">Copy JSON report</button><button id="save" type="button">Save JSON report</button></div>
+    </section>
+  </main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

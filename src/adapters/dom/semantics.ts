@@ -88,19 +88,20 @@ export function roleForElement(element: Element): string {
 
 export function allowsContentName(role: string): boolean { return CONTENT_NAMES.has(role); }
 
-export function elementStates(element: Element, role: string): NodeStates | undefined {
+export function elementStates(element: Element, role: string, includeValues = true): NodeStates | undefined {
   const states: NodeStates = {};
-  if (['checkbox', 'radio', 'switch', 'menuitemcheckbox', 'menuitemradio'].includes(role)) {
+  if (includeValues && ['checkbox', 'radio', 'switch', 'menuitemcheckbox', 'menuitemradio'].includes(role)) {
     const aria = element.getAttribute('aria-checked');
     if (aria === 'mixed') states.checked = 'mixed';
     else if (aria === 'true' || aria === 'false') states.checked = aria === 'true';
     else if (element.localName === 'input') states.checked = (element as HTMLInputElement).indeterminate ? 'mixed' : (element as HTMLInputElement).checked;
   }
   for (const key of ['expanded', 'selected', 'required', 'disabled', 'readOnly'] as const) {
+    if (!includeValues && key === 'selected') continue;
     const aria = element.getAttribute(`aria-${key.toLowerCase()}`);
     if (aria === 'true' || aria === 'false') states[key] = aria === 'true';
   }
-  if (element.localName === 'option') states.selected = (element as HTMLOptionElement).selected;
+  if (includeValues && element.localName === 'option') states.selected = (element as HTMLOptionElement).selected;
   if (element.matches('input,textarea,select,button,option,optgroup,fieldset')) states.disabled = isDisabled(element);
   if (element.matches('input,textarea,select')) states.required = (element as HTMLInputElement).required || states.required === true;
   if (element.matches('input,textarea')) states.readOnly = (element as HTMLInputElement).readOnly || states.readOnly === true;

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { FORM_ROLES, type DataControls } from '../../core/data-controls';
 import type { SemanticNode } from '../../core/model';
 import type { CaptureOutcome } from '../types';
 import type { CaptureWarningCode } from '../../capture-warnings';
@@ -12,6 +13,7 @@ const clean = (value: string): string => value.replace(/\s+/gu, ' ').trim();
 
 export interface DomCaptureWork { nodes: number; visited: number; nameWork: number; characters: number; milliseconds: number }
 export interface DomCaptureOptions {
+  dataControls?: DataControls;
   root?: Element;
   embedded?: boolean;
   includeFrame?: (element: Element) => boolean;
@@ -21,6 +23,18 @@ export interface DomCaptureOptions {
 
 /** A bounded HTML/ARIA approximation, not the browser's computed AX tree. */
 export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAPTURE_LIMITS, options: DomCaptureOptions = {}): CaptureOutcome {
+  const omitValues = options.dataControls?.includeFormValues === false;
+  const editable = (element: Element): boolean => {
+    let current: Element | null = element;
+    while (current) {
+      const mode = current.getAttribute('contenteditable')?.toLowerCase();
+      if (mode === 'false') return false;
+      if (mode === '' || mode === 'true' || mode === 'plaintext-only') return true;
+      current = current.assignedSlot ?? current.parentElement ?? (current.getRootNode() as ShadowRoot).host ?? null;
+    }
+    return false;
+  };
+  const field = (element: Element) => editable(element) || FORM_ROLES.has(roleForElement(element));
   const started = performance.now();
   let visitedCount = 0;
   let outputCount = 1;
@@ -62,7 +76,7 @@ export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAP
       const element = node as Element;
       if (OMIT_TAGS.has(element.localName) || ['iframe', 'frame', 'canvas'].includes(element.localName) || !includeHidden && (pruned(element) || style(element).visibility === 'hidden' || style(element).visibility === 'collapse')) continue;
       // Never read a password value, including controls embedded in referenced labels.
-      if (isPassword(element)) continue;
+      if (isPassword(element) || omitValues && field(element)) continue;
       if (element !== root && element.hasAttribute('aria-labelledby')) {
         add(` ${accessibleName(element, path, includeHidden)} `); continue;
       }
@@ -114,6 +128,7 @@ export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAP
     }
     if (element.localName === 'optgroup') return element.getAttribute('label') ?? '';
     if (element.localName === 'option' && element.hasAttribute('label')) return (element as HTMLOptionElement).label;
+    if (omitValues && field(element)) return element.getAttribute('title') ?? '';
     if (referenced || allowsContentName(roleForElement(element))) {
       const content = textAlternative(element, referenced, undefined, next);
       if (content) return content;
@@ -165,15 +180,16 @@ export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAP
         let name = names.get(element);
         if (name === undefined) { name = accessibleName(element); names.set(element, name); }
         if (name) output.name = text(clean(name));
-        const states = elementStates(element, role);
+        if (omitValues && editable(element)) output.editable = true;
+        const states = elementStates(element, role, !omitValues);
         if (states) output.states = states;
         const ariaLevel = Number(element.getAttribute('aria-level'));
         if (Number.isInteger(ariaLevel) && ariaLevel > 0) output.level = ariaLevel;
         else if (/^h[1-6]$/u.test(element.localName)) output.level = Number(element.localName[1]);
         else if (role === 'listitem' && listLevel > 0) output.level = listLevel;
-        if (element.matches('input,textarea,select') && !isPassword(element) && !['button', 'checkbox', 'radio'].includes(role)) output.value = text((element as HTMLInputElement).value);
-        else if (element.getAttribute('contenteditable') === 'true') output.value = text(textAlternative(element, false));
-        else if (['slider', 'spinbutton', 'progressbar', 'meter'].includes(role)) {
+        if (!omitValues && element.matches('input,textarea,select') && !isPassword(element) && !['button', 'checkbox', 'radio'].includes(role)) output.value = text((element as HTMLInputElement).value);
+        else if (!omitValues && editable(element)) output.value = text(textAlternative(element, false));
+        else if (!omitValues && ['slider', 'spinbutton', 'progressbar', 'meter'].includes(role)) {
           const value = element.getAttribute('aria-valuetext') ?? element.getAttribute('aria-valuenow') ?? (element.matches('progress,meter') ? String((element as HTMLProgressElement).value) : null);
           if (value !== null) output.value = text(value);
         }
@@ -195,7 +211,7 @@ export function captureDomPage(doc: Document, limits: DomCaptureLimits = DOM_CAP
         if (element.localName === 'canvas') warnings.add('canvas-content');
       }
       if (element.localName === 'iframe' || element.localName === 'frame' || element.localName === 'canvas') continue;
-      let children = composedChildren(element);
+      let children = omitValues && field(element) ? [] : composedChildren(element);
       if (hidden) children = children.filter((child) => child.nodeType !== 3);
       if (visitedCount + stack.length + children.length > limits.maxVisited) throw new CaptureLimitError();
       for (let i = children.length - 1; i >= 0; i--) stack.push({ node: children[i]!, parent: container, depth: depth + 1, listLevel: nextListLevel });

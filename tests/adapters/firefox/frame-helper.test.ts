@@ -133,3 +133,12 @@ describe('origin restriction before DOM capture', () => {
     expect(handler).toHaveBeenCalledTimes(2);
   });
 });
+
+it.each([{ AllowedCaptureSources: [] }, { personal: { AllowedCaptureSources: [] } }])('checks the actual isolated document source before touching its DOM (%j)', sources => {
+  const fixture = setup('<p>SECRET-PAGE</p>');
+  const read = vi.spyOn(fixture.doc, 'body', 'get');
+  const result = fixture.handler({ mode: 'capture', operation: 'blocked', limits: { ...DOM_CAPTURE_LIMITS }, maxOwners: 128, controls: { sources } }) as FrameSnapshot;
+  expect(isFrameSnapshot(result, 'blocked', false)).toBe(true);
+  expect(result.outcome).toMatchObject({ ok: false, error: { code: 'policy-blocked' } });
+  expect(read).not.toHaveBeenCalled(); expect(JSON.stringify(result)).not.toContain('SECRET-PAGE');
+});

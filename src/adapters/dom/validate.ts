@@ -13,7 +13,7 @@ const onlyKeys = (value: Record<string, unknown>, keys: string[]): boolean => Ob
 export function isDomCaptureOutcome(value: unknown, embedded = false, expectedDemoUrl?: string): value is CaptureOutcome {
   if (!isRecord(value)) return false;
   if (value.ok === false) return isRecord(value.error) &&
-    ['capture-failed', 'capture-limit', 'unsupported-page'].includes(String(value.error.code)) && typeof value.error.message === 'string';
+    ['capture-failed', 'capture-limit', 'unsupported-page', 'policy-blocked'].includes(String(value.error.code)) && typeof value.error.message === 'string';
   if (value.ok !== true || !isRecord(value.tree)) return false;
   if (value.warnings !== undefined && !isCaptureWarnings(value.warnings)) return false;
   const tree = value.tree;
@@ -42,7 +42,8 @@ export function isDomCaptureOutcome(value: unknown, embedded = false, expectedDe
     const { node, depth } = stack.pop()!;
     if (seen.has(node) || seen.size >= DOM_CAPTURE_LIMITS.maxNodes || depth > DOM_CAPTURE_LIMITS.maxDepth + 1) return false;
     seen.add(node);
-    if (!onlyKeys(node, ['role', 'name', 'value', 'href', 'id', 'level', 'states', 'children'])) return false;
+    if (!onlyKeys(node, ['role', 'name', 'value', 'href', 'id', 'level', 'states', 'children', 'editable'])) return false;
+    if (node.editable !== undefined && typeof node.editable !== 'boolean') return false;
     if (typeof node.role !== 'string' || !node.role || !validText(node.role) ||
       !validText(node.name) || !validText(node.value) || !validText(node.href) || !validText(node.id) ||
       !Array.isArray(node.children)) return false;

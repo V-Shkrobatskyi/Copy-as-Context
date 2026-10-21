@@ -15,6 +15,8 @@ export interface NodeStates {
 
 /** A normalized semantic node. It intentionally contains no browser/CDP details. */
 export interface SemanticNode {
+  /** Adapter-identified editable content, before compression. */
+  editable?: boolean;
   id?: string;
   role: string;
   name?: string;

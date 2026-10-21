@@ -15,7 +15,7 @@ export interface CaptureActiveTabRequest {
   redactSensitiveData: boolean;
 }
 
-export type CaptureActiveTabResponse = { ok: true; export: PreparedExport; policyRevision?: string; warnings?: CaptureWarningCode[]; frameAccess?: string[] } | { ok: false; error: CaptureError };
+export type CaptureActiveTabResponse = { ok: true; export: PreparedExport; operationId?: string; policyRevision?: string; warnings?: CaptureWarningCode[]; frameAccess?: string[] } | { ok: false; error: CaptureError };
 
 export function isCaptureActiveTabRequest(value: unknown): value is CaptureActiveTabRequest {
   if (typeof value !== 'object' || value === null) return false;
@@ -31,6 +31,7 @@ export function isCaptureActiveTabResponse(value: unknown): value is CaptureActi
   const response = value as Partial<CaptureActiveTabResponse>;
   if (response.ok === false) return typeof response.error?.code === 'string';
   if (response.ok !== true || !response.export) return false;
+  if (response.operationId !== undefined && !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(response.operationId)) return false;
   if (response.warnings !== undefined && !isCaptureWarnings(response.warnings)) return false;
   if (response.frameAccess !== undefined && !isFrameAccess(response.frameAccess)) return false;
   const result = response.export;

@@ -1,6 +1,9 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi
 // SPDX-License-Identifier: GPL-3.0-only
 
+import { sourceAllowed } from '../../policy/sources';
+import { FORM_ROLES } from '../../core/data-controls';
+import type { CaptureControls } from '../types';
 import type { CaptureErrorCode, SemanticNode } from '../../core';
 import type { CaptureOutcome } from '../types';
 import type { ChromeDebuggerClient } from './capture';
@@ -22,6 +25,7 @@ interface Frame {
   parentId?: string;
   loaderId: string;
   url?: string;
+  origin?: string;
   session: Session;
   snapshot?: ChromeAxTreeResponse;
   owner?: number;
@@ -119,7 +123,7 @@ function checkSnapshot(value: unknown, budget: { nodes: number; characters: numb
 /** One root attachment owns all child sessions and releases them before normalization. */
 export function createFrameCapturer(client: ChromeDebuggerClient) {
   const inFlight = new Set<number>();
-  return async (tabId: number, selection?: string, signal?: AbortSignal): Promise<CaptureOutcome> => {
+  return async (tabId: number, selection?: string, signal?: AbortSignal, controls?: CaptureControls): Promise<CaptureOutcome> => {
     if (!Number.isInteger(tabId) || tabId < 0) return fail('unsupported-page', 'This page cannot be captured.');
     if (inFlight.has(tabId)) return fail('capture-failed', 'A capture is already running for this tab.');
     inFlight.add(tabId);
@@ -136,6 +140,7 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
     let closing = false;
     let detached = false;
     let partial = false;
+    let policyPartial = false;
     let rootId: string | undefined;
     let result: CaptureOutcome | undefined;
     let cleanupDeadline = 0;
@@ -224,6 +229,7 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
             if (!collected.has(frame.id) || depth === 0) collected.set(frame.id, {
               id: frame.id, loaderId: frame.loaderId, parentId, session,
               ...(typeof frame.url === 'string' ? { url: frame.url } : {}),
+              ...(typeof frame.securityOrigin === 'string' ? { origin: frame.securityOrigin } : {}),
             });
             if (entry.childFrames !== undefined && !Array.isArray(entry.childFrames)) throw new CaptureFailure('invalid-tree', 'Chrome returned an invalid frame tree.');
             if (depth > LIMITS.frameDepth) { if ((entry.childFrames as unknown[] | undefined)?.length) partial = true; continue; }
@@ -252,6 +258,43 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
       frame.snapshot = checkSnapshot(data, budget);
       if (frame.snapshot.nodes.some((node) => node.frameId !== undefined && node.frameId !== frame.id)) {
         throw new CaptureFailure('invalid-tree', 'Chrome returned an unexpected document.');
+      }
+      if (controls?.data?.includeFormValues === false) {
+        const suppressedValues = new Set<string>();
+        const byId = new Map(frame.snapshot.nodes.map(node => [node.nodeId, node]));
+        const parents = new Map<string, ChromeAxNode[]>();
+        for (const parent of frame.snapshot.nodes) for (const id of parent.childIds ?? []) parents.set(id, [...parents.get(id) ?? [], parent]);
+        let comparisons = 0;
+        for (const node of frame.snapshot.nodes) {
+          const editable = node.properties?.some(p => p.name === 'editable' && ['plain', 'plaintext', 'richtext', true].includes(p.value?.value as string | boolean));
+          if (FORM_ROLES.has(String(node.role?.value)) || editable) {
+            const values = new Set<string>();
+            if (typeof node.value?.value === 'string' && node.value.value) values.add(node.value.value);
+            const queue = [...node.childIds ?? []];
+            while (queue.length) {
+              const id = queue.pop()!; if (suppressedValues.has(id)) continue;
+              suppressedValues.add(id); const child = byId.get(id);
+              for (const text of [child?.name?.value, child?.value?.value]) if (typeof text === 'string' && text) values.add(text);
+              queue.push(...child?.childIds ?? []);
+            }
+            if (node.name?.value === node.value?.value || node.name?.sources?.some(source => source.type === 'contents' && !source.superseded) && !['checkbox', 'radio', 'switch', 'menuitemcheckbox', 'menuitemradio'].includes(String(node.role?.value))) delete node.name;
+            delete node.value;
+            // AX may repeat editable descendants in an ancestor's content-based name.
+            const ancestors = [...parents.get(node.nodeId) ?? []];
+            const seen = new Set<string>();
+            while (ancestors.length) {
+              const parent = ancestors.pop()!; if (seen.has(parent.nodeId)) continue; seen.add(parent.nodeId);
+              if (typeof parent.name?.value === 'string') for (const value of values) {
+                if (++comparisons > 100000) throw new CaptureFailure('capture-limit', 'The page exceeds the capture limits.');
+                parent.name.value = parent.name.value.split(value).join('').trim();
+              }
+              ancestors.push(...parents.get(parent.nodeId) ?? []);
+            }
+            node.childIds = [];
+          }
+          node.properties = node.properties?.filter(p => !['checked', 'selected'].includes(p.name));
+        }
+        frame.snapshot.nodes = frame.snapshot.nodes.filter(node => !suppressedValues.has(node.nodeId));
       }
       // Only inspect input type, never DOM values. Suppress descendants of password controls.
       const suppressed = new Set<string>();
@@ -301,20 +344,28 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
         if (!client.extensionOrigin) throw new CaptureFailure('capture-unavailable', 'The selection context is unavailable.');
         runtimeEnabled = true;
         await command(rootSession, 'Runtime.enable');
-        if (pickerContexts.size !== 1) throw new CaptureFailure('page-changed', 'The selected element is no longer available.');
-        selectionContext = [...pickerContexts.values()][0]!;
-        const response = await command(rootSession, 'Runtime.evaluate', {
-          expression: `(${selectedElementReference.toString()})(${JSON.stringify(selection)})`,
-          uniqueContextId: selectionContext, objectGroup, silent: true,
-        });
-        selectedObject = record(response.result).objectId as string | undefined;
-        if (response.exceptionDetails || !selectedObject) throw new CaptureFailure('page-changed', 'The selected element is no longer available.');
+        // Reloaded extensions can leave another authenticated isolated world in
+        // this document. Select the world retaining this session's exact token,
+        // rather than rejecting a valid selection merely because two worlds exist.
+        for (const candidate of pickerContexts.values()) {
+          const response = await command(rootSession, 'Runtime.evaluate', {
+            expression: `(${selectedElementReference.toString()})(${JSON.stringify(selection)})`,
+            uniqueContextId: candidate, objectGroup, silent: true,
+          });
+          const objectId = record(response.result).objectId;
+          if (response.exceptionDetails || typeof objectId !== 'string') continue;
+          if (selectedObject) throw new CaptureFailure('page-changed', 'The selection session is ambiguous. Start Select element again.');
+          selectionContext = candidate;
+          selectedObject = objectId;
+        }
+        if (!selectedObject) throw new CaptureFailure('page-changed', 'The selected element is no longer available. Start Select element again.');
         const description = await command(rootSession, 'DOM.describeNode', { objectId: selectedObject, depth: -1, pierce: true });
         try {
           selectionIds = await selectedDomIds(description.node, async backendNodeId =>
             (await command(rootSession, 'DOM.describeNode', { backendNodeId, depth: -1, pierce: true })).node);
         } catch { throw new CaptureFailure('capture-limit', 'Unable to resolve the selected block within capture limits.'); }
       }
+      if (!sourceAllowed(frames.get(rootId)!.url, controls?.sources, frames.get(rootId)!.origin ?? 'null')) throw new CaptureFailure('policy-blocked', 'Capture of this source is disabled by site restrictions.');
       await snapshot(frames.get(rootId)!);
       if (selectionIds) {
         try { frames.get(rootId)!.snapshot = selectChromeAxTree(frames.get(rootId)!.snapshot!, selectionIds); }
@@ -349,6 +400,7 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
             if (deadline - Date.now() < LIMITS.commandMs) {
               frame.status = 'Not captured: limit exceeded'; partial = true; continue;
             }
+            if (!sourceAllowed(frame.url, controls?.sources, frame.origin ?? 'null')) { frame.omitted = true; policyPartial = true; continue; }
             documents++;
             if (changed.has(frame.id) || !frame.session.live) throw new CaptureFailure('page-changed', 'The embedded document changed.');
             await snapshot(frame);
@@ -381,7 +433,7 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
       for (const frame of frames.values()) {
         if (changed.has(frame.id) || !frame.session.live || current.get(frame.id)?.loaderId !== frame.loaderId ||
             current.get(frame.id)?.session !== frame.session || current.get(frame.id)?.parentId !== frame.parentId ||
-            current.get(frame.id)?.url !== frame.url) {
+            current.get(frame.id)?.url !== frame.url || current.get(frame.id)?.origin !== frame.origin) {
           if (frame.id === rootId) throw new CaptureFailure('page-changed', 'The page changed during capture.');
           frame.snapshot = undefined;
           if (!frame.omitted) { frame.status = 'Not captured: document changed'; partial = true; }
@@ -492,7 +544,7 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
         schemaVersion: 1, root,
         ...(root.name ? { title: root.name } : {}),
         ...(rootId && frames.get(rootId)?.url !== undefined ? { sourceUrl: frames.get(rootId)!.url } : {}),
-      }, ...(partial ? { warnings: ['embedded-frames-partial'] as const } : {}) };
+      }, ...((partial || policyPartial) ? { warnings: [...(partial ? ['embedded-frames-partial' as const] : []), ...(policyPartial ? ['source-policy-omitted' as const] : [])] } : {}) };
     } catch { return fail('invalid-tree', 'Chrome returned an invalid accessibility tree.'); }
   };
 }

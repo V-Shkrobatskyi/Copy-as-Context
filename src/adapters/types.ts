@@ -6,3 +6,8 @@ import type { CaptureWarningCode } from '../capture-warnings';
 
 export type CaptureOutcome = { ok: true; tree: SemanticTree; warnings?: CaptureWarningCode[]; frameAccess?: string[] } |
   { ok: false; error: CaptureError };
+
+export interface CaptureControls {
+  sources?: import('../policy/sources').CaptureSourceRules;
+  data?: import('../core/data-controls').DataControls;
+}

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+vi.mock('../../src/diagnostics/client', () => ({ technicalEvent: vi.fn() }));
+
 
 import { prepareExport, type CaptureResult, type SemanticTree } from '@/src/core';
 const previewMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
@@ -49,6 +51,7 @@ interface PopupHarness {
   selectElement: FakeElement;
   customize: FakeElement;
   guideLink: FakeElement;
+  diagnosticsLink: FakeElement;
   licenseLink: FakeElement;
   status: FakeElement;
   metrics: FakeElement;
@@ -104,6 +107,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const feedback = new FakeElement();
   const compressionDescription = new FakeElement();
   const guideLink = new FakeElement();
+  const diagnosticsLink = new FakeElement();
   const licenseLink = new FakeElement();
   const redactSensitiveData = new FakeElement();
   const saveSettings = new FakeElement();
@@ -117,7 +121,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
     ['#app', app], ['#compression', compression], ['#format', format],
     ['#format-semantic-text', semanticTextFormat], ['#format-markdown', markdownFormat],
     ['#customize', customize], ['#preview', preview], ['#select-element', selectElement], ['.primary-action', copy], ['.secondary-action', save], ['.status', status], ['.metrics', metrics],
-    ['.feedback', feedback], ['#compression-description', compressionDescription], ['#guide-link', guideLink], ['#license-link', licenseLink],
+    ['.feedback', feedback], ['#compression-description', compressionDescription], ['#guide-link', guideLink], ['#diagnostics-link', diagnosticsLink], ['#license-link', licenseLink],
     ['#redact-sensitive-data', redactSensitiveData], ['#save-settings', saveSettings],
     ['#include-other-site-frames', otherSiteFrames],
   ]);
@@ -195,7 +199,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   await settle();
   return {
     app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings, otherSiteFrames,
-    copy, save, preview, selectElement, customize, guideLink, licenseLink, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create, managedGet, changePolicy: () => { for (const fn of policyListeners) fn({}, 'managed'); },
+    copy, save, preview, selectElement, customize, guideLink, diagnosticsLink, licenseLink, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create, managedGet, changePolicy: () => { for (const fn of policyListeners) fn({}, 'managed'); },
   };
 }
 
@@ -212,7 +216,7 @@ afterEach(() => {
 });
 
 describe('popup export flow', () => {
-  for (const [link, path] of [['guideLink', '/guide.html'], ['licenseLink', '/license.html']] as const) {
+  for (const [link, path] of [['guideLink', '/guide.html'], ['diagnosticsLink', '/diagnostics.html'], ['licenseLink', '/license.html']] as const) {
     it.each([{ firefox: false }, { firefox: true }, { firefox: true, android: true }])(`opens ${path} once and closes only after the tab opens: %j`, async options => {
       const popup = await loadPopup(successfulCapture(), options);
       let opened!: (value: { id: number }) => void;
@@ -362,7 +366,7 @@ describe('popup export flow', () => {
     popup.sendMessage.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
     popup.copy.click(); popup.copy.click(); popup.save.click();
     await settle();
-    expect(popup.sendMessage).toHaveBeenCalledOnce();
+    expect(popup.sendMessage.mock.calls.filter(([m]) => m.type === 'capture-active-tab')).toHaveLength(1);
     finish({ ok: true, export: prepareExport(result.tree, 'compact', 'semantic-text'), warnings: ['embedded-frames', 'canvas-content'] });
     await settle();
     expect(popup.clipboardWrite).toHaveBeenCalledOnce();
@@ -539,7 +543,7 @@ describe('popup export flow', () => {
     expect(popup.save.disabled).toBe(true);
     popup.save.click();
     await settle();
-    expect(popup.sendMessage).toHaveBeenCalledOnce();
+    expect(popup.sendMessage.mock.calls.filter(([m]) => m.type === 'capture-active-tab')).toHaveLength(1);
     expect(popup.download).not.toHaveBeenCalled();
     expect(popup.status.textContent).toContain('Saving files is unavailable');
   });
