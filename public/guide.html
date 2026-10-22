@@ -28,153 +28,277 @@ SPDX-License-Identifier: GPL-3.0-only
       .resource-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
       @media (prefers-color-scheme: dark) { .resource-icon-github { filter: brightness(0) invert(1); } }
       @media (max-width: 560px) { .support-card { flex-direction: column; align-items: flex-start; } }
+      .guide-layout { width: min(100% - 32px, 760px); margin: 0 auto; }
+      main { width: 100%; margin: 0; }
+      .guide-toc { position: relative; z-index: 1; padding: 12px 0; background: var(--background); }
+      .toc-desktop { display: none; }
+      .toc-mobile { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+      .guide-toc summary { padding: 12px 16px; cursor: pointer; font-size: .88rem; font-weight: 700; }
+      .guide-toc ul { list-style: none; margin: 0; padding: 4px 8px 8px; }
+      .guide-toc li { margin: 0; }
+      .guide-toc a { display: block; padding: 8px; border-radius: 6px; color: var(--muted); font-size: .86rem; line-height: 1.4; text-decoration: none; }
+      .guide-toc a:hover { color: var(--text); background: var(--selected); }
+      .guide-toc a:focus-visible, .guide-toc summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+      .toc-mobile[open] { max-height: 75vh; overflow-y: auto; }
+      h2[id] { scroll-margin-top: 24px; }
+      @media (min-width: 1100px) {
+        .guide-layout { display: grid; grid-template-columns: 220px minmax(0, 760px); gap: 48px; width: min(100% - 48px, 1028px); }
+        .guide-toc { position: sticky; top: 32px; align-self: start; max-height: calc(100vh - 64px); overflow-y: auto; padding: 14px 0; }
+        .toc-desktop { display: block; }
+        .toc-desktop p { margin: 0 0 10px; padding: 0 8px; color: var(--text); font-size: .8rem; font-weight: 700; }
+        .toc-desktop ul { padding: 0; }
+        .toc-mobile { display: none; }
+      }
+      .guide-toc .toc-group > a { color: var(--text); font-weight: 700; }
+      .guide-toc ul ul { margin: 0 0 8px 8px; padding: 0 0 0 8px; border-left: 1px solid var(--border); }
+      .guide-toc ul ul a { padding: 6px 8px; font-size: .82rem; }
+      .guide-group { margin-top: 48px; }
+      .guide-group > h2 { margin-bottom: 24px; font-size: 1.45rem; }
+      .guide-group > section { margin-top: 28px; }
+      .guide-group > section > h3 { margin-bottom: 12px; font-size: 1.1rem; }
+      h4 { margin: 0; font-size: .9rem; }
+      h3[id] { scroll-margin-top: 24px; }
     </style>
   </head>
   <body>
+    <div class="guide-layout">
+      <nav class="guide-toc" aria-label="Guide contents">
+        <div class="toc-desktop">
+          <p>On this page</p>
+          <ul>
+            <li class="toc-group"><a href="#getting-started">Getting started</a>
+              <ul>
+                <li><a href="#start-heading">Quick start</a></li>
+                <li><a href="#settings-heading">Compression and format</a></li>
+                <li><a href="#shortcuts-heading">Shortcuts</a></li>
+              </ul>
+            </li>
+            <li class="toc-group"><a href="#capture-export">Capture and export</a>
+              <ul>
+                <li><a href="#preview-heading">Preview and selection</a></li>
+                <li><a href="#firefox-heading">Browser capture and saving</a></li>
+              </ul>
+            </li>
+            <li class="toc-group"><a href="#privacy-controls">Privacy and data</a>
+              <ul>
+                <li><a href="#filters-heading">Redaction filters</a></li>
+                <li><a href="#privacy-heading">Redaction limits</a></li>
+                <li><a href="#content-review-heading">Review before sharing</a></li>
+                <li><a href="#diagnostics-heading">Data controls</a></li>
+              </ul>
+            </li>
+            <li class="toc-group"><a href="#help-links">Help and links</a>
+              <ul>
+                <li><a href="#help-heading">Troubleshooting</a></li>
+                <li><a href="#resources-heading">Demo and official links</a></li>
+                <li><a href="#feedback-heading">Feedback</a></li>
+                <li><a href="#support-heading">Support the developer</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <details class="toc-mobile">
+          <summary>On this page</summary>
+          <ul>
+            <li class="toc-group"><a href="#getting-started">Getting started</a>
+              <ul>
+                <li><a href="#start-heading">Quick start</a></li>
+                <li><a href="#settings-heading">Compression and format</a></li>
+                <li><a href="#shortcuts-heading">Shortcuts</a></li>
+              </ul>
+            </li>
+            <li class="toc-group"><a href="#capture-export">Capture and export</a>
+              <ul>
+                <li><a href="#preview-heading">Preview and selection</a></li>
+                <li><a href="#firefox-heading">Browser capture and saving</a></li>
+              </ul>
+            </li>
+            <li class="toc-group"><a href="#privacy-controls">Privacy and data</a>
+              <ul>
+                <li><a href="#filters-heading">Redaction filters</a></li>
+                <li><a href="#privacy-heading">Redaction limits</a></li>
+                <li><a href="#content-review-heading">Review before sharing</a></li>
+                <li><a href="#diagnostics-heading">Data controls</a></li>
+              </ul>
+            </li>
+            <li class="toc-group"><a href="#help-links">Help and links</a>
+              <ul>
+                <li><a href="#help-heading">Troubleshooting</a></li>
+                <li><a href="#resources-heading">Demo and official links</a></li>
+                <li><a href="#feedback-heading">Feedback</a></li>
+                <li><a href="#support-heading">Support the developer</a></li>
+              </ul>
+            </li>
+          </ul>
+        </details>
+      </nav>
     <main>
       <p class="eyebrow">Copy as Context</p>
       <h1>Turn the open page into useful context.</h1>
-      <p class="lede">Create a focused semantic export for an AI conversation without manually selecting, cleaning, or restructuring page content.</p>
+      <p class="lede">Export page context for AI chats without manually cleaning or restructuring it.</p>
       <p class="start">Everything is processed locally in your browser</p>
 
-      <section aria-labelledby="resources-heading">
-        <h2 id="resources-heading">Demo and official links</h2>
-        <p>Watch a short demo, find the extension for your browser, or explore the source code.</p>
-        <div class="resource-links">
-          <a class="resource-link" href="https://www.youtube.com/watch?v=6NjQ28gr5ZE" target="_blank" rel="noopener noreferrer"><img class="resource-icon" src="icon/brands/youtube.svg" width="20" height="20" alt="" aria-hidden="true" />Watch the demo on YouTube</a>
-          <a class="resource-link" href="https://chromewebstore.google.com/detail/copy-as-context/ghkjolcdeccimnjhdebaklffpekfmojd" target="_blank" rel="noopener noreferrer"><img class="resource-icon" src="icon/brands/googlechrome.svg" width="20" height="20" alt="" aria-hidden="true" />Chrome Web Store</a>
-          <a class="resource-link" href="https://addons.mozilla.org/firefox/addon/copy-as-context/" target="_blank" rel="noopener noreferrer"><img class="resource-icon" src="icon/brands/firefoxbrowser.svg" width="20" height="20" alt="" aria-hidden="true" />Firefox — Desktop &amp; Android</a>
-          <a class="resource-link" href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener noreferrer"><img class="resource-icon resource-icon-github" src="icon/brands/github.svg" width="20" height="20" alt="" aria-hidden="true" />GitHub</a>
-        </div>
-      </section>
+      <section class="guide-group" aria-labelledby="getting-started">
+        <h2 id="getting-started">Getting started</h2>
 
-      <section aria-labelledby="start-heading">
-        <h2 id="start-heading">A quick export in three steps</h2>
-        <div class="steps">
-          <article class="step"><span class="step-number">1</span><h3>Open a page</h3><p>Use the tab whose content you want to provide as context.</p></article>
-          <article class="step"><span class="step-number">2</span><h3>Choose the shape</h3><p>Select a compression level and either Semantic Text or Markdown.</p></article>
-          <article class="step"><span class="step-number">3</span><h3>Take it with you</h3><p>Copy directly into a prompt. On Desktop, you can also save the result as a file.</p></article>
-        </div>
-      </section>
-
-      <section aria-labelledby="settings-heading">
-        <h2 id="settings-heading">Choose the right amount of context</h2>
-        <div class="settings">
-          <div class="setting"><h3>Without</h3><p>Keeps every captured semantic node, not all HTML text on the page. Use it when completeness of the captured context matters more than length.</p></div>
-          <div class="setting"><h3>Detailed</h3><p>Removes unnamed wrappers without semantic attributes, preserving text, links and states for careful review.</p></div>
-          <div class="setting"><h3>Compact</h3><p>Removes repeated accessibility noise while retaining meaningful controls. This is the default.</p></div>
-          <div class="setting"><h3>Maximum</h3><p>Preserves Compact context using selective abbreviations and repeated text or structures. A short legend explains the output; pages fall back to Compact when packing adds overhead. Token savings depend on the page and model.</p></div>
-          <div class="setting"><h3>Export format</h3><p>Choose Semantic Text for a concise outline or Markdown when you want formatting in your notes or AI chat.</p></div>
-        </div>
-        <aside class="note"><p><strong>Save preferences</strong> stores your compression, format, and privacy choices for the next time you open the popup.</p></aside>
-      </section>
-
-      <section aria-labelledby="shortcuts-heading">
-        <h2 id="shortcuts-heading">Shortcuts</h2>
-        <p>On Chrome and Firefox Desktop, run actions from the current page without opening the popup: <strong>Alt+Shift+P</strong> for Preview &amp; edit, <strong>Alt+Shift+C</strong> for Copy page context, <strong>Alt+Shift+S</strong> for Save to file, and <strong>Alt+Shift+E</strong> for Select element. On macOS, use <strong>Option+Shift</strong> with the same letters.</p>
-        <p>Shortcuts use saved preferences or defaults, together with current organization policies. Preview, Copy and Save capture the whole page; use the picker panel to export a selected block. Keep the source page focused for Copy. The extension icon briefly shows a check mark on success or <strong>!</strong> on failure; hover over it for details. Save opens a temporary extension tab that closes after saving; keep it open until completion. Firefox asks for download permission when needed. Repeated shortcuts are ignored while an action is running.</p>
-        <p>Choose <strong>Shortcuts</strong> in the popup footer to change or remove assignments. Chrome uses <code>chrome://extensions/shortcuts</code>. In Firefox, use <strong>Manage Extension Shortcuts</strong> in the tools menu at <code>about:addons</code> if the shortcut manager does not open directly. Browser, system and other extension shortcuts may conflict. Check your assignments and keyboard layout, especially if Alt+Shift switches input languages.</p>
-      </section>
-
-      <section aria-labelledby="filters-heading">
-        <h2 id="filters-heading">Customize redaction filters</h2>
-        <p>Choose <strong>Customize</strong> inside <strong>Redact sensitive data</strong>. The table lists the existing filters. Toggle a row, or choose <strong>+ Add filter</strong> to add a named literal text filter in the same table, such as a client name or internal domain. Edit custom filters directly in their rows. Enable <strong>Case sensitive</strong> when letter case matters. Literal types do not interpret Regex or wildcard syntax. Choose Regex when you need pattern matching. Matches become <code>[REDACTED]</code>; overlapping filters may hide the same text. Password input values are always omitted by capture.</p>
-        <p>Choose one <strong>Rule type</strong> in each custom row. <strong>Text</strong> hides literal alternatives. <strong>Field labels</strong> hides values and nested text when a label contains a matching term; <strong>Field labels — whole words</strong> requires word boundaries. Both keep the field label visible. <strong>URL parameters</strong> hides query values for names such as <code>token / client_key</code>, keeping names and unrelated parameters visible. Enter parameter names without ?, &amp;, =, # or line breaks.</p>
-        <p>Other types recognize <strong>Authorization</strong> values, <strong>JWT</strong>s and <strong>Assigned secrets</strong>. <strong>Regex</strong> replaces the separate GitHub, AWS and OpenAI custom types; existing rules are converted automatically with their original prefixes and case settings. Use <strong>Duplicate</strong> to create an editable equivalent of a configurable built-in filter, then edit its names, prefixes or Regex expression. Disable the original if your copy should replace it. Built-in types are fixed; Case sensitive is editable except for automatic detection types.</p>
-        <p>For literal types, separate alternatives with <code> / </code> (space, slash, space), such as <code>pass / private code</code>. Commas and ordinary URL/path slashes are literal. <strong>Text — single literal</strong> treats the entire matching rule as one phrase, preserving older rules. Older rules with several modes become separate rows. To check the same terms in two places, add two rows with different types.</p>
-        <p><strong>Mask email addresses (including domains)</strong> is enabled by default: <code>abcdef@gmail.com</code> becomes <code>abc***@gm***.com</code>. The name and each domain label keep half their characters, rounded down and capped at three visible characters; the final domain suffix remains visible. One-character parts become *. <strong>Hide email addresses</strong> is off by default and hides the whole address when enabled. Full hiding from overlapping rules always wins, regardless of row order. Both types work automatically without matching text or case settings, recognize common email formats, and follow the master Redact sensitive data setting. Masking is stable on repeated processing.</p>
-        <p><strong>Hide payment card numbers</strong> and <strong>Hide IBANs</strong> are on by default. Card-shaped numbers need 13–19 digits and a valid Luhn checksum; IBANs need a recognized country length and valid MOD-97 checksum. Spaces are accepted, as are hyphens in card numbers. Checksums do not prove that a card or account exists.</p>
-        <p><strong>Mask phone numbers</strong> is on by default: it keeps half the digits, rounded down and capped at three, and masks the rest while preserving formatting. For example, <code>+380 50 123 4567</code> becomes <code>+380 ** *** ****</code>. Full phone hiding overrides masking, regardless of row order.</p>
-        <p><strong>Mask personal field values (English labels)</strong> is also on by default. Names and addresses keep half their characters, rounded down and capped at three: <code>Al → A*</code>, <code>Anna → An**</code>, <code>Alexander → Ale******</code>. Phone values keep formatting and email values use the existing name/domain mask. Documents, dates of birth, financial details and CVV/CVC are hidden completely. Labels stay visible; nested value text is protected too. Both mask types work without matching text or case settings, stay stable on repeated processing, and yield to full hiding.</p>
-        <p><strong>Hide phone numbers</strong> is off by default. It recognizes phone-shaped numbers with <code>+</code> or <code>00</code> prefixes, or English Phone, Telephone, Tel, Mobile or Fax labels followed by <code>:</code> or <code>=</code>. English phone field labels also provide context for local field values and their nested text. It accepts 8–15 digits; unlabelled local numbers stay visible. These three automatic types need no matching text or case setting.</p>
-        <p><strong>Hide personal field values (English labels)</strong> is off by default. It uses a fixed automatic type to hide values and nested text under labels such as Full name, Email, Phone, Address, Date of birth, Passport, SSN, Tax ID, Card number, CVV, IBAN or Bank account. It keeps labels visible. Enable it to hide whole Email field values instead of masking them. It does not detect names or addresses in ordinary prose; its fixed English label list is shown in Text / matching rule for both Hide and Mask.</p>
-        <p>For <strong>Regex</strong>, choose <strong>Insert example…</strong> in the row to start with email addresses, GitHub tokens, AWS keys, OpenAI keys or order IDs. The selection replaces the expression after confirmation when needed. Enter Regex without surrounding slashes or flags; use <code>|</code> for alternatives. Case sensitive sets default case matching. Expressions use the RE2 syntax subset: lookarounds and backreferences are not supported. Empty matches are ignored, existing redaction markers are preserved, and every nonempty match is hidden in full. Examples target common formats; email matching does not cover every valid address.</p>
-        <p>Expand <strong>Try filters</strong>. <strong>Test all</strong> checks enabled rules; <strong>Test selected</strong> checks only the rule chosen in the list, even if it is off, without changing its saved state. Both use unsaved edits. <strong>Matched rules</strong> shows which rules match the original input; their individual counts can overlap. <strong>Load example</strong> and <strong>Load near miss</strong> insert synthetic samples using the chosen rule’s current terms. Regex samples are provided for the preset expressions; paste your own sample for other expressions.</p>
-        <p>Leave <strong>Field label</strong> blank for plain text, or enter a label such as API key to test field values. The result includes the field label when provided. Sample text is not saved. Choose <strong>Save filters</strong> to apply changes to future exports when redaction is on. Existing previews are unchanged. <strong>Restore defaults</strong> removes custom rules and restores built-in defaults in the form; save to apply it.</p>
-        <p>Custom rules offer Text, Text — single literal, Field labels, Field labels — whole words, URL parameters, Authorization, JWT, Assigned secrets and Regex. Automatic email, phone, card, IBAN and personal-field types are built-in only and have no Duplicate action. Use their On switches. Import rejects automatic custom types or altered built-in types, matching definitions and automatic case settings; imported descriptions cannot redefine behavior.</p>
-        <p><strong>Demo</strong>, beside Import / Export, opens a live page for enabled filters. It opens in the same tab with your current draft without saving preferences, and evaluates examples with all enabled rules together. Capture the page using Copy, Preview or Save in the popup: Demo uses the same draft, while ordinary pages use saved filters. Customize filters returns in the same tab and restores unsaved changes. Temporary navigation drafts stay in this tab, separately from saved extension preferences. Built-in examples are synthetic; custom examples may contain your matching terms. Rules without an automatic example link to Try filters.</p>
-        <p>In <strong>Try filters</strong>, choose Text or field value, Link URL, Page title or Page URL. Add a field label only for field values; other detectors work on the sample itself. Paste a complete query URL for URL-parameter rules. Demo uses a packaged DOM capture script in both browsers; other extension pages stay blocked and no extra permissions are needed.</p>
-        <p><strong>Export</strong> immediately downloads a file with every filter in the table, including built-in definitions, on/off states and custom text rules. <strong>Import</strong> opens a file picker and loads the selected file directly into the table. Choose <strong>Save filters</strong> to apply it. The file also lists the available rule types and explains what each checks. Older filter exports remain supported; new built-in filters are added with their default states. Limits: 400 custom rows, 256 match characters per literal row or 4,096 per Regex row, 131,072 in total, and 1 MB per imported file.</p>
-        <aside class="note"><p>Custom rule text is stored locally and included in filter exports. Review it before sharing. If saved filters cannot be read, redacted exports stop; reload filters or restore defaults and save to recover.</p></aside>
-      </section>
-
-      <section aria-labelledby="preview-heading">
-        <h2 id="preview-heading">Preview and edit before copying</h2>
-        <p>After selecting a block, the panel offers <strong>Preview &amp; edit</strong>, <strong>Copy context</strong>, and <strong>Save to file</strong>. Each action uses only the selected block. Direct Copy adds the usual context boundaries; Save writes the text without boundaries through a temporary extension tab that closes on success. Firefox requests download permission when needed. The picker closes after successful copying or after the save tab accepts the export. Cancelling the Save As dialog closes the temporary save tab without activating it. If preparation or copying fails, the picker remains available for retry.</p>
-        <p>On Chrome and Firefox Desktop, <strong>Select element</strong> starts a picker and closes the popup. Point and click to choose one block. Use <strong>Select parent</strong>, <strong>Back</strong>, or <strong>Pick again</strong> to adjust it; focus a page element and press <strong>F2</strong> for keyboard selection. <strong>Preview &amp; edit</strong> opens the prepared block in the editor with your chosen settings. <strong>Esc</strong> or <strong>Cancel</strong> exits. Choices expire after five minutes and are not saved. The picker works in the main document of ordinary HTTP/HTTPS pages; selecting inside frames is unavailable. Accessible labels may refer to text outside the block. Android retains whole-page capture.</p>
-        <p>Choose <strong>Preview &amp; edit</strong>, first in the action row, to open the prepared context in a separate tab. Keep the popup open until the editor is ready. Opening it does not copy anything or save a file. Edit the text, then choose <strong>Copy</strong> or, on Desktop, <strong>Save to file</strong>. Copy adds context boundaries automatically; saved files contain the editor text without boundaries. Your spaces and line breaks are preserved.</p>
-        <p><strong>Reset changes</strong> restores the initially prepared text after confirmation. Counts below the editor show both the copy size with boundaries and the text/file size without them. Compression reduction and automatic redaction counts describe the original export before manual edits. Manual edits are not checked for sensitive data. Maximum contains packed references; use Compact for easier editing.</p>
-        <aside class="note"><p>Your draft stays in this tab only. Closing or reloading it loses the text. To change the format, compression or privacy setting, return to the source page and open the popup again. Preview and Copy work on Desktop and Firefox Android. Saving edited drafts to a file is available on Desktop.</p></aside>
-      </section>
-
-      <section aria-labelledby="firefox-heading">
-        <h2 id="firefox-heading">Firefox capture</h2>
-        <p>Chrome 125 and later captures the main document and eligible embedded documents, including cross-origin frames. Hidden frames and tracking pixels are skipped; visible advertising may still appear. Documents below the viewport can be included. A warning indicates when some embedded documents could not be captured. Both browser builds omit password input values even when redaction is disabled.</p>
-        <p>The Firefox build reads the current page's HTML and ARIA semantics. It captures the main document, supported open web components and eligible same-origin frames. Enable Include frames from other sites to include available cross-origin frames. Hidden frames and tracking pixels are skipped; unavailable or changing frames produce a partial warning. Closed web components, canvas pixels and content that has not loaded remain outside its scope. This Firefox-only checkbox is off by default and works on Desktop and Android. Enabling it requests access to all HTTP/HTTPS websites in one browser prompt. Denial leaves it off. Access persists across tabs and browser restarts; turning it off removes site access. No Save preferences click is needed for this option. Capture still runs only when you use Copy, Preview, or Desktop Save; use the action again after changing the option. Protected frames may remain unavailable.</p>
-        <p>Password input values are always omitted in Firefox, including when redaction is off. Hidden labels can still contribute to control names. Collapsed content is not automatically opened or included.</p>
-        <p>If capture exceeds a page-size or time limit, or the page changes during capture, wait for the page to finish loading and try again. Browser pages and protected websites may deny access. Firefox capture does not need a debugger connection.</p>
-        <p>Open the extension from the browser toolbar to grant access to the current page. Reopen it after navigating to another site. Firefox Desktop supports Copy and Save. The same Firefox package supports Copy on Android; Save is unavailable. Without and Detailed can match when there are no removable wrappers, and Maximum can match Compact when additional encoding would not save enough space.</p>
-        <p>Firefox Desktop asks for download permission when you first choose Save to file. If you decline, Copy remains available. Firefox Save opens a separate extension tab to keep the file available when the file picker closes the popup. Keep that tab open until saving finishes; it closes after success and shows an error if saving fails or is cancelled. Chrome confirms completion while its popup remains open; otherwise check the browser download manager. If this browser does not support file downloads, Save is unavailable and you can use Copy page context.</p>
-      </section>
-
-      <section aria-labelledby="privacy-heading">
-        <h2 id="privacy-heading">Privacy is in your control</h2>
-        <p><strong>Redact sensitive data</strong> is on by default. It replaces detected credentials with <code>[REDACTED]</code> before the export reaches your clipboard or a saved file. Disable it only when you intentionally need original values.</p>
-        <h3>What gets hidden</h3>
-        <p>The filter looks for common credential patterns in captured text, field values, and URLs. Examples below use fictional values:</p>
-        <ul>
-          <li>API keys such as <code>sk-proj_abcdefghijklmnopqrstuvwxyz</code>, GitHub tokens such as <code>ghp_abcdefghijklmnopqrstuvwxyz123456</code>, and AWS access key IDs such as <code>AKIA1234567890ABCDEF</code> become <code>[REDACTED]</code>.</li>
-          <li><code>Authorization: Bearer abcdefghijklmnopqrstuvwxyz.12345678</code> becomes <code>Authorization: Bearer [REDACTED]</code>. Recognized Basic authorization values and JWTs are hidden too.</li>
-          <li><code>https://example.test/?token=example-token</code> becomes <code>https://example.test/?token=[REDACTED]</code>. Values of <code>api_key</code>, <code>secret</code>, and <code>password</code> query parameters are also hidden.</li>
-          <li>Captured field values with labels containing English terms such as <code>Password</code>, <code>Passcode</code>, <code>API key</code>, <code>Token</code>, <code>Secret</code>, or <code>Authorization</code> are hidden. In ordinary text, assignments such as <code>password: example-password</code> are hidden when the value has at least eight characters.</li>
-        </ul>
-        <h3>What can remain visible</h3>
-        <p>Names and postal addresses in ordinary text stay visible. Common email addresses are partially masked by default. Phone masking detects only the supported formats; full hiding is optional. English personal-field masking applies only to labelled values; checksum-based card and IBAN rules can miss malformed values. Ordinary text such as <code>Token count: 42</code> also stays visible. A password written as plain text without a recognized label or pattern, or with an unrecognized label in another language, can remain visible.</p>
-        <aside class="note"><p>These local pattern and checksum filters are not a complete personal-data anonymizer. Review the exported text before sharing it, even when redaction is enabled.</p></aside>
-      </section>
-
-      <section aria-labelledby="content-review-heading">
-        <h2 id="content-review-heading">Review page content before sharing</h2>
-        <p>Exported context can include text you did not see, such as white text on a white background, text covered by another element, or accessible labels. Inclusion depends on what Chrome exposes in its accessibility tree and what the export preserves. Hidden accessibility text can be legitimate; its presence alone does not mean a page is malicious.</p>
-        <p>The export does not include all HTML text. Content excluded from the accessibility tree, not yet loaded, or present only as image pixels may be absent. The extension does not perform OCR. Some hidden text can still contribute to an element's accessible name.</p>
-        <p>Visible or hidden page text can contain instructions aimed at an AI assistant, often called <strong>prompt injection</strong>. These may ask it to ignore your task, reveal private information, or take unrelated actions.</p>
-        <ul>
-          <li>Review the exported text before sharing it, and remove suspicious or irrelevant instructions.</li>
-          <li>Tell the assistant to use the page as source material rather than instructions to follow.</li>
-          <li>Review consequential actions, such as sending information or changing data, before allowing them.</li>
-        </ul>
-        <aside class="note"><p>Local processing, credential redaction, compression, and export boundaries do not detect or guarantee removal of malicious instructions. These review steps can help reduce risk, but they do not guarantee protection.</p></aside>
-      </section>
-
-      <section aria-labelledby="help-heading">
-        <h2 id="help-heading">If something does not work</h2>
-        <div class="troubleshooting">
-          <article class="trouble"><h3>This page cannot be captured</h3><p>Browser-internal pages, extension stores, and some protected websites cannot be captured. Try a regular web page.</p></article>
-          <article class="trouble"><h3>Capture is busy or fails</h3><p>In Chrome, close competing DevTools sessions and try again. In Firefox, wait for the page to finish loading, reopen the extension, and retry.</p></article>
-        </div>
-      </section>
-      <section aria-labelledby="feedback-heading">
-        <h2 id="feedback-heading">Feedback and suggestions</h2>
-        <p>Have a suggestion, found a bug, or want to share feedback? Email <a href="mailto:copyascontext@gmail.com">copyascontext@gmail.com</a>.</p>
-        <p>For bug reports, include your extension version, browser version, and steps to reproduce the issue. Please do not send passwords, tokens, or sensitive page content.</p>
-      </section>
-      <section aria-labelledby="support-heading">
-        <h2 id="support-heading">Support the developer</h2>
-        <div class="support-card">
-          <div>
-            <p>If you find Copy as Context useful, you can support my development work. Contributions are voluntary and help me maintain my projects, improve existing tools, and build new ones.</p>
-            <a class="support-link" href="https://www.privat24.ua/send/kh73d" target="_blank" rel="noopener noreferrer">Support via PrivatBank (UAH)</a>
+        <section aria-labelledby="start-heading">
+          <h3 id="start-heading">A quick export in three steps</h3>
+          <div class="steps">
+            <article class="step"><span class="step-number">1</span><h4>Open a page</h4><p>Open the extension on the tab you want to capture.</p></article>
+            <article class="step"><span class="step-number">2</span><h4>Choose settings</h4><p>Set Compression. Expand Options to change the format or redaction.</p></article>
+            <article class="step"><span class="step-number">3</span><h4>Export context</h4><p>Choose Copy context or Preview &amp; edit. Save to file is also available on Desktop.</p></article>
           </div>
-          <img class="support-qr" src="donate-qr.png" width="310" height="309" alt="Scan to support the developer via PrivatBank" loading="lazy" />
-        </div>
+        </section>
+
+        <section aria-labelledby="settings-heading">
+          <h3 id="settings-heading">Compression and format</h3>
+          <div class="settings">
+            <div class="setting"><h4>Without</h4><p>Keeps every captured semantic node, not all HTML text.</p></div>
+            <div class="setting"><h4>Detailed</h4><p>Removes unnamed wrappers without semantic attributes; keeps text, links and states.</p></div>
+            <div class="setting"><h4>Compact</h4><p>Removes repeated accessibility noise while keeping meaningful controls. The default.</p></div>
+            <div class="setting"><h4>Maximum</h4><p>Packs Compact context using abbreviations and shared references, with a legend. Falls back to Compact when packing adds overhead. Token savings vary by page and model.</p></div>
+            <div class="setting"><h4>Export format</h4><p>Semantic Text gives a concise outline; Markdown adds formatting for notes or AI chats.</p></div>
+          </div>
+          <aside class="note"><p>Changed settings apply to the next export. <strong>Remember settings</strong> stores compression, format and redaction for future popup openings. Shortcuts use saved settings or defaults.</p></aside>
+        </section>
+
+        <section aria-labelledby="shortcuts-heading">
+          <h3 id="shortcuts-heading">Desktop shortcuts</h3>
+          <p>Use <strong>Alt+Shift+P</strong> for Preview &amp; edit, <strong>Alt+Shift+C</strong> for Copy context, <strong>Alt+Shift+S</strong> for Save to file, and <strong>Alt+Shift+E</strong> for Select element. On macOS, use <strong>Option+Shift</strong> with the same letters.</p>
+          <p>Preview, Copy and Save shortcuts capture the whole page using saved settings and current organization policies. Keep the source page focused for Copy. A check mark on the extension icon means success; <strong>!</strong> means failure. Hover for details. Repeated shortcuts are ignored during an action.</p>
+          <p>Save shortcuts open a temporary tab that closes after saving; keep it open until completion. Firefox requests download permission when needed.</p>
+          <p>Open <strong>Shortcuts</strong> in the popup footer to change assignments. Chrome uses <code>chrome://extensions/shortcuts</code>; Firefox uses <strong>Manage Extension Shortcuts</strong> at <code>about:addons</code>. Check for browser, system or keyboard-layout conflicts if a shortcut fails.</p>
+        </section>
+
       </section>
-      <section aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">Data controls and local diagnostics</h2>
-      <p>Open <strong>Data controls</strong> from the popup to exclude document titles, reduce or omit URLs, and exclude current form values. Organization restrictions take priority. After changing data settings, prepare context again. Mandatory organization exclusions make Preview read-only.</p>
-      <p>The local technical journal defaults to Error, with Off, Info and temporary Debug options. It excludes page content, URLs, titles, form values, filenames and filter text. Default retention is at most 1000 events, 2 MiB of serialized data and seven days; entries expire during access. Personal Debug ends after 30 minutes. Clear journal removes retained entries unless your organization disables manual clearing.</p>
-      <p>Use Capture sources in Data controls to save personal blocked sites or enable Only allow these sites. Enter one origin pattern per line, such as https://example.com or https://*.example.com. An enabled empty allowed list blocks all external captures. Personal restrictions apply to pages, selected elements and embedded frames, and cannot override organization restrictions. Prepare context again after changing them.</p>
-      <p>Optional capture history is off by default. Enable it in Data controls to retain page headers and selected element tags, without captured contents. Defaults are 60 days and 10 MiB; choose 1–365 days and 1–50 MiB. Organization settings can lock these choices and separately prohibit manual clearing. Automatic retention continues. View recent captures, clear history, or explicitly copy/save its JSON. History never enters the technical report automatically.</p>
-      <p>Review the diagnostic JSON before copying or saving it. The report excludes internal domain lists and rule text. Journal entries are included only if you choose them. Export restrictions also apply to diagnostic reports. Nothing is sent automatically.</p></section>
-      <footer>Copy as Context works with the page’s accessibility structure, not by uploading the page to a service. <a href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener">View the project on GitHub</a> · <a href="privacy.html">Privacy policy</a> · <a href="license.html">License</a>.</footer>
+
+      <section class="guide-group" aria-labelledby="capture-export">
+        <h2 id="capture-export">Capture and export</h2>
+
+        <section aria-labelledby="preview-heading">
+          <h3 id="preview-heading">Preview, edit or select a block</h3>
+          <p><strong>Preview &amp; edit</strong> opens prepared context in a separate tab without copying or saving. Keep the popup open until it is ready. Edit directly or use <strong>Find and replace</strong>, with optional <strong>Match case</strong>, Previous/Next, Replace or Replace all. <strong>Reset changes</strong> restores the original text after confirmation.</p>
+          <p><strong>Copy</strong> adds context boundaries; Desktop <strong>Save to file</strong> saves the text without them. Spaces and line breaks are preserved. Counts distinguish copy and file sizes; compression and redaction counts describe the original export. Manual edits are not checked for sensitive data. Use Compact for easier editing; Maximum contains packed references.</p>
+          <p>On Desktop, <strong>Select element</strong> closes the popup and starts a picker. Click a block, then adjust it with <strong>Select parent</strong>, <strong>Back</strong> or <strong>Pick again</strong>. For keyboard selection, focus a page element and press <strong>F2</strong>. The panel’s Preview, Copy and Save actions export only that block. <strong>Esc</strong> or <strong>Cancel</strong> exits; selections expire after five minutes.</p>
+          <p>The picker supports the main document of ordinary HTTP/HTTPS pages, not frame contents. Accessible labels may refer to text outside the selected block. Android supports whole-page capture only.</p>
+          <aside class="note"><p>Preview drafts stay in their tab; closing or reloading loses them. To change export settings, return to the source page and prepare context again. Preview and Copy work on Desktop and Firefox Android; file saving is Desktop-only.</p></aside>
+        </section>
+
+        <section aria-labelledby="firefox-heading">
+          <h3 id="firefox-heading">Browser capture and saving</h3>
+          <p><strong>Chrome 125+</strong> captures the main document and eligible embedded documents, including cross-origin frames, through its accessibility structure. <strong>Firefox</strong> reads HTML and ARIA semantics, including supported open web components and same-origin frames, without a debugger connection.</p>
+          <p>Both skip hidden frames and tracking pixels; visible ads and documents below the viewport may be included. Unavailable or changing frames produce a partial-capture warning. Capture does not open collapsed content, read canvas pixels or perform OCR. Unloaded content and closed web components may be unavailable.</p>
+          <p>In Firefox <strong>Options</strong>, <strong>Include frames from other sites</strong> is off by default on Desktop and Android. Enabling it requests access to all HTTP/HTTPS sites; denial leaves it off. Access persists across restarts, and switching it off revokes access. This option needs no Remember settings click. Run capture again after changing it; protected frames may still be unavailable.</p>
+          <p>Open the extension from the toolbar to grant current-page access, and reopen it after navigating to another site. If capture hits a size/time limit or the page changes, wait for loading to finish and retry. Compression levels can produce the same output when there is nothing more to remove or pack.</p>
+          <p>Firefox Desktop requests download permission on first save; declining still allows Copy. Firefox saves and selected-block saves use a temporary tab. Keep it open until saving finishes; it closes on success. For Chrome popup saves, keep the popup open for confirmation or check the download manager. Save is unavailable on Android or browsers without download support.</p>
+        </section>
+
+      </section>
+
+      <section class="guide-group" aria-labelledby="privacy-controls">
+        <h2 id="privacy-controls">Privacy and data</h2>
+
+        <section aria-labelledby="filters-heading">
+          <h3 id="filters-heading">Redaction filters</h3>
+          <p>Expand <strong>Options</strong> and choose <strong>Filters</strong> beside <strong>Redact sensitive data</strong>. Toggle built-in rules or use <strong>+ Add filter</strong> for custom rules. Matches become <code>[REDACTED]</code> or are partially masked. Password input values are always omitted, even with redaction off.</p>
+          <h4>Custom rules</h4>
+          <p>Give each row a name, choose one <strong>Rule type</strong> and enter matching text. Enable <strong>Case sensitive</strong> when needed. Use <strong>Duplicate</strong> to copy a configurable built-in rule; disable the original if the copy should replace it. Automatic built-ins use fixed detection rules; you can switch them on or off.</p>
+          <ul>
+            <li><strong>Text</strong> hides literal alternatives separated by <code> / </code> (space, slash, space), for example <code>client name / internal.example</code>. Commas and ordinary path slashes remain literal. <strong>Text — single literal</strong> treats the entire cell as one phrase.</li>
+            <li><strong>Field labels</strong> hides values and nested text under labels containing a term. <strong>Field labels — whole words</strong> requires word boundaries. Both keep labels visible.</li>
+            <li><strong>URL parameters</strong> hides query values while keeping parameter names. Enter names such as <code>token / client_key</code>, without ?, &amp;, =, # or line breaks.</li>
+            <li><strong>Authorization</strong>, <strong>JWT</strong> and <strong>Assigned secrets</strong> recognize credentials by scheme, token prefix or assignment label. Their matching details appear on the Filters page.</li>
+            <li><strong>Regex</strong> hides complete matches. <strong>Insert example…</strong> provides email, GitHub, AWS, OpenAI and order-ID patterns. Enter expressions without surrounding slashes or flags; use <code>|</code> for alternatives. RE2 syntax excludes lookarounds and backreferences. Empty matches are ignored and existing redaction markers preserved.</li>
+          </ul>
+          <p>Use separate rows to check the same terms in different contexts.</p>
+          <h4>Automatic protection</h4>
+          <p>These built-ins need no matching text or case settings. Full hiding overrides masking, regardless of row order.</p>
+          <ul>
+            <li><strong>Email masking</strong> is on by default: <code>abcdef@gmail.com → abc***@gm***.com</code>. It keeps half the characters of each name/domain part, rounded down and capped at three; the final suffix stays visible. Full email hiding is optional.</li>
+            <li><strong>Phone masking</strong> is on by default and keeps up to three digits using the same half-length rule, preserving formatting: <code>+380 50 123 4567 → +380 ** *** ****</code>. Detection accepts 8–15 digits with +/00 prefixes or English phone-label context. Unlabelled local numbers can remain visible. Full hiding is optional.</li>
+            <li><strong>Payment card and IBAN hiding</strong> is on by default. They check number length and checksums, accepting common separators. A match does not verify that an account exists.</li>
+            <li><strong>Personal-field masking</strong> is on by default for English labels. Names and addresses keep up to three characters using the half-length rule; phones and emails use their masks. Documents, birth dates, financial details and CVV/CVC are hidden completely. Labels stay visible and nested values are protected. Optional full hiding covers the whole value. Names and addresses in ordinary prose are not detected. The supported labels appear in Text / matching rule.</li>
+          </ul>
+          <h4>Test and save</h4>
+          <p>Expand <strong>Try filters</strong>. <strong>Test all</strong> checks enabled rules; <strong>Test selected</strong> checks the chosen rule even when off. Both use unsaved edits. <strong>Matched rules</strong> checks the original sample, so counts may overlap.</p>
+          <p>Choose what to test: text/field values, link URLs, page titles or page URLs. Add a <strong>Field label</strong> for field tests or a complete URL for parameter rules. Use <strong>Load example</strong>, <strong>Load near miss</strong> or your own sample. Test text is not saved.</p>
+          <p><strong>Demo</strong> opens a sample page using your unsaved filters. Capture it from the popup to see their effect; ordinary pages still use saved rules. <strong>Customize filters</strong> returns to your draft. Examples are synthetic but may contain your custom terms.</p>
+          <p><strong>Save filters</strong> applies edits to future exports with redaction on; existing previews stay unchanged. <strong>Reload saved</strong> discards unsaved edits. <strong>Restore defaults</strong> removes custom rules and resets built-ins in the form; save to apply.</p>
+          <p><strong>Export</strong> downloads all filter definitions, custom text and on/off states. <strong>Import</strong> loads them into the table; choose Save filters to apply. The Filters page lists rule-size and import limits.</p>
+          <aside class="note"><p>Filter text is stored locally and included in exports; review it before sharing. If saved filters cannot be read, redacted exports stop. Reload filters or restore defaults and save to recover.</p></aside>
+        </section>
+
+        <section aria-labelledby="privacy-heading">
+          <h3 id="privacy-heading">Privacy and redaction limits</h3>
+          <p><strong>Redact sensitive data</strong> is on by default. It hides recognized credentials and applies enabled masking rules before export. Disable it only when you need original values.</p>
+          <p>Credential filters cover common API keys, GitHub tokens, AWS access key IDs, Authorization values, JWTs, secret URL parameters and English sensitive-field labels. For example, <code>?token=example-token</code> becomes <code>?token=[REDACTED]</code>. Assigned secrets such as <code>password: example-password</code> require at least eight value characters.</p>
+          <p>Unrecognized patterns or labels in other languages can remain visible. Names and addresses in prose are not masked; phone detection covers supported formats only, and checksum rules can miss malformed card or IBAN values. Harmless text such as <code>Token count: 42</code> remains visible.</p>
+          <aside class="note"><p>Local filters are not a complete personal-data anonymizer. Review exported text before sharing, even with redaction enabled.</p></aside>
+        </section>
+
+        <section aria-labelledby="content-review-heading">
+          <h3 id="content-review-heading">Review page content before sharing</h3>
+          <p>Exports may include accessible labels or text hidden by styling or overlapping elements. This can be legitimate. Capture follows browser semantics, so some HTML text may be absent.</p>
+          <p>Visible or hidden page text may contain <strong>prompt injection</strong>: instructions asking an AI to ignore your task, reveal information or take unrelated actions.</p>
+          <ul>
+            <li>Remove suspicious or irrelevant instructions before sharing.</li>
+            <li>Tell the assistant to treat page content as source material, not instructions.</li>
+            <li>Review consequential actions before allowing them.</li>
+          </ul>
+          <aside class="note"><p>Local processing, redaction, compression and context boundaries do not detect or guarantee removal of malicious instructions.</p></aside>
+        </section>
+
+        <section aria-labelledby="diagnostics-heading">
+          <h3 id="diagnostics-heading">Data controls and diagnostics</h3>
+          <p>Open <strong>Data controls</strong> from the popup to exclude titles or form values and reduce or omit URLs. Organization restrictions take priority and can make Preview read-only. Prepare context again after changing data or source settings.</p>
+          <p><strong>Capture sources</strong> blocks sites or enables <strong>Only allow these sites</strong>. Enter one origin pattern per line, such as <code>https://example.com</code> or <code>https://*.example.com</code>. An enabled empty allowed list blocks all external captures. Restrictions cover pages, selected blocks and frames, and cannot override organization rules.</p>
+          <p>The <strong>technical journal</strong> records technical results, excluding page content, URLs, titles, form values, filenames and filter text. Error is the default; Off, Info and 30-minute Debug are available. Default retention is up to 1,000 events, 2 MiB and seven days. You can clear entries unless your organization restricts it.</p>
+          <p><strong>Capture history</strong> is off by default. It keeps page headers and selected-element tags, without captured contents, for 60 days/up to 10 MiB by default. You can change retention, view or clear entries, and copy/save history as JSON. Organization rules may limit these choices. History is never included in technical reports automatically.</p>
+          <p>Review diagnostic JSON before copying or saving. Reports exclude internal domain lists and rule text; journal entries are opt-in. Export restrictions apply to reports too. Nothing is sent automatically.</p>
+        </section>
+
+      </section>
+
+      <section class="guide-group" aria-labelledby="help-links">
+        <h2 id="help-links">Help and links</h2>
+
+        <section aria-labelledby="help-heading">
+          <h3 id="help-heading">If something does not work</h3>
+          <div class="troubleshooting">
+            <article class="trouble"><h4>This page cannot be captured</h4><p>Browser pages, extension stores and protected sites may block capture. Try a regular web page.</p></article>
+            <article class="trouble"><h4>Capture is busy or fails</h4><p>Chrome: close competing DevTools sessions. Firefox: wait for loading, reopen the extension and retry.</p></article>
+          </div>
+        </section>
+
+        <section aria-labelledby="resources-heading">
+          <h3 id="resources-heading">Demo and official links</h3>
+          <div class="resource-links">
+            <a class="resource-link" href="https://www.youtube.com/watch?v=6NjQ28gr5ZE" target="_blank" rel="noopener noreferrer"><img class="resource-icon" src="icon/brands/youtube.svg" width="20" height="20" alt="" aria-hidden="true" />Watch the demo on YouTube</a>
+            <a class="resource-link" href="https://chromewebstore.google.com/detail/copy-as-context/ghkjolcdeccimnjhdebaklffpekfmojd" target="_blank" rel="noopener noreferrer"><img class="resource-icon" src="icon/brands/googlechrome.svg" width="20" height="20" alt="" aria-hidden="true" />Chrome Web Store</a>
+            <a class="resource-link" href="https://addons.mozilla.org/firefox/addon/copy-as-context/" target="_blank" rel="noopener noreferrer"><img class="resource-icon" src="icon/brands/firefoxbrowser.svg" width="20" height="20" alt="" aria-hidden="true" />Firefox — Desktop &amp; Android</a>
+            <a class="resource-link" href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener noreferrer"><img class="resource-icon resource-icon-github" src="icon/brands/github.svg" width="20" height="20" alt="" aria-hidden="true" />GitHub</a>
+          </div>
+        </section>
+
+        <section aria-labelledby="feedback-heading">
+          <h3 id="feedback-heading">Feedback and suggestions</h3>
+          <p>Email <a href="mailto:copyascontext@gmail.com">copyascontext@gmail.com</a> with suggestions or bugs. Include extension/browser versions and reproduction steps; omit passwords, tokens and sensitive content.</p>
+        </section>
+
+        <section aria-labelledby="support-heading">
+          <h3 id="support-heading">Support the developer</h3>
+          <div class="support-card">
+            <div>
+              <p>Voluntary contributions help maintain and improve Copy as Context and my other projects.</p>
+              <a class="support-link" href="https://www.privat24.ua/send/kh73d" target="_blank" rel="noopener noreferrer">Support via PrivatBank (UAH)</a>
+            </div>
+            <img class="support-qr" src="donate-qr.png" width="310" height="309" alt="Scan to support the developer via PrivatBank" loading="lazy" />
+          </div>
+        </section>
+
+      </section>
+      <footer>Page context is processed locally, without uploading it to a service. <a href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener">View the project on GitHub</a> · <a href="privacy.html">Privacy policy</a> · <a href="license.html">License</a>.</footer>
     </main>
+    </div>
   </body>
 </html>
