@@ -1,0 +1,54 @@
+/* Copyright (c) 2026 Vitalii Shkrobatskyi; SPDX-License-Identifier: GPL-3.0-only */
+.site-header {
+  box-sizing: border-box;
+  width: min(100% - 48px, 1152px);
+  margin: 0 auto;
+  color: #1b2942;
+  font: 14px/1.5 system-ui, sans-serif;
+}
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 18px 0;
+  border-bottom: 1px solid #cbd5e1;
+}
+.site-brand { display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 650; }
+.site-brand img { flex: none; }
+.site-nav, .site-nav-primary, .site-nav-secondary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.site-nav { gap: 8px 16px; }
+.site-nav-secondary { padding-left: 16px; border-left: 1px solid #cbd5e1; }
+.site-header a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #52617a;
+  text-decoration: none;
+  text-underline-offset: 4px;
+}
+.site-nav-primary a { color: #1b2942; }
+.site-header a:hover { color: #1b2942; background: #e4ecff; }
+.site-header a[aria-current="page"] {
+  color: #263e89;
+  background: #e4ecff;
+  font-weight: 650;
+  text-decoration: underline;
+}
+.site-header a:focus-visible { outline: 3px solid #5882f5; outline-offset: 2px; }
+@media (max-width: 600px) {
+  .site-header { width: calc(100% - 28px); }
+  .site-nav { flex-basis: 100%; }
+  .site-nav-secondary { flex-basis: 100%; padding-left: 0; border-left: 0; }
+}
+@media (prefers-color-scheme: dark) {
+  .site-header { color: #e6ebf5; border-color: #425777; }
+  .site-header a { color: #b9c8df; }
+  .site-nav-primary a { color: #e6ebf5; }
+  .site-nav-secondary { border-color: #425777; }
+  .site-header a:hover { color: #e6ebf5; background: #283850; }
+  .site-header a[aria-current="page"] { color: #b9c8df; background: #283850; }
+}

@@ -5,11 +5,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Customize filters — Copy as Context</title>
+  <link rel="stylesheet" href="/page-navigation.css" />
 </head>
 <body>
+  <header class="site-header">
+    <div class="site-brand"><img src="/icon/48.png" width="32" height="32" alt="" /><span>Copy as Context</span></div>
+    <nav class="site-nav" aria-label="Main navigation">
+      <div class="site-nav-primary">
+        <a href="/filters.html" aria-current="page">Filters</a>
+        <a href="/data-controls.html">Data controls</a>
+        <a href="/guide.html">Guide</a>
+      </div>
+      <div class="site-nav-secondary"><a href="/privacy.html">Privacy</a> <a href="/license.html">License</a> <a href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div>
+    </nav>
+  </header>
   <main>
     <header>
-      <div class="brand"><img src="/icon/48.png" width="32" height="32" alt="" /><span>Copy as Context</span></div>
       <h1>Customize filters</h1>
       <p class="intro">Choose what Redact sensitive data hides in your page context.</p>
     </header>
@@ -78,7 +89,7 @@
     <input id="import-file" type="file" accept=".json,application/json" hidden />
     <div class="save-bar">
       <div class="action-group"><button id="save-filters" type="button" disabled>Save filters</button><button id="close-filters" type="button">Close</button><span id="dirty" class="note"></span></div>
-      <div class="action-group secondary-actions"><button id="reload-filters" type="button">Reload saved</button><button id="restore-defaults" type="button">Restore defaults</button><a href="/guide.html" target="_blank" rel="noopener">Guide</a></div>
+      <div class="action-group secondary-actions"><button id="reload-filters" type="button">Reload saved</button><button id="restore-defaults" type="button">Restore defaults</button></div>
       <p id="save-feedback" class="note"></p>
     </div>
   </main>

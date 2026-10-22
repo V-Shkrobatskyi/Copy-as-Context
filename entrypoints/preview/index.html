@@ -5,11 +5,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Preview &amp; edit — Copy as Context</title>
+  <link rel="stylesheet" href="/page-navigation.css" />
 </head>
 <body class="preview-page">
+  <header class="site-header">
+    <div class="site-brand"><img src="/icon/48.png" width="32" height="32" alt="" /><span>Copy as Context</span></div>
+    <nav class="site-nav" aria-label="Main navigation">
+      <div class="site-nav-primary">
+        <a href="/filters.html" target="_blank" rel="noopener" title="Opens in a new tab">Filters</a>
+        <a href="/data-controls.html" target="_blank" rel="noopener" title="Opens in a new tab">Data controls</a>
+        <a href="/guide.html" target="_blank" rel="noopener" title="Opens in a new tab">Guide</a>
+      </div>
+      <div class="site-nav-secondary"><a href="/privacy.html" target="_blank" rel="noopener" title="Opens in a new tab">Privacy</a> <a href="/license.html" target="_blank" rel="noopener" title="Opens in a new tab">License</a> <a href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div>
+    </nav>
+  </header>
   <main>
     <header>
-      <div class="brand"><img src="/icon/48.png" width="32" height="32" alt="" /><span>Copy as Context</span></div>
       <h1>Preview &amp; edit</h1>
       <p class="intro">Review and edit the context before copying or saving.</p>
     </header>
@@ -42,7 +53,7 @@
     </section>
     <div class="actions">
       <div class="action-group"><div id="editor-actions" class="action-group" hidden><button id="copy" type="button">Copy</button><button id="save" type="button" disabled>Save to file</button></div><button id="close" type="button">Close</button></div>
-      <div class="action-group secondary-actions"><button id="reset" type="button" hidden disabled>Reset changes</button><a href="/guide.html" target="_blank" rel="noopener">Guide</a></div>
+      <div class="action-group secondary-actions"><button id="reset" type="button" hidden disabled>Reset changes</button></div>
     </div>
   </main>
   <script type="module" src="./main.ts"></script>
