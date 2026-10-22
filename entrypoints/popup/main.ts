@@ -138,7 +138,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <p class="status" role="status" aria-live="polite"></p>
       <p class="metrics" aria-live="polite"></p>
     </section>
-    <footer class="help"><a id="shortcuts-link" href="#">Shortcuts</a> · <a id="diagnostics-link" href="/data-controls.html" target="_blank" rel="noopener">Data controls</a> · <a id="guide-link" target="_blank" rel="noopener">Guide</a> · <a id="license-link" href="/license.html" target="_blank" rel="noopener">License</a></footer>
+    <footer class="help"><a id="guide-link" target="_blank" rel="noopener">Guide</a> · <a id="diagnostics-link" href="/data-controls.html" target="_blank" rel="noopener">Data controls</a> · <a id="shortcuts-link" href="#">Shortcuts</a> · <a id="license-link" href="/license.html" target="_blank" rel="noopener">License</a></footer>
 
   </main>
 `;
