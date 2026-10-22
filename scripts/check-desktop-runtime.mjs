@@ -181,7 +181,7 @@ try {
           for (const width of options['popup-layout'] === 'android' ? [280, 320, 376] : [376]) {
             const layout = JSON.parse(await evaluate(`(async () => {
               const frame = document.createElement('iframe');
-              frame.style.cssText = 'width:${width}px;height:640px;border:0';
+              frame.style.cssText = 'width:${width}px;height:600px;border:0';
               const loaded = new Promise(resolve => { frame.onload = resolve; });
               frame.srcdoc = ${JSON.stringify(`<style>${popupCss}</style>${popupMarkup}`)};
               document.body.append(frame);
@@ -190,13 +190,20 @@ try {
               doc.body.dataset.platform = ${JSON.stringify(options['popup-layout'] === 'android' ? 'android' : 'desktop')};
               doc.querySelector('.feedback').hidden = false;
               doc.querySelector('.metrics').textContent = ${JSON.stringify(options['popup-layout'] === 'android' ? 'SyntheticLongMetric'.repeat(30) : '100 characters · ~25 tokens · 0 redactions')};
-              const layout = { width: frame.contentWindow.innerWidth, scrollWidth: doc.documentElement.scrollWidth, buttonHeight: doc.querySelector('.primary-action').getBoundingClientRect().height, popupWidth: doc.querySelector('.popup').getBoundingClientRect().width, rangeHeight: doc.querySelector('input[type=range]').getBoundingClientRect().height };
+              if (${JSON.stringify(options['popup-layout'] === 'desktop')}) {
+                doc.querySelector('.options-panel').open = true;
+                doc.querySelector('#save-settings').hidden = false;
+                doc.querySelector('.status').textContent = 'Settings saved for future popup openings.';
+                doc.querySelector('.metrics').textContent = '';
+              }
+              const layout = { height: doc.querySelector('.popup').getBoundingClientRect().height, viewportHeight: frame.contentWindow.innerHeight, width: frame.contentWindow.innerWidth, scrollWidth: doc.documentElement.scrollWidth, buttonHeight: doc.querySelector('.primary-action').getBoundingClientRect().height, popupWidth: doc.querySelector('.popup').getBoundingClientRect().width, rangeHeight: doc.querySelector('input[type=range]').getBoundingClientRect().height };
               frame.remove();
               return JSON.stringify(layout);
             })()`));
             assert.ok(layout.scrollWidth <= layout.width, 'Popup overflows narrow viewport');
             if (options['popup-layout'] === 'android' && width < 376) assert.ok(layout.buttonHeight >= 44, 'Narrow viewport button is too small');
             if (options['popup-layout'] === 'desktop') {
+              assert.ok(layout.height <= layout.viewportHeight, `Expanded desktop popup with unsaved preferences and saved-settings feedback exceeds the 600px height limit: ${layout.height}px`);
               assert.equal(layout.popupWidth, 376, 'Desktop popup width changed');
               assert.equal(layout.rangeHeight, 18, 'Desktop range uses mobile sizing');
               assert.ok(layout.buttonHeight < 44, 'Desktop button uses mobile sizing');
