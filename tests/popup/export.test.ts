@@ -20,6 +20,7 @@ class FakeElement {
   checked = false;
   textContent = '';
   innerHTML = '';
+  setAttribute = vi.fn();
   readonly style = { setProperty: vi.fn() };
   private readonly listeners = new Map<string, (event: Event) => void>();
 
@@ -44,9 +45,11 @@ interface PopupHarness {
   markdown: FakeElement;
   redactSensitiveData: FakeElement;
   saveSettings: FakeElement;
+  optionsSummary: FakeElement;
   otherSiteFrames: FakeElement;
   copy: FakeElement;
   save: FakeElement;
+  saveLabel: FakeElement;
   preview: FakeElement;
   selectElement: FakeElement;
   customize: FakeElement;
@@ -91,6 +94,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   downloadsUnavailable?: boolean;
   android?: boolean;
   permissionDenied?: boolean;
+  siteAccessGranted?: boolean;
   platformError?: boolean;
 }): Promise<PopupHarness> {
   const app = new FakeElement();
@@ -98,6 +102,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const format = new FakeElement();
   const copy = new FakeElement();
   const save = new FakeElement();
+  const saveLabel = new FakeElement();
   const preview = new FakeElement();
   const selectElement = new FakeElement();
   const customize = new FakeElement();
@@ -106,13 +111,13 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   const semanticTextFormat = format;
   const markdownFormat = new FakeElement();
   const feedback = new FakeElement();
-  const compressionDescription = new FakeElement();
   const guideLink = new FakeElement();
   const diagnosticsLink = new FakeElement();
   const licenseLink = new FakeElement();
   const shortcutsLink = new FakeElement();
   const redactSensitiveData = new FakeElement();
   const saveSettings = new FakeElement();
+  const optionsSummary = new FakeElement();
   const otherSiteFrames = new FakeElement();
   compression.value = '2';
   semanticTextFormat.value = 'semantic-text';
@@ -123,8 +128,8 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
     ['#shortcuts-link', shortcutsLink], ['#app', app], ['#compression', compression], ['#format', format],
     ['#format-semantic-text', semanticTextFormat], ['#format-markdown', markdownFormat],
     ['#customize', customize], ['#preview', preview], ['#select-element', selectElement], ['.primary-action', copy], ['.secondary-action', save], ['.status', status], ['.metrics', metrics],
-    ['.feedback', feedback], ['#compression-description', compressionDescription], ['#guide-link', guideLink], ['#diagnostics-link', diagnosticsLink], ['#license-link', licenseLink],
-    ['#redact-sensitive-data', redactSensitiveData], ['#save-settings', saveSettings],
+    ['#save-label', saveLabel], ['.feedback', feedback], ['#guide-link', guideLink], ['#diagnostics-link', diagnosticsLink], ['#license-link', licenseLink],
+    ['#redact-sensitive-data', redactSensitiveData], ['#save-settings', saveSettings], ['#options-summary', optionsSummary],
     ['#include-other-site-frames', otherSiteFrames],
   ]);
   const clipboardWrite = vi.fn().mockImplementation(async () => {
@@ -178,7 +183,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   vi.stubGlobal('chrome', extensionApi);
   const firefoxApi = {
       ...extensionApi,
-      permissions: { request: requestPermission, contains: vi.fn().mockResolvedValue(false),
+      permissions: { request: requestPermission, contains: vi.fn().mockResolvedValue(options?.siteAccessGranted ?? false),
         getAll: vi.fn().mockResolvedValue({ origins: [] }), remove: vi.fn().mockResolvedValue(true),
         onAdded: { addListener: vi.fn(), removeListener: vi.fn() }, onRemoved: { addListener: vi.fn(), removeListener: vi.fn() } },
       runtime: {
@@ -201,8 +206,8 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   await import('@/entrypoints/popup/main');
   await settle();
   return {
-    app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings, otherSiteFrames,
-    copy, save, preview, selectElement, customize, guideLink, diagnosticsLink, licenseLink, shortcutsLink, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create, managedGet, changePolicy: () => { for (const fn of policyListeners) fn({}, 'managed'); },
+    app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings, optionsSummary, otherSiteFrames,
+    copy, save, saveLabel, preview, selectElement, customize, guideLink, diagnosticsLink, licenseLink, shortcutsLink, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create, managedGet, changePolicy: () => { for (const fn of policyListeners) fn({}, 'managed'); },
   };
 }
 
@@ -305,7 +310,7 @@ describe('popup export flow', () => {
     expect(popup.sendMessage).not.toHaveBeenCalled();
     expect(popup.storageSet).not.toHaveBeenCalled();
     expect(popup.clipboardWrite).not.toHaveBeenCalled();
-    expect(popup.app.innerHTML).toContain('Customize');
+    expect(popup.app.innerHTML).toContain('Filters');
     expect(popup.app.innerHTML).toContain('Preview &amp; edit');
   });
 
@@ -430,6 +435,8 @@ describe('popup export flow', () => {
       error: { code: 'capture-unavailable', message: 'synthetic private details' },
     }, { firefox: true });
     await settle();
+    popup.redactSensitiveData.checked = false;
+    popup.redactSensitiveData.change();
     popup.saveSettings.click();
     await settle();
     expect(popup.storageSet).toHaveBeenCalledOnce();
@@ -486,8 +493,8 @@ describe('popup export flow', () => {
     expect(popup.app.innerHTML).toContain('Without');
     expect(popup.app.innerHTML).toContain('type="radio"');
     expect(popup.app.innerHTML).toContain('Redact sensitive data');
-    expect(popup.app.innerHTML).toContain('Save preferences');
-    expect(popup.app.innerHTML).toContain('Copy page context');
+    expect(popup.app.innerHTML).toContain('Remember settings');
+    expect(popup.app.innerHTML).toContain('Copy context');
     expect(popup.app.innerHTML).toContain('Save to file');
   });
 
@@ -567,7 +574,7 @@ describe('popup export flow', () => {
   it('keeps Save unavailable after Copy when the browser has no downloads API', async () => {
     const popup = await loadPopup(successfulCapture(), { firefox: true, android: true, downloadsUnavailable: true });
     expect(popup.save.disabled).toBe(true);
-    expect(popup.save.textContent).toBe('Save unavailable');
+    expect(popup.saveLabel.textContent).toBe('Save unavailable');
     popup.copy.click();
     await settle();
     expect(popup.clipboardWrite).toHaveBeenCalledOnce();
@@ -634,6 +641,97 @@ describe('popup export flow', () => {
     await settle();
     expect(popup.clipboardWrite).toHaveBeenCalledOnce();
     expect(popup.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it('enables Remember settings only for changes and disables it after saving or reverting', async () => {
+    const popup = await loadPopup(successfulCapture());
+    expect(popup.saveSettings.disabled).toBe(true);
+    expect(popup.saveSettings.hidden).toBe(true);
+    popup.saveSettings.click();
+    await settle();
+    expect(popup.storageSet).not.toHaveBeenCalled();
+
+    popup.compression.value = '3';
+    popup.compression.change();
+    expect(popup.saveSettings.disabled).toBe(false);
+    expect(popup.saveSettings.hidden).toBe(false);
+    popup.compression.value = '2';
+    popup.compression.change();
+    expect(popup.saveSettings.disabled).toBe(true);
+    expect(popup.saveSettings.hidden).toBe(true);
+
+    popup.redactSensitiveData.checked = false;
+    popup.redactSensitiveData.change();
+    expect(popup.saveSettings.disabled).toBe(false);
+    popup.storageSet.mockRejectedValueOnce(new Error('storage unavailable'));
+    popup.saveSettings.click();
+    expect(popup.saveSettings.disabled).toBe(true);
+    await settle();
+    expect(popup.saveSettings.disabled).toBe(false);
+    expect(popup.status.textContent).toContain('Unable to save');
+    expect(popup.saveSettings.hidden).toBe(false);
+    popup.saveSettings.click();
+    await settle();
+    expect(popup.saveSettings.disabled).toBe(true);
+    expect(popup.saveSettings.hidden).toBe(true);
+  });
+
+  it('compares changes with saved preferences under the current organization policy', async () => {
+    const popup = await loadPopup(successfulCapture(), {
+      storedSettings: { compression: 'maximum', format: 'markdown', redactSensitiveData: false },
+      managedPolicy: { ForcedCompression: 'compact', RedactionMode: 'force-on' },
+    });
+    await vi.waitFor(() => {
+      expect(popup.compression.value).toBe('2');
+      expect(popup.markdown.checked).toBe(true);
+      expect(popup.redactSensitiveData.checked).toBe(true);
+    });
+    expect(popup.saveSettings.disabled).toBe(true);
+    popup.markdown.checked = false;
+    popup.format.checked = true;
+    popup.format.change();
+    expect(popup.saveSettings.disabled).toBe(false);
+    popup.markdown.checked = true;
+    popup.format.change();
+    expect(popup.saveSettings.disabled).toBe(true);
+  });
+
+  it.each([false, true])('shows Firefox iframe access in Options and refreshes after permission changes: %s', async granted => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true, siteAccessGranted: granted });
+    expect(popup.optionsSummary.textContent).toBe(`Semantic Text · Redaction on · iframes ${granted ? 'on' : 'off'}`);
+    const { browser } = await import('wxt/browser');
+    vi.mocked(browser.permissions.contains).mockImplementation(async () => !granted);
+    const changed = vi.mocked(browser.permissions.onRemoved.addListener).mock.calls[0]![0];
+    changed({ origins: ['<all_urls>'] });
+    await settle();
+    expect(popup.optionsSummary.textContent).toBe(`Semantic Text · Redaction on · iframes ${granted ? 'off' : 'on'}`);
+    expect(popup.storageSet).not.toHaveBeenCalled();
+  });
+
+  it('keeps the Firefox iframe summary off after site access is denied', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true, permissionDenied: true });
+    popup.otherSiteFrames.checked = true;
+    popup.otherSiteFrames.change();
+    await settle();
+    expect(popup.otherSiteFrames.checked).toBe(false);
+    expect(popup.optionsSummary.textContent).toBe('Semantic Text · Redaction on · iframes off');
+  });
+
+  it('updates the Options summary for temporary choices without saving them', async () => {
+    const popup = await loadPopup(successfulCapture());
+    expect(popup.optionsSummary.textContent).toBe('Semantic Text · Redaction on');
+    popup.markdown.checked = true;
+    popup.markdown.change();
+    popup.redactSensitiveData.checked = false;
+    popup.redactSensitiveData.change();
+    expect(popup.optionsSummary.textContent).toBe('Markdown · Redaction off');
+    expect(popup.saveSettings.hidden).toBe(false);
+    popup.copy.click();
+    await settle();
+    expect(popup.sendMessage).toHaveBeenCalledWith(expect.objectContaining({ format: 'markdown', redactSensitiveData: false }));
+    expect(popup.storageSet).not.toHaveBeenCalled();
+    expect(popup.optionsSummary.textContent).toBe('Markdown · Redaction off');
+    expect(popup.saveSettings.hidden).toBe(false);
   });
 
   it('persists settings and allows an explicitly unredacted export', async () => {

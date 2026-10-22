@@ -45,7 +45,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   'page-changed': 'The page changed during capture. Wait for it to finish loading and try again.',
   'copy-failed': 'Unable to copy the page context. Check browser clipboard access and try again.',
   'preview-failed': 'Unable to open the preview. Keep the popup open until the editor is ready and try again.',
-  'redaction-settings': 'Unable to load redaction filters. Open Customize to reload or restore them.',
+  'redaction-settings': 'Unable to load redaction filters. Open Filters to reload or restore them.',
   'save-failed': 'Unable to save the page context. Try again.',
 };
 
@@ -93,43 +93,47 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <button id="retry-policy" type="button" hidden>Retry organization policies</button>
     <section class="action-section" aria-label="Export page context">
       <div class="actions">
-        <button id="preview" class="preview-action" type="button">Preview &amp; edit</button>
-        <button class="primary-action" type="button">Copy page context</button>
-        <button class="secondary-action" type="button">Save to file</button>
-        <button id="select-element" class="preview-action" type="button">Select element</button>
+        <button class="primary-action" type="button"><svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg><span>Copy context</span></button>
+        <button class="secondary-action" type="button"><svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg><span id="save-label">Save to file</span></button>
+        <button id="preview" class="preview-action" type="button"><svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Preview &amp; edit</span></button>
+        <button id="select-element" class="preview-action" type="button"><svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7"/><path d="M12 2v5m0 10v5M2 12h5m10 0h5"/></svg><span>Select element</span></button>
       </div>
     </section>
     <section class="settings-panel" aria-label="Export preferences">
       <fieldset class="field compression-field">
         <legend>Compression</legend>
         <div class="range-control">
-          <input id="compression" name="compression" type="range" min="0" max="3" step="1" value="2" aria-describedby="compression-description" />
+          <input id="compression" name="compression" type="range" min="0" max="3" step="1" value="2" />
           <div class="range-labels" aria-hidden="true">
             <span>Without</span><span>Detailed</span><span>Compact</span><span>Maximum</span>
           </div>
         </div>
-        <p id="compression-description" class="field-note">Compact removes repeated accessibility noise.</p>
-        <div class="privacy-setting">
-          <div class="privacy-setting-header">
-            <label class="privacy-toggle"><input id="redact-sensitive-data" type="checkbox" checked /> <span>Redact sensitive data</span></label>
-            <button id="customize" class="customize-action" type="button" title="Customize redaction filters">Customize</button>
+      </fieldset>
+      <details class="options-panel">
+        <summary><span>Options</span><span id="options-summary" class="options-summary">Semantic Text · Redaction on</span></summary>
+        <div class="options-content">
+          <div class="privacy-setting">
+            <div class="privacy-setting-header">
+              <label class="privacy-toggle"><input id="redact-sensitive-data" type="checkbox" checked /> <span>Redact sensitive data</span></label>
+              <button id="customize" class="customize-action" type="button" title="Customize redaction filters"><svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h6m4 0h6M4 17h10m4 0h2"/><circle cx="12" cy="7" r="2"/><circle cx="16" cy="17" r="2"/></svg><span>Filters</span></button>
+            </div>
+            <p>Replaces matching credentials and custom text with <code>[REDACTED]</code>.</p>
           </div>
-          <p>Replaces matching credentials and custom text with <code>[REDACTED]</code>.</p>
+          ${import.meta.env.BROWSER === 'firefox' ? `<section class="privacy-setting frame-access-setting" aria-label="Site access">
+            <label class="privacy-toggle"><input id="include-other-site-frames" type="checkbox" disabled aria-describedby="other-site-frames-note" /> <span>Include frames from other sites</span></label>
+            <p id="other-site-frames-note">Applies immediately. Requires access to all sites; off revokes it.</p>
+          </section>` : ''}
+          <fieldset class="field format-field">
+            <legend>Export format</legend>
+            <div class="format-options">
+              <label class="format-option"><input id="format-semantic-text" name="format" type="radio" value="semantic-text" checked /> <span>Semantic Text</span></label>
+              <label class="format-option"><input id="format-markdown" name="format" type="radio" value="markdown" /> <span>Markdown</span></label>
+            </div>
+          </fieldset>
         </div>
-      </fieldset>
-      <fieldset class="field format-field">
-        <legend>Export format</legend>
-        <div class="format-options">
-          <label class="format-option"><input id="format-semantic-text" name="format" type="radio" value="semantic-text" checked /> <span>Semantic Text</span></label>
-          <label class="format-option"><input id="format-markdown" name="format" type="radio" value="markdown" /> <span>Markdown</span></label>
-        </div>
-      </fieldset>
-      <button id="save-settings" class="save-settings" type="button">Save preferences</button>
+      </details>
+      <button id="save-settings" class="save-settings" type="button" hidden disabled><svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12 4 4L19 6"/></svg><span>Remember settings</span></button>
     </section>
-    ${import.meta.env.BROWSER === 'firefox' ? `<section class="privacy-setting frame-access-setting" aria-label="Site access">
-      <label class="privacy-toggle"><input id="include-other-site-frames" type="checkbox" disabled aria-describedby="other-site-frames-note" /> <span>Include frames from other sites</span></label>
-      <p id="other-site-frames-note">Applies immediately. Requires access to all sites; off revokes it.</p>
-    </section>` : ''}
     <section class="feedback" hidden aria-label="Export result">
       <p class="status" role="status" aria-live="polite"></p>
       <p class="metrics" aria-live="polite"></p>
@@ -144,6 +148,7 @@ const semanticTextFormat = document.querySelector<HTMLInputElement>('#format-sem
 const markdownFormat = document.querySelector<HTMLInputElement>('#format-markdown')!;
 const copyButton = document.querySelector<HTMLButtonElement>('.primary-action')!;
 const saveButton = document.querySelector<HTMLButtonElement>('.secondary-action')!;
+const saveLabel = document.querySelector<HTMLSpanElement>('#save-label')!;
 const previewButton = document.querySelector<HTMLButtonElement>('#preview')!;
 const selectElementButton = document.querySelector<HTMLButtonElement>('#select-element')!;
 const customizeButton = document.querySelector<HTMLButtonElement>('#customize')!;
@@ -151,22 +156,23 @@ const firefox = import.meta.env.BROWSER === 'firefox';
 let canSave = !firefox && typeof browser.downloads?.download === 'function';
 function updateSaveAvailability(): void {
   saveButton.disabled = exportPending || !canSave;
-  saveButton.textContent = canSave ? 'Save to file' : 'Save unavailable';
+  saveLabel.textContent = canSave ? 'Save to file' : 'Save unavailable';
   saveButton.title = canSave && firefox
     ? 'Firefox asks for download permission the first time you save a file.'
-    : canSave ? '' : 'Saving files is unavailable in this browser. Use Copy page context.';
+    : canSave ? '' : 'Saving files is unavailable in this browser. Use Copy context.';
   applyPolicyControls();
 }
 if (!canSave) {
   saveButton.disabled = true;
-  saveButton.textContent = 'Save unavailable';
-  saveButton.title = 'Saving files is unavailable in this browser. Use Copy page context.';
+  saveLabel.textContent = 'Save unavailable';
+  saveButton.title = 'Saving files is unavailable in this browser. Use Copy context.';
 }
 const status = document.querySelector<HTMLParagraphElement>('.status')!;
 const metrics = document.querySelector<HTMLParagraphElement>('.metrics')!;
 const feedback = document.querySelector<HTMLElement>('.feedback')!;
 const guideLink = document.querySelector<HTMLAnchorElement>('#guide-link')!;
 const redactSensitiveData = document.querySelector<HTMLInputElement>('#redact-sensitive-data')!;
+const optionsSummary = document.querySelector<HTMLSpanElement>('#options-summary')!;
 const saveSettingsButton = document.querySelector<HTMLButtonElement>('#save-settings')!;
 installTouchButtonFeedback(saveSettingsButton, () => document.body.dataset.platform === 'android');
 const controls = [
@@ -176,13 +182,31 @@ const controls = [
 
 let policySnapshot: PolicySnapshot | undefined;
 let personalSettings: StoredPopupSettings = {};
+let savedSettings: StoredPopupSettings = {};
+let preferencesSavePending = false;
+
+function preferencesChanged(): boolean {
+  if (!policySnapshot || !formats(policySnapshot.policy).length || !levels(policySnapshot.policy).length) return false;
+  const saved = resolvePreferences(policySnapshot.policy, savedSettings);
+  const current = resolvePreferences(policySnapshot.policy, {
+    compression: selectedRangeCompression(compression.value),
+    format: selectedFormat(markdownFormat.checked ? 'markdown' : 'semantic-text'),
+    redactSensitiveData: redactSensitiveData.checked,
+  });
+  return current.compression !== saved.compression || current.format !== saved.format
+    || current.redactSensitiveData !== saved.redactSensitiveData;
+}
 let policyGeneration = 0;
 let policyLoadFailed = false;
 
 function applyPolicyControls(): void {
+  optionsSummary.textContent = `${FORMAT_LABELS[markdownFormat.checked ? 'markdown' : 'semantic-text']} · Redaction ${redactSensitiveData.checked ? 'on' : 'off'}`
+    + (otherSiteFrames ? ` · iframes ${otherSiteFrames.checked ? 'on' : 'off'}` : '');
+  const changed = preferencesChanged();
+  saveSettingsButton.hidden = !changed;
   if (!policySnapshot) { for (const control of controls) control.disabled = true; return; }
   const p = policySnapshot.policy;
-  const busy = exportPending || !!frameAccessToggle?.pending;
+  const busy = exportPending || preferencesSavePending || !!frameAccessToggle?.pending;
   for (const control of controls) { control.disabled = busy; control.title = ''; control.ariaDescription = null; }
   const blocked = (control: HTMLInputElement | HTMLButtonElement, disabled: boolean, reason: string) => {
     control.disabled ||= disabled;
@@ -200,6 +224,7 @@ function applyPolicyControls(): void {
   blocked(redactSensitiveData, redactionMode(p) !== 'user-controlled', 'Redaction is managed by your organization.');
   const editable = (!p.ForcedCompression && levels(p).length > 1) || (!p.ForcedExportFormat && formats(p).length > 1) || redactionMode(p) === 'user-controlled';
   blocked(saveSettingsButton, p.UserPreferencesSaveAllowed === false || !editable, 'Saving preferences is managed by your organization.');
+  saveSettingsButton.disabled ||= !changed;
 }
 async function refreshPolicy(): Promise<void> {
   const generation = ++policyGeneration;
@@ -217,7 +242,7 @@ async function refreshPolicy(): Promise<void> {
       compression.value = String(COMPRESSION_VALUES.indexOf(effective.compression));
       semanticTextFormat.checked = effective.format === 'semantic-text'; markdownFormat.checked = effective.format === 'markdown';
       redactSensitiveData.checked = effective.redactSensitiveData;
-      updateCompressionDescription();
+      updateCompressionControl();
     }
     applyPolicyControls();
   } catch (error) {
@@ -233,7 +258,8 @@ function rememberSelection(): void {
   if (!p.ForcedExportFormat && formats(p).length > 1) personalSettings.format = selectedFormat(markdownFormat.checked ? 'markdown' : 'semantic-text');
   if (redactionMode(p) === 'user-controlled') personalSettings.redactSensitiveData = redactSensitiveData.checked;
   const effective = resolvePreferences(p, personalSettings);
-  compression.value = String(COMPRESSION_VALUES.indexOf(effective.compression)); updateCompressionDescription();
+  compression.value = String(COMPRESSION_VALUES.indexOf(effective.compression)); updateCompressionControl();
+  applyPolicyControls();
 }
 for (const control of [compression, semanticTextFormat, markdownFormat, redactSensitiveData]) control.addEventListener('change', rememberSelection);
 
@@ -274,13 +300,7 @@ function selectedRangeCompression(value: string): CompressionLevel {
   return COMPRESSION_VALUES[index] ?? DEFAULT_COMPRESSION_LEVEL;
 }
 
-function updateCompressionDescription(): void {
-  const descriptions: Record<CompressionLevel, string> = {
-    without: 'Keeps every captured semantic node.',
-    detailed: 'Removes unnamed wrappers without semantic attributes, preserving text, links and states.',
-    compact: 'Removes repeated accessibility noise while retaining meaningful controls.',
-    maximum: 'Packs Compact context with selective abbreviations and reusable shared structures when they save space.',
-  };
+function updateCompressionControl(): void {
   const minimum = Number.parseFloat(compression.min);
   const maximum = Number.parseFloat(compression.max);
   const current = Number.parseFloat(compression.value);
@@ -288,8 +308,7 @@ function updateCompressionDescription(): void {
     ? ((current - minimum) / (maximum - minimum)) * 100
     : 0;
   compression.style.setProperty('--compression-progress', `${progress}%`);
-  const description = document.querySelector<HTMLParagraphElement>('#compression-description')!;
-  description.textContent = descriptions[selectedRangeCompression(compression.value)];
+  compression.setAttribute('aria-valuetext', selectedRangeCompression(compression.value));
 }
 
 function readSettings(value: unknown): StoredPopupSettings | undefined {
@@ -302,6 +321,7 @@ async function loadSettings(): Promise<void> {
     const stored = await browser.storage.local.get(POPUP_SETTINGS_KEY);
     const settings = readSettings(stored[POPUP_SETTINGS_KEY]);
     personalSettings = settings ?? {};
+    savedSettings = { ...personalSettings };
     if (settings === undefined) return;
 
     const compressionIndex = settings.compression === undefined
@@ -313,13 +333,16 @@ async function loadSettings(): Promise<void> {
     if (typeof settings.redactSensitiveData === 'boolean') {
       redactSensitiveData.checked = settings.redactSensitiveData;
     }
-    updateCompressionDescription();
+    updateCompressionControl();
   } catch {
     // The popup remains usable with its safe defaults when storage is unavailable.
   }
 }
 
 async function saveSettings(): Promise<void> {
+  if (exportPending || preferencesSavePending || frameAccessToggle?.pending || !preferencesChanged()) return;
+  preferencesSavePending = true;
+  applyPolicyControls();
   const settings: Required<StoredPopupSettings> = {
     compression: selectedRangeCompression(compression.value),
     format: markdownFormat.checked ? 'markdown' : 'semantic-text',
@@ -335,9 +358,13 @@ async function saveSettings(): Promise<void> {
     if (redactionMode(policy) === 'user-controlled') saved.redactSensitiveData = settings.redactSensitiveData;
     await browser.storage.local.set({ [POPUP_SETTINGS_KEY]: saved });
     personalSettings = saved;
+    savedSettings = { ...saved };
     showFeedback('Settings saved for future popup openings.');
   } catch (error) {
     showFeedback(error instanceof PolicyError ? policyMessage(error) : 'Unable to save settings. Try again.');
+  } finally {
+    preferencesSavePending = false;
+    applyPolicyControls();
   }
 }
 
@@ -367,7 +394,7 @@ if (otherSiteFrames) frameAccessToggle = installFrameAccessToggle(otherSiteFrame
 
 async function exportPageContext(action: ExportAction): Promise<void> {
   if (action === 'save' && !canSave) {
-    showFeedback('Saving files is unavailable in this browser. Use Copy page context.');
+    showFeedback('Saving files is unavailable in this browser. Use Copy context.');
     return;
   }
   if (exportPending || frameAccessToggle?.pending) return;
@@ -389,7 +416,7 @@ async function exportPageContext(action: ExportAction): Promise<void> {
         return;
       }
       if (typeof browser.downloads?.download !== 'function') {
-        showFeedback('Saving files is unavailable in this browser. Use Copy page context.');
+        showFeedback('Saving files is unavailable in this browser. Use Copy context.');
         return;
       }
     }
@@ -491,11 +518,11 @@ selectElementButton.addEventListener('click', async () => {
 });
 copyButton.addEventListener('click', () => void exportPageContext('copy'));
 saveButton.addEventListener('click', () => void exportPageContext('save'));
-compression.addEventListener('input', () => { rememberSelection(); updateCompressionDescription(); });
+compression.addEventListener('input', () => { rememberSelection(); updateCompressionControl(); });
 saveSettingsButton.addEventListener('click', () => {
   void saveSettings();
 });
-updateCompressionDescription();
+updateCompressionControl();
 setPending(false);
 void loadSettings().then(refreshPolicy);
 const stopPolicy = watchPolicy(() => { policySnapshot = undefined; applyPolicyControls(); void refreshPolicy(); });
