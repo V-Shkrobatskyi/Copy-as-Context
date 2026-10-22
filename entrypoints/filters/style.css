@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Vitalii Shkrobatskyi; SPDX-License-Identifier: GPL-3.0-only */
 @import '../preview/style.css';
-main { max-width: 1200px; }
-h2 { margin: 0; font-size: 1.1rem; }
+@import '../../public/page-layout.css';
 .filters-section { margin: 20px 0; }
 .table-toolbar, .table-bottom, .toolbar-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .table-toolbar { justify-content: space-between; margin-bottom: 12px; }

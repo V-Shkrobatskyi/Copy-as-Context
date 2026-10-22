@@ -46,7 +46,7 @@ function selectFile(text: string, size = text.length): void {
 beforeEach(async () => {
   vi.stubGlobal('crypto', webcrypto);
   managedGet.mockReset().mockResolvedValue({}); managedListeners.clear();
-  document.body.innerHTML = readFileSync(resolve('entrypoints/filters/index.html'), 'utf8').split('<body>')[1]!.split('</body>')[0]!;
+  document.body.innerHTML = readFileSync(resolve('entrypoints/filters/index.html'), 'utf8').split(/<body\b[^>]*>/)[1]!.split('</body>')[0]!;
   stored = undefined; sessionStorage.clear();
   getStored = vi.fn().mockImplementation(async () => ({ [key]: structuredClone(stored) }));
   setStored = vi.fn().mockImplementation(async value => { stored = structuredClone(value[key]); });
