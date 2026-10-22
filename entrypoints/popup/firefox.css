@@ -6,10 +6,12 @@ SPDX-License-Identifier: GPL-3.0-only
 @import './style.css';
 
 /* Let a vertical scrollbar shrink the content instead of causing horizontal overflow. */
-body { min-width: 0; width: 376px; max-width: 100%; }
+body { min-width: 0; width: 360px; max-width: 100%; }
 .popup { width: 100%; }
 .options-content .frame-access-setting { margin-top: 8px; }
 .status, .metrics { overflow-wrap: anywhere; }
+.frame-access-setting:has(input[data-capture-hint="true"]) { border-color: var(--accent); background: var(--selected); }
+.options-panel:has(input[data-capture-hint="true"]) > summary { color: var(--link); }
 
 /* Leave room for export feedback within the Desktop popup's height limit. */
 body:not([data-platform="android"]) .popup { padding-top: 8px; padding-bottom: 8px; }
@@ -21,9 +23,12 @@ body:not([data-platform="android"]) .help { margin-top: 6px; padding-top: 6px; }
 /* Keep expanded options, unsaved preferences and feedback within Firefox's 600px limit. */
 body:not([data-platform="android"]) .compression-field { padding-bottom: 8px; }
 body:not([data-platform="android"]) .options-panel { padding-top: 8px; }
-body:not([data-platform="android"]) .options-content { padding-top: 8px; }
-body:not([data-platform="android"]) .frame-access-setting { padding-top: 6px; padding-bottom: 6px; }
+body:not([data-platform="android"]) .options-content { padding-top: 6px; }
+body:not([data-platform="android"]) .options-content .privacy-setting { margin-top: 8px; padding-top: 6px; padding-bottom: 6px; }
+body:not([data-platform="android"]) .format-options { margin-top: 6px; }
+body:not([data-platform="android"]) .save-settings { margin-top: 8px; }
 body:not([data-platform="android"]) .feedback { margin-top: 8px; padding-top: 7px; padding-bottom: 7px; }
+body:not([data-platform="android"]) .metrics:empty { display: none; }
 
 
 /* The same package preserves Desktop sizing and adapts only on Android. */

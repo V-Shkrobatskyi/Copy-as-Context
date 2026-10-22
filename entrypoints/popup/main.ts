@@ -253,6 +253,12 @@ async function refreshPolicy(): Promise<void> {
 }
 function rememberSelection(): void {
   if (!policySnapshot) return;
+  otherSiteFrames?.setAttribute('data-capture-hint', 'false');
+  if (metrics.textContent) {
+    feedback.hidden = true;
+    status.textContent = '';
+    metrics.textContent = '';
+  }
   const p = policySnapshot.policy;
   if (!p.ForcedCompression && levels(p).length > 1) personalSettings.compression = selectedRangeCompression(compression.value);
   if (!p.ForcedExportFormat && formats(p).length > 1) personalSettings.format = selectedFormat(markdownFormat.checked ? 'markdown' : 'semantic-text');
@@ -370,6 +376,8 @@ async function saveSettings(): Promise<void> {
 
 function showFeedback(message: string): void {
   status.textContent = message;
+  metrics.textContent = '';
+  otherSiteFrames?.setAttribute('data-capture-hint', 'false');
   feedback.hidden = false;
 }
 
@@ -468,7 +476,14 @@ async function exportPageContext(action: ExportAction): Promise<void> {
       await saveContext(result.serialized.content, exportFormat, context);
       showFeedback(firefox ? 'Saving file in a separate tab.' : `Saved ${FORMAT_LABELS[exportFormat]} file.`);
     }
-    const warnings = captureWarningText(response.warnings ?? []);
+    const captureWarnings = response.warnings ?? [];
+    const suggestFrameAccess = !!otherSiteFrames && !otherSiteFrames.checked
+      && captureWarnings.includes('embedded-frames-partial');
+    otherSiteFrames?.setAttribute('data-capture-hint', String(suggestFrameAccess));
+    const warnings = firefox && suggestFrameAccess
+      ? ['Some frames skipped. Enable other-site frames and capture again.',
+        captureWarningText(captureWarnings.filter(code => code !== 'embedded-frames-partial'))].filter(Boolean).join(' ')
+      : captureWarningText(captureWarnings, false);
     metrics.textContent = formatMetrics(
       characterCount,
       approximateTokenCount,
