@@ -11,8 +11,8 @@ SPDX-License-Identifier: GPL-3.0-only
   <link rel="stylesheet" href="page-theme.css" />
   <style>
     * { box-sizing: border-box; }
-    body { margin: 2rem auto; font: 1rem/1.6 system-ui, sans-serif; }
-    .policy-layout { width: min(100% - 32px, 48rem); margin: 0 auto; }
+    body { margin: 0; font: 1rem/1.6 system-ui, sans-serif; }
+    .policy-layout { width: min(100% - 32px, 48rem); margin: 28px auto; }
     main { min-width: 0; padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
     h1 { margin: 0 0 16px; color: var(--text); font-size: clamp(1.6rem, 5vw, 2rem); line-height: 1.25; }
     h2 { margin: 32px 0 12px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 1.15rem; line-height: 1.35; }
@@ -39,10 +39,22 @@ SPDX-License-Identifier: GPL-3.0-only
       .toc-desktop ul { padding: 0; }
       .toc-mobile { display: none; }
     }
-    @media (max-width: 520px) { body { margin: 18px auto; } main { padding: 18px 14px; } }
+    @media (max-width: 520px) { main { padding: 18px 14px; } }
   </style>
+  <link rel="stylesheet" href="page-navigation.css" />
 </head>
 <body>
+  <header class="site-header">
+    <div class="site-brand"><img src="icon/48.png" width="32" height="32" alt="" /><span>Copy as Context</span></div>
+    <nav class="site-nav" aria-label="Main navigation">
+      <div class="site-nav-primary">
+        <a href="filters.html">Filters</a>
+        <a href="data-controls.html">Data controls</a>
+        <a href="guide.html">Guide</a>
+      </div>
+      <div class="site-nav-secondary"><a href="privacy.html" aria-current="page">Privacy</a> <a href="license.html">License</a> <a href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div>
+    </nav>
+  </header>
   <div class="policy-layout">
     <nav class="policy-toc" aria-label="Privacy policy contents">
       <div class="toc-desktop">
