@@ -112,6 +112,13 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <details class="options-panel">
         <summary><span>Options</span><span id="options-summary" class="options-summary">Semantic Text · Redaction on</span></summary>
         <div class="options-content">
+          <fieldset class="field format-field">
+            <legend>Export format</legend>
+            <div class="format-options">
+              <label class="format-option"><input id="format-semantic-text" name="format" type="radio" value="semantic-text" checked /> <span>Semantic Text</span></label>
+              <label class="format-option"><input id="format-markdown" name="format" type="radio" value="markdown" /> <span>Markdown</span></label>
+            </div>
+          </fieldset>
           <div class="privacy-setting">
             <div class="privacy-setting-header">
               <label class="privacy-toggle"><input id="redact-sensitive-data" type="checkbox" checked /> <span>Redact sensitive data</span></label>
@@ -123,13 +130,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
             <label class="privacy-toggle"><input id="include-other-site-frames" type="checkbox" disabled aria-describedby="other-site-frames-note" /> <span>Include frames from other sites</span></label>
             <p id="other-site-frames-note">Applies immediately. Requires access to all sites; off revokes it.</p>
           </section>` : ''}
-          <fieldset class="field format-field">
-            <legend>Export format</legend>
-            <div class="format-options">
-              <label class="format-option"><input id="format-semantic-text" name="format" type="radio" value="semantic-text" checked /> <span>Semantic Text</span></label>
-              <label class="format-option"><input id="format-markdown" name="format" type="radio" value="markdown" /> <span>Markdown</span></label>
-            </div>
-          </fieldset>
         </div>
       </details>
       <button id="save-settings" class="save-settings" type="button" hidden disabled><svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12 4 4L19 6"/></svg><span>Remember settings</span></button>
