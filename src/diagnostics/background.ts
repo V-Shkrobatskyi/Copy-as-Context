@@ -16,7 +16,7 @@ import { loadRedactionSettings } from '../redaction-settings';
 import { journalStore, localStateStore } from './store';
 import { assertAction, resolvePreferences, redactionMode, formats, levels, type ExportPreferences } from '../policy/model';
 
-const paths = ['/popup.html', '/preview.html', '/save.html', '/selection-save.html', '/filters.html', '/diagnostics.html'] as const;
+const paths = ['/popup.html', '/preview.html', '/save.html', '/selection-save.html', '/filters.html', '/data-controls.html'] as const;
 export function installDiagnostics() {
   const journal = createJournal(journalStore(), async () => (await readPolicy()).policy);
   const history = createCaptureHistory(localStateStore<import('../history/history').HistoryState>('capture-history-v1'), async () => {
@@ -37,7 +37,7 @@ export function installDiagnostics() {
       if (event) void journal.append(event);
       reply({ ok: !!event }); return;
     }
-    if (page !== '/diagnostics.html') return;
+    if (page !== '/data-controls.html') return;
     void (async () => {
       if (raw.action === 'sources-read') {
         const { policy } = await readPolicy(false);
@@ -63,6 +63,12 @@ export function installDiagnostics() {
         if (raw.destination !== 'copy' && raw.destination !== 'save') throw new Error();
         assertAction(snapshot.policy, raw.destination === 'copy' ? 'diagnostics-copy' : 'diagnostics-save');
         return { ok: true, json: await history.export() };
+      }
+      if (raw.action === 'journal-export') {
+        const snapshot = await readPolicy();
+        assertAction(snapshot.policy, 'diagnostics-save');
+        const log = await journal.read();
+        return { ok: true, json: JSON.stringify({ journalVersion: 1, generatedAt: new Date().toISOString(), extensionVersion: version, events: log.events }, null, 2) };
       }
       if (raw.action === 'clear') { await journal.clear(); return { ok: true }; }
       if (raw.action === 'level') { if (!LOG_LEVELS.includes(raw.level)) throw new Error(); await journal.setLevel(raw.level); return { ok: true }; }

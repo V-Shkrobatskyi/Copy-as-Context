@@ -13,12 +13,12 @@ const settle = async () => { for (let i = 0; i < 15; i++) await Promise.resolve(
 let clipboard: ReturnType<typeof vi.fn>;
 beforeEach(async () => {
   vi.resetModules(); mocks.clearHistory = true; mocks.clearLog = true; mocks.check.mockReset().mockResolvedValue({ policy: {} }); mocks.download.mockReset().mockResolvedValue(undefined); mocks.stop.mockReset();
-  dom = new JSDOM(readFileSync('entrypoints/diagnostics/index.html', 'utf8'), { url: 'chrome-extension://test/diagnostics.html' });
+  dom = new JSDOM(readFileSync('entrypoints/data-controls/index.html', 'utf8'), { url: 'chrome-extension://test/data-controls.html' });
   vi.stubGlobal('document', dom.window.document); vi.stubGlobal('window', dom.window);
   clipboard = vi.fn().mockResolvedValue(undefined); vi.stubGlobal('navigator', { clipboard: { writeText: clipboard } });
   mocks.api.runtime = { sendMessage: vi.fn(async (request: any) => request.action === 'sources-read' ? { ok: true, available: true, preferencesAllowed: true, settings: { allowlistEnabled: false, allowed: [], blocked: [] }, organization: { allowlistEnabled: false, allowedCount: 0, blockedCount: 0 } } : request.action === 'history-read' ? { ok: true, history: { clearAllowed: mocks.clearHistory, settings: { enabled: false, retentionDays: 60, maxMiB: 10 }, managed: { enabled: false, retentionDays: false, maxMiB: false }, locked: false, count: 0, bytes: 33, entries: [] } } : request.action === 'read' ? { ok: true, report: { reportVersion: 1, policyState: 'unmanaged', capabilities: { downloads: true }, platform: 'linux', ...(request.includeLog ? { events: [{ code: 'capture-complete' }] } : {}) }, personal: defaults, data: defaults, sources: {}, preferencesAllowed: true, copyAllowed: true, saveAllowed: true, log: { clearAllowed: mocks.clearLog, effectiveLevel: 'error', events: [], bytes: 2, limits: { events: 1000, bytes: 2097152, ageHours: 168 } } } : { ok: true }) };
   mocks.api.permissions = { request: vi.fn().mockResolvedValue(true) };
-  await import('@/entrypoints/diagnostics/main'); await settle();
+  await import('@/entrypoints/data-controls/main'); await settle();
 });
 afterEach(() => { dom.window.dispatchEvent(new dom.window.Event('pagehide')); dom.window.close(); vi.unstubAllGlobals(); });
 it('previews a report without journal, opts in explicitly and checks clipboard policy before copying', async () => {
@@ -80,4 +80,31 @@ it('saves personal sites with an explicit empty-allowlist warning and rejects UR
   doc.querySelector('#sources-form')!.dispatchEvent(new dom.window.Event('submit', { cancelable: true })); await settle();
   expect(mocks.api.runtime.sendMessage).not.toHaveBeenCalled();
   expect(doc.querySelector('#sources-status')!.textContent).toContain('Invalid site settings');
+});
+
+it('saves the standalone journal and stops downloading when file policy changes', async () => {
+  const button = dom.window.document.querySelector<HTMLButtonElement>('#journal-save')!;
+  expect(button.disabled).toBe(false);
+  const json = JSON.stringify({ journalVersion: 1, events: [{ code: 'capture-complete' }] });
+  mocks.api.runtime.sendMessage.mockResolvedValueOnce({ ok: true, json });
+  button.click(); await settle();
+  expect(mocks.api.runtime.sendMessage).toHaveBeenCalledWith({ type: 'diagnostics', action: 'journal-export' });
+  expect(mocks.check).toHaveBeenCalledWith('diagnostics-save');
+  expect(mocks.download).toHaveBeenCalledWith(expect.any(Blob), 'copy-as-context-journal.json');
+  expect(await mocks.download.mock.calls[0]![0].text()).toBe(json);
+  mocks.download.mockClear(); mocks.check.mockRejectedValueOnce(new Error('Blocked'));
+  mocks.api.runtime.sendMessage.mockResolvedValueOnce({ ok: true, json });
+  button.click(); await settle();
+  expect(mocks.download).not.toHaveBeenCalled();
+});
+
+it('disables journal export without file permission or journal storage', async () => {
+  const response = await mocks.api.runtime.sendMessage({ action: 'read' });
+  for (const restricted of [{ ...response, saveAllowed: false }, { ...response, log: undefined }, { ...response, report: { ...response.report, platform: 'android' } }]) {
+    mocks.api.runtime.sendMessage.mockResolvedValueOnce(restricted);
+    dom.window.document.querySelector<HTMLButtonElement>('#refresh')!.click(); await settle();
+    const button = dom.window.document.querySelector<HTMLButtonElement>('#journal-save')!;
+    expect(button.disabled).toBe(true);
+    mocks.download.mockClear(); button.click(); await settle(); expect(mocks.download).not.toHaveBeenCalled();
+  }
 });

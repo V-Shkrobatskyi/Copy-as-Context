@@ -138,7 +138,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <p class="status" role="status" aria-live="polite"></p>
       <p class="metrics" aria-live="polite"></p>
     </section>
-    <footer class="help"><a id="shortcuts-link" href="#">Shortcuts</a> · <a id="diagnostics-link" href="/diagnostics.html" target="_blank" rel="noopener">Data controls</a> · <a id="guide-link" target="_blank" rel="noopener">Guide</a> · <a id="license-link" href="/license.html" target="_blank" rel="noopener">License</a></footer>
+    <footer class="help"><a id="shortcuts-link" href="#">Shortcuts</a> · <a id="diagnostics-link" href="/data-controls.html" target="_blank" rel="noopener">Data controls</a> · <a id="guide-link" target="_blank" rel="noopener">Guide</a> · <a id="license-link" href="/license.html" target="_blank" rel="noopener">License</a></footer>
 
   </main>
 `;
@@ -285,8 +285,8 @@ document.querySelector<HTMLAnchorElement>('#shortcuts-link')!.addEventListener('
   })();
 });
 const diagnosticsLink = document.querySelector<HTMLAnchorElement>('#diagnostics-link')!;
-diagnosticsLink.href = browser.runtime.getURL('/diagnostics.html');
-for (const [link, path] of [[guideLink, '/guide.html'], [diagnosticsLink, '/diagnostics.html'], [licenseLink, '/license.html']] as const) {
+diagnosticsLink.href = browser.runtime.getURL('/data-controls.html');
+for (const [link, path] of [[guideLink, '/guide.html'], [diagnosticsLink, '/data-controls.html'], [licenseLink, '/license.html']] as const) {
   link.addEventListener('click', event => {
     event.preventDefault();
     void browser.tabs.create({ url: browser.runtime.getURL(path), active: true })

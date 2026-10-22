@@ -40,10 +40,11 @@ async function refresh() {
     get('journal').textContent = r.log ? r.log.events.map((e: { time: number }) => `${new Date(e.time).toLocaleString()} ${JSON.stringify(e)}`).join('\n') || 'No events.' : 'Unavailable';
     get<HTMLButtonElement>('copy').disabled = !r.copyAllowed;
     get<HTMLButtonElement>('save').disabled = !r.saveAllowed || !r.report.capabilities.downloads || r.report.platform === 'android';
+    get<HTMLButtonElement>('journal-save').disabled = !r.log || !r.saveAllowed || !r.report.capabilities.downloads || r.report.platform === 'android';
     get<HTMLButtonElement>('history-copy').disabled = !r.copyAllowed;
     get<HTMLButtonElement>('history-save').disabled = !r.saveAllowed || !r.report.capabilities.downloads || r.report.platform === 'android';
     status.textContent = r.report.policyState === 'error' ? 'Policies or data settings could not be loaded. Export remains blocked.' : 'Diagnostics ready. Nothing has been exported.';
-  } catch { get<HTMLButtonElement>('clear').disabled = true; status.textContent = 'Unable to load diagnostics. Retry Refresh.'; }
+  } catch { get<HTMLButtonElement>('journal-save').disabled = true; get<HTMLButtonElement>('clear').disabled = true; status.textContent = 'Unable to load diagnostics. Retry Refresh.'; }
 }
 async function act(action: () => Promise<void>) {
   if (saving) return; saving = true;
@@ -65,7 +66,14 @@ get('save').addEventListener('click', () => void act(async () => {
   await checkPolicy('diagnostics-save');
   await downloadBlob(new Blob([text], { type: 'application/json;charset=utf-8' }), 'copy-as-context-diagnostics.json'); status.textContent = 'Diagnostic JSON report saved.';
 }));
-const stop = watchPolicy(() => { get<HTMLButtonElement>('clear').disabled = true; text = ''; get('report').textContent = ''; void refresh(); });
+get('journal-save').addEventListener('click', () => void act(async () => {
+  if (import.meta.env.BROWSER === 'firefox' && !await browser.permissions.request({ permissions: ['downloads'] })) throw new Error();
+  const result = await request('journal-export');
+  await checkPolicy('diagnostics-save');
+  await downloadBlob(new Blob([result.json], { type: 'application/json;charset=utf-8' }), 'copy-as-context-journal.json');
+  status.textContent = 'Technical journal JSON saved.';
+}));
+const stop = watchPolicy(() => { get<HTMLButtonElement>('journal-save').disabled = true; get<HTMLButtonElement>('clear').disabled = true; text = ''; get('report').textContent = ''; void refresh(); });
 window.addEventListener('pagehide', () => { generation++; stop(); text = ''; });
 void refresh();
 
@@ -130,9 +138,7 @@ async function refreshSources() {
     sourceAllowlist.checked = result.settings.allowlistEnabled;
     sourceAllowed.value = result.settings.allowed.join('\n'); sourceBlocked.value = result.settings.blocked.join('\n');
     sourcePreferencesAllowed = result.preferencesAllowed; updateSourceControls();
-    const org = result.organization;
-    get('sources-organization').textContent = org.allowlistEnabled || org.blockedCount ? `Organization restrictions also apply: ${org.allowlistEnabled ? `allowed list with ${org.allowedCount} patterns` : 'no allowed list'}, ${org.blockedCount} blocked patterns. Personal settings cannot permit a site blocked by your organization.` : 'No organization site restrictions.';
-    get('sources-status').textContent = !result.available ? 'Saved site settings could not be loaded. Capture remains blocked. Saving valid settings replaces them.' : !sourcePreferencesAllowed ? 'Saving personal site settings is disabled by your organization.' : 'Personal site settings loaded. With no restrictions, eligible sites remain available.';
+    get('sources-status').textContent = !result.available ? 'Saved site settings could not be loaded. Capture remains blocked. Saving valid settings replaces them.' : !sourcePreferencesAllowed ? 'Saving personal site settings is disabled by your organization.' : '';
   } catch { if (ticket === sourceGeneration) get('sources-status').textContent = 'Unable to load site settings. Reload this page to retry.'; }
 }
 sourceAllowlist.addEventListener('change', updateSourceControls);
