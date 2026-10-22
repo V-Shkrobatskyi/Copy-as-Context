@@ -213,7 +213,7 @@ try {
           // WebDriver cannot provide trusted input in this privileged extension tab.
           // A fresh profile has no optional downloads grant; never modify the manifest to bypass it.
           const downloadsGranted = await extensionEvaluate('browser.permissions.contains({ permissions: ["downloads"] })');
-          await protocol.send('browsingContext.navigate', { context: popup, url: `moz-extension://${fixtureExtensionUuid}/diagnostics.html`, wait: 'complete' });
+          await protocol.send('browsingContext.navigate', { context: popup, url: `moz-extension://${fixtureExtensionUuid}/data-controls.html`, wait: 'complete' });
           const diagnostics = JSON.parse(await extensionEvaluate(`(async () => {
             const request = (action, extra = {}) => browser.runtime.sendMessage({ type: 'diagnostics', action, ...extra });
             const before = await request('read');

@@ -252,7 +252,7 @@ describe('popup export flow', () => {
     expect(popup.clipboardWrite).not.toHaveBeenCalled();
   });
 
-  for (const [link, path] of [['guideLink', '/guide.html'], ['diagnosticsLink', '/diagnostics.html'], ['licenseLink', '/license.html']] as const) {
+  for (const [link, path] of [['guideLink', '/guide.html'], ['diagnosticsLink', '/data-controls.html'], ['licenseLink', '/license.html']] as const) {
     it.each([{ firefox: false }, { firefox: true }, { firefox: true, android: true }])(`opens ${path} once and closes only after the tab opens: %j`, async options => {
       const popup = await loadPopup(successfulCapture(), options);
       let opened!: (value: { id: number }) => void;

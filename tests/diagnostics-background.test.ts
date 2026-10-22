@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({ api: {} as any, state: undefined as any, histo
 vi.mock('wxt/browser', () => ({ browser: mocks.api }));
 vi.mock('@/src/diagnostics/store', () => ({ journalStore: () => ({ load: async () => structuredClone(mocks.state), save: async (state: unknown) => { mocks.state = structuredClone(state); } }), localStateStore: () => ({ load: async () => structuredClone(mocks.historyState), save: async (state: unknown) => { mocks.historyState = structuredClone(state); } }) }));
 import { installDiagnostics } from '@/src/diagnostics/background';
-const sender = (path = '/diagnostics.html') => ({ id: 'extension', url: `chrome-extension://test${path}`, tab: { id: 42 } });
+const sender = (path = '/data-controls.html') => ({ id: 'extension', url: `chrome-extension://test${path}`, tab: { id: 42 } });
 const send = (action: string, extra = {}, source = sender()) => new Promise<any>(resolve => { const result = mocks.listener({ type: 'diagnostics', action, ...extra }, source, resolve); if (result === undefined) resolve(undefined); });
 beforeEach(() => {
   mocks.state = undefined; mocks.historyState = undefined;
@@ -103,4 +103,15 @@ it('saves personal source restrictions only from diagnostics, validates them and
   mocks.api.storage.local.get.mockResolvedValue({ 'capture-sources-v1': { allowlistEnabled: 'invalid' } });
   expect((await send('sources-read')).available).toBe(false);
   expect((await send('sources-save', { settings })).ok).toBe(true);
+});
+
+it('exports only retained journal events from Data controls and enforces file policy', async () => {
+  await send('event', { event: { code: 'capture-complete', result: 'error', reason: 'failed' } }, sender('/popup.html'));
+  const result = await send('journal-export');
+  const json = JSON.parse(result.json);
+  expect(json).toMatchObject({ journalVersion: 1, events: [expect.objectContaining({ code: 'capture-complete' })] });
+  expect(Object.keys(json).sort()).toEqual(['events', 'extensionVersion', 'generatedAt', 'journalVersion']);
+  expect(await send('journal-export', {}, sender('/popup.html'))).toBeUndefined();
+  mocks.api.storage.managed.get.mockResolvedValue({ FileExportAllowed: false });
+  expect((await send('journal-export')).ok).toBe(false);
 });

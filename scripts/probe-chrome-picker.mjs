@@ -74,7 +74,7 @@ try {
   await poll(async () => (await send('Runtime.evaluate', { expression: 'typeof globalThis.probeStart === "function"', returnByValue: true }, sessionId)).result?.value);
   await send('Runtime.enable', {}, pageSession);
   await poll(async () => (await send('Runtime.evaluate', { expression: 'document.readyState === "complete"', returnByValue: true }, pageSession)).result?.value);
-  const { targetId: diagnosticsId } = await send('Target.createTarget', { url: `chrome-extension://${id}/diagnostics.html` });
+  const { targetId: diagnosticsId } = await send('Target.createTarget', { url: `chrome-extension://${id}/data-controls.html` });
   const { sessionId: diagnosticsSession } = await send('Target.attachToTarget', { targetId: diagnosticsId, flatten: true });
   await poll(async () => (await send('Runtime.evaluate', { expression: 'document.readyState === "complete"', returnByValue: true }, diagnosticsSession)).result?.value);
   const requestHistory = async (action, extra = {}) => {
