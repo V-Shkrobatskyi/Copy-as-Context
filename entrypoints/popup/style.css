@@ -97,7 +97,5 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
 .customize-action:active:not(:disabled) { background: var(--selected); border-color: var(--accent); }
 .customize-action:disabled { opacity: .5; cursor: default; }
 
-@media (prefers-color-scheme: dark) {
-  .settings-panel { border-color: var(--border); }
-  .primary-action { color: #1b1b23; box-shadow: none; }
-}
+.settings-panel { border-color: light-dark(var(--accent), var(--border)); }
+.primary-action { color: light-dark(#fff, #1b1b23); box-shadow: 0 1px 2px light-dark(#263e8929, transparent); }

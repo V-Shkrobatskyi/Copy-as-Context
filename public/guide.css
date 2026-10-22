@@ -29,7 +29,7 @@
 .resource-icon { width: 20px; height: 20px; flex: none; }
 .guide-content footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: .8125rem; }
 [hidden] { display: none !important; }
-@media (prefers-color-scheme: dark) { .resource-icon-github { filter: brightness(0) invert(1); } }
+:root[data-theme="dark"] .resource-icon-github { filter: brightness(0) invert(1); }
 @media (max-width: 600px) {
   .steps, .troubleshooting { grid-template-columns: 1fr; }
   .setting { grid-template-columns: 1fr; gap: 4px; }
