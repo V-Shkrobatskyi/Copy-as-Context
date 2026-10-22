@@ -1,18 +1,15 @@
 /* Copyright (c) 2026 Vitalii Shkrobatskyi; SPDX-License-Identifier: GPL-3.0-only */
 @import './page-theme.css';
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1b1b23;
-    --surface: #30323f;
-    --selected: #3b4664;
-    --border: #4c4f60;
-    --text: #e2e2e8;
-    --muted: #b2b2bf;
-    --accent: #8baaf7;
-    --accent-hover: #a3bcff;
-    --accent-dark: #d2defe;
-    --link: #9bb7ff;
-    --focus: #adc3ff;
-  }
+:root {
+  --background: light-dark(#e9eef5, #1b1b23);
+  --surface: light-dark(#f7f9fc, #30323f);
+  --selected: light-dark(#cbd9ff, #3b4664);
+  --border: light-dark(#cbd5e1, #4c4f60);
+  --text: light-dark(#1b2942, #e2e2e8);
+  --muted: light-dark(#52617a, #b2b2bf);
+  --accent: light-dark(#365ed7, #8baaf7);
+  --accent-hover: light-dark(#263e89, #a3bcff);
+  --accent-dark: light-dark(#263e89, #d2defe);
+  --link: light-dark(#365ed7, #9bb7ff);
+  --focus: light-dark(#5882f5, #adc3ff);
 }

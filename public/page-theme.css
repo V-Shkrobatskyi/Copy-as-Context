@@ -1,16 +1,16 @@
 /* Copyright (c) 2026 Vitalii Shkrobatskyi; SPDX-License-Identifier: GPL-3.0-only */
 :root {
   color-scheme: light dark;
-  --background: #e9eef5;
-  --surface: #f7f9fc;
-  --text: #1b2942;
-  --muted: #52617a;
+  --background: light-dark(#e9eef5, #192333);
+  --surface: light-dark(#f7f9fc, #202e44);
+  --text: light-dark(#1b2942, #e6ebf5);
+  --muted: light-dark(#52617a, #b9c8df);
   --accent: #365ed7;
   --accent-hover: #263e89;
-  --accent-dark: #263e89;
-  --selected: #e4ecff;
-  --border: #cbd5e1;
-  --link: #365ed7;
+  --accent-dark: light-dark(#263e89, #b9c8df);
+  --selected: light-dark(#cbd9ff, #283850);
+  --border: light-dark(#cbd5e1, #425777);
+  --link: light-dark(#365ed7, #a8c7fa);
   --focus: #5882f5;
   color: var(--text);
   background: var(--background);
@@ -20,15 +20,5 @@
 a { color: var(--link); text-underline-offset: .15em; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #192333;
-    --surface: #202e44;
-    --text: #e6ebf5;
-    --muted: #b9c8df;
-    --accent-dark: #b9c8df;
-    --selected: #283850;
-    --border: #425777;
-    --link: #a8c7fa;
-  }
-}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }

@@ -6,8 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Customize filters — Copy as Context</title>
   <link rel="stylesheet" href="/page-navigation.css" />
+  <script src="/theme.js"></script>
 </head>
-<body>
+<body class="content-page">
   <header class="site-header">
     <div class="site-brand"><img src="/icon/48.png" width="32" height="32" alt="" /><span>Copy as Context</span></div>
     <nav class="site-nav" aria-label="Main navigation">
@@ -17,9 +18,20 @@
         <a href="/guide.html">Guide</a>
       </div>
       <div class="site-nav-secondary"><a href="/privacy.html">Privacy</a> <a href="/license.html">License</a> <a href="https://github.com/V-Shkrobatskyi/Copy-as-Context" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div>
+
+      <label class="theme-picker">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/></svg>
+        <span aria-hidden="true">Theme</span>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+        <select data-theme-picker aria-label="Color theme">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </label>
     </nav>
   </header>
-  <main>
+  <main class="page-main page-wide">
     <header>
       <h1>Customize filters</h1>
       <p class="intro">Choose what Redact sensitive data hides in your page context.</p>

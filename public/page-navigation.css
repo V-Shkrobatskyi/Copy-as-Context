@@ -3,7 +3,7 @@
   box-sizing: border-box;
   width: min(100% - 48px, 1152px);
   margin: 0 auto;
-  color: #1b2942;
+  color: light-dark(#1b2942, #e6ebf5);
   font: 14px/1.5 system-ui, sans-serif;
 }
 .site-header {
@@ -13,28 +13,29 @@
   justify-content: space-between;
   gap: 12px 24px;
   padding: 18px 0;
-  border-bottom: 1px solid #cbd5e1;
+  border-bottom: 1px solid light-dark(#cbd5e1, #425777);
 }
 .site-brand { display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 650; }
 .site-brand img { flex: none; }
 .site-nav, .site-nav-primary, .site-nav-secondary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .site-nav { gap: 8px 16px; }
-.site-nav-secondary { padding-left: 16px; border-left: 1px solid #cbd5e1; }
+.site-nav-secondary { padding-left: 16px; border-left: 1px solid light-dark(#cbd5e1, #425777); }
 .site-header a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
   padding: 8px 12px;
   border-radius: 6px;
-  color: #52617a;
+  color: light-dark(#52617a, #b9c8df);
   text-decoration: none;
   text-underline-offset: 4px;
 }
-.site-nav-primary a { color: #1b2942; }
-.site-header a:hover { color: #1b2942; background: #e4ecff; }
+.site-nav-primary a { color: light-dark(#1b2942, #e6ebf5); }
+.site-header a:hover { color: light-dark(#1b2942, #e6ebf5); background: var(--selected); }
 .site-header a[aria-current="page"] {
-  color: #263e89;
-  background: #e4ecff;
+  color: light-dark(#263e89, #b9c8df);
+  background: var(--selected);
+  box-shadow: inset 0 0 0 1px light-dark(#9bb2ed, transparent);
   font-weight: 650;
   text-decoration: underline;
 }
@@ -44,11 +45,9 @@
   .site-nav { flex-basis: 100%; }
   .site-nav-secondary { flex-basis: 100%; padding-left: 0; border-left: 0; }
 }
-@media (prefers-color-scheme: dark) {
-  .site-header { color: #e6ebf5; border-color: #425777; }
-  .site-header a { color: #b9c8df; }
-  .site-nav-primary a { color: #e6ebf5; }
-  .site-nav-secondary { border-color: #425777; }
-  .site-header a:hover { color: #e6ebf5; background: #283850; }
-  .site-header a[aria-current="page"] { color: #b9c8df; background: #283850; }
-}
+/* Keep the native select interactive while the closed control shows a fixed label. */
+.site-header .theme-picker { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin: 0 0 0 4px; padding: 6px 10px; border: 1px solid light-dark(#cbd5e1, #425777); border-radius: 6px; color: light-dark(#52617a, #b9c8df); background: light-dark(#f7f9fc, #202e44); font-size: 14px; font-weight: 400; cursor: pointer; }
+.theme-picker svg { flex: none; }
+.site-header .theme-picker select { position: absolute; inset: 0; display: block; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; opacity: 0; font: inherit; cursor: pointer; }
+.site-header .theme-picker:focus-within { outline: 3px solid #5882f5; outline-offset: 2px; }
+@media (max-width: 600px) { .site-header .theme-picker { min-height: 44px; } .site-header .theme-picker select { font-size: 16px; } }
