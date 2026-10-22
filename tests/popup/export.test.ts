@@ -59,6 +59,7 @@ interface PopupHarness {
   shortcutsLink: FakeElement;
   status: FakeElement;
   metrics: FakeElement;
+  feedback: FakeElement;
   clipboardWrite: ReturnType<typeof vi.fn>;
   download: ReturnType<typeof vi.fn>;
   downloadSearch: ReturnType<typeof vi.fn>;
@@ -207,7 +208,7 @@ async function loadPopup(response: CaptureResult | unknown, options?: {
   await settle();
   return {
     app, compression, format, markdown: markdownFormat, redactSensitiveData, saveSettings, optionsSummary, otherSiteFrames,
-    copy, save, saveLabel, preview, selectElement, customize, guideLink, diagnosticsLink, licenseLink, shortcutsLink, status, metrics, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create, managedGet, changePolicy: () => { for (const fn of policyListeners) fn({}, 'managed'); },
+    copy, save, saveLabel, preview, selectElement, customize, guideLink, diagnosticsLink, licenseLink, shortcutsLink, status, metrics, feedback, clipboardWrite, download, downloadSearch, downloadChanged, storageSet, sendMessage, requestPermission, createTab: extensionApi.tabs.create, managedGet, changePolicy: () => { for (const fn of policyListeners) fn({}, 'managed'); },
   };
 }
 
@@ -421,6 +422,26 @@ describe('popup export flow', () => {
     expect(popup.metrics.textContent).toContain('Some embedded documents could not be captured.');
     expect(popup.metrics.textContent).not.toContain('Embedded frames are not included.');
   });
+  it.each([false, true])('shows a short Firefox frame warning with site access %s', async (siteAccessGranted) => {
+    const result = successfulCapture();
+    if (!result.ok) throw new Error('Expected fixture');
+    const popup = await loadPopup({ ok: true, export: prepareExport(result.tree, 'compact', 'semantic-text'), warnings: ['embedded-frames-partial', 'canvas-content'] }, { firefox: true, siteAccessGranted });
+    popup.copy.click();
+    await settle();
+    expect(popup.metrics.textContent).toContain('Canvas content is not included.');
+    expect(popup.otherSiteFrames.setAttribute).toHaveBeenLastCalledWith('data-capture-hint', String(!siteAccessGranted));
+    if (siteAccessGranted) {
+      expect(popup.metrics.textContent).toContain('Some embedded documents could not be captured.');
+      expect(popup.metrics.textContent).not.toContain('Enable other-site frames');
+    } else {
+      expect(popup.metrics.textContent).toContain('Some frames skipped. Enable other-site frames and capture again.');
+      popup.compression.value = '3';
+      popup.compression.change();
+      expect(popup.otherSiteFrames.setAttribute).toHaveBeenLastCalledWith('data-capture-hint', 'false');
+    }
+    expect(popup.requestPermission).not.toHaveBeenCalled();
+  });
+
   it('rejects an unknown warning rather than displaying arbitrary content', async () => {
     const result = successfulCapture();
     if (!result.ok) throw new Error('Expected fixture');
@@ -641,6 +662,38 @@ describe('popup export flow', () => {
     await settle();
     expect(popup.clipboardWrite).toHaveBeenCalledOnce();
     expect(popup.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it.each(['compression', 'markdown', 'redactSensitiveData'] as const)('clears the previous capture result when %s changes', async (control) => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true });
+    popup.copy.click();
+    await settle();
+    expect(popup.feedback.hidden).toBe(false);
+    expect(popup.metrics.textContent).toContain('characters copied');
+
+    if (control === 'compression') popup.compression.value = '3';
+    else popup[control].checked = !popup[control].checked;
+    popup[control].change();
+
+    expect(popup.feedback.hidden).toBe(true);
+    expect(popup.status.textContent).toBe('');
+    expect(popup.metrics.textContent).toBe('');
+    expect(popup.saveSettings.hidden).toBe(false);
+    expect(popup.clipboardWrite).toHaveBeenCalledOnce();
+  });
+
+  it('clears capture metrics when a new settings message is shown', async () => {
+    const popup = await loadPopup(successfulCapture(), { firefox: true });
+    popup.compression.value = '3';
+    popup.compression.change();
+    popup.copy.click();
+    await settle();
+    expect(popup.metrics.textContent).toContain('characters copied');
+    popup.saveSettings.click();
+    await settle();
+    expect(popup.feedback.hidden).toBe(false);
+    expect(popup.status.textContent).toBe('Settings saved for future popup openings.');
+    expect(popup.metrics.textContent).toBe('');
   });
 
   it('enables Remember settings only for changes and disables it after saving or reverting', async () => {

@@ -195,7 +195,7 @@ describe('preview editor', async () => {
     vi.resetModules(); await loadEditor(true);
     accept(payload); await readyPolicy();
     expect(element('warnings').textContent).toContain('Some embedded documents could not be captured.');
-    expect(element('warnings').textContent).toContain('enable "Include frames from other sites" in the extension popup, then capture again.');
+    expect(element('warnings').textContent).toContain('Enable "Include frames from other sites" in the popup to retry.');
     accept({ ...payload, warnings: ['canvas-content'] }); await readyPolicy();
     expect(element('warnings').textContent).toBe('Canvas content is not included.');
     accept({ ...payload, warnings: [] }); await readyPolicy();
