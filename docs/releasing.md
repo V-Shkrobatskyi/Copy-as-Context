@@ -58,8 +58,8 @@ Archive names follow the version in `package.json`:
 
 | Target | Extension ZIP | Reviewer sources |
 | --- | --- | --- |
-| Chrome Desktop | `.output/copy-as-context-X.Y.Z-chrome.zip` | Not normally uploaded to Chrome Web Store |
-| Firefox Desktop and Android | `.output/copy-as-context-X.Y.Z-firefox.zip` | `.output/copy-as-context-X.Y.Z-sources.zip` |
+| Chrome Desktop | `.output/page-as-context-X.Y.Z-chrome.zip` | Not normally uploaded to Chrome Web Store |
+| Firefox Desktop and Android | `.output/page-as-context-X.Y.Z-firefox.zip` | `.output/page-as-context-X.Y.Z-sources.zip` |
 
 Verify manifest versions, permissions and target platforms. Upload the Firefox
 ZIP once for Desktop and Android. Create extension and source ZIPs from the same

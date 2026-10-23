@@ -1,10 +1,10 @@
-# Privacy policy for Copy as Context
+# Privacy policy for Page as Context
 
-Last updated: 2026-10-21. Applies to version 1.5.2.
+Last updated: 2026-10-23. Applies to version 1.6.0.
 
 ## Purpose and local processing
 
-Copy as Context exports semantic content from the active page for your AI conversations or notes. Capture, compression, credential redaction, and serialization run locally on your device after you request an export. The extension has no capture backend, analytics, advertising SDK, or LLM API integration.
+Page as Context exports semantic content from the active page for your AI conversations or notes. Capture, compression, credential redaction, and serialization run locally on your device after you request an export. The extension has no capture backend, analytics, advertising SDK, or LLM API integration.
 
 ## Information processed
 
@@ -62,7 +62,7 @@ Local diagnostics contain operational information such as capture status, root r
 
 ## Chrome Web Store Limited Use
 
-Copy as Context uses information obtained through browser permissions solely for its user-requested page-context export feature. Its use of that information complies with the Chrome Web Store User Data Policy, including the Limited Use requirements. The extension does not transfer captured data to the developer or third parties, use it for personalized advertising, or give the developer access to your captures.
+Page as Context uses information obtained through browser permissions solely for its user-requested page-context export feature. Its use of that information complies with the Chrome Web Store User Data Policy, including the Limited Use requirements. The extension does not transfer captured data to the developer or third parties, use it for personalized advertising, or give the developer access to your captures.
 
 ## Changes and contact
 

@@ -1,4 +1,4 @@
-# Contributing to Copy as Context
+# Contributing to Page as Context
 
 Thanks for contributing.
 

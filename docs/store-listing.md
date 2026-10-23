@@ -6,7 +6,7 @@ package; adjust browser-specific details when preparing a Chrome listing.
 
 ## Shared metadata
 
-- Name: Copy as Context
+- Name: Page as Context
 - Suggested category: Productivity (select the closest available category in each dashboard)
 - Support email: copyascontext@gmail.com
 - Support website: https://github.com/V-Shkrobatskyi/Copy-as-Context/issues
@@ -16,11 +16,11 @@ package; adjust browser-specific details when preparing a Chrome listing.
 
 ## Short description
 
-Copy a compact semantic representation of the current page for LLM chats.
+Structured browser context for AI.
 
 ## Description
 
-Turn the current page into useful context for an AI conversation or local notes. Copy as Context reads semantic page structure, processes it locally, and exports the result as Semantic Text or Markdown.
+Turn the current page into useful context for an AI conversation or local notes. Page as Context reads semantic page structure, processes it locally, and exports the result as Semantic Text or Markdown.
 
 Choose Without, Detailed, Compact, or Maximum compression. Optional credential redaction is enabled by default. Save preferences for your next export and see character counts, rough token estimates, and context reduction.
 
@@ -78,3 +78,9 @@ Use the packaged icon and screenshots from the browser being listed. Show
 Firefox Desktop and Android separately so Copy-only Android support is clear.
 Keep private page content and account details out of screenshots. See the
 [release guide](releasing.md) for store submission and artifact requirements.
+
+## Rename deployment
+
+Page as Context is the new name of Copy as Context. Update the existing store listings; do not create new listings or change the Firefox add-on ID. Repository, store and support links retain their current addresses until those external destinations are updated.
+
+The `popup-settings` storage key is unchanged from version 1.1.0. Theme keys and portable filter formats were introduced after that release and now use the `page-as-context` prefix. Files from unpublished development builds must be exported with the new build or recreated.
