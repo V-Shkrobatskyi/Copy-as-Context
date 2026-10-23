@@ -259,8 +259,8 @@ export function importRedactionSettings(json: string): RedactionSettings {
     const detectors = parsed.version === 6;
     const urlModes = parsed.version === 5 || detectors;
     const file = parsed as { format?: unknown; filters?: unknown };
-    if (file.format !== 'copy-as-context-filters' || !Array.isArray(file.filters) || file.filters.length > BUILTIN_FILTERS.length + REDACTION_LIMITS.rules) {
-      throw new Error('Invalid filter file. Choose a supported Copy as Context filter export.');
+    if (file.format !== 'page-as-context-filters' || !Array.isArray(file.filters) || file.filters.length > BUILTIN_FILTERS.length + REDACTION_LIMITS.rules) {
+      throw new Error('Invalid filter file. Choose a supported Page as Context filter export.');
     }
     const seen = new Set<string>();
     const disabledBuiltins: BuiltinFilterId[] = [];
@@ -302,10 +302,10 @@ export function importRedactionSettings(json: string): RedactionSettings {
 /** The catalog documents code-defined types; imported text never defines new detectors. */
 function importTypedFilters(parsed: object): RedactionSettings {
   const file = parsed as { version?: unknown; format?: unknown; availableRuleTypes?: unknown; filters?: unknown };
-  const invalid = () => { throw new Error('Invalid filter file. Use supported rule types from a compatible Copy as Context export.'); };
+  const invalid = () => { throw new Error('Invalid filter file. Use supported rule types from a compatible Page as Context export.'); };
   const catalog = file.version === 7 ? LEGACY_RULE_TYPES : file.version === 8 ? V8_RULE_TYPES : file.version === 9 ? V9_RULE_TYPES : file.version === 10 ? V10_RULE_TYPES : file.version === 11 ? V11_RULE_TYPES : file.version === 12 ? V12_RULE_TYPES : RULE_TYPES;
   const builtins = file.version === 13 ? BUILTIN_FILTERS : file.version === 12 ? V12_BUILTIN_FILTERS : file.version === 11 ? V11_BUILTIN_FILTERS : file.version === 10 ? V10_BUILTIN_FILTERS : file.version === 9 ? V9_BUILTIN_FILTERS : LEGACY_BUILTIN_FILTERS;
-  if (file.format !== 'copy-as-context-filters' || !Array.isArray(file.availableRuleTypes) ||
+  if (file.format !== 'page-as-context-filters' || !Array.isArray(file.availableRuleTypes) ||
     file.availableRuleTypes.length !== catalog.length || !Array.isArray(file.filters) ||
     file.filters.length > builtins.length + REDACTION_LIMITS.rules) return invalid();
   const types = new Set<string>();
@@ -353,7 +353,7 @@ export function exportRedactionSettings(settings: RedactionSettings): string {
     matchingRule: rule.text, caseSensitive: rule.caseSensitive, enabled: rule.enabled,
   });
   return `${JSON.stringify({
-    format: 'copy-as-context-filters',
+    format: 'page-as-context-filters',
     version: 13,
     availableRuleTypes: RULE_TYPES,
     filters: [

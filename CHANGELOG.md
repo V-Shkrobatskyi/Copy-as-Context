@@ -1,6 +1,9 @@
 # Changelog
 
-## 1.5.2 — unreleased
+## 1.6.0 — unreleased
+
+- Rename the extension to Page as Context with the popup subtitle "Structured browser context for AI."
+- Rename internal branding and file formats while preserving the published extension ID and popup preferences.
 
 - Close temporary save tabs quietly when Save As is cancelled, and keep genuine download failures distinct.
 

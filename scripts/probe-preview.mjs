@@ -190,7 +190,7 @@ try {
     assert.equal(detectorResult, 'CustomAuth [REDACTED] CustomAuth short');
     await evaluate(settings.id, 'document.querySelector("#export-filters").click(); true');
     const exported = await poll(async () => {
-      try { return JSON.parse(await readFile(resolve(downloads, 'copy-as-context-filters.json'), 'utf8')); }
+      try { return JSON.parse(await readFile(resolve(downloads, 'page-as-context-filters.json'), 'utf8')); }
       catch { return undefined; }
     }, 'downloaded filters file');
     assert.equal(exported.version, 13);
@@ -249,13 +249,13 @@ try {
       await evaluate(settings.id, 'document.querySelectorAll("details").forEach(section => { section.open = false; }); window.scrollTo(0,0); true');
       const bounds = JSON.parse(await evaluate(settings.id, 'JSON.stringify((()=>{const box=document.querySelector(".filters-section").getBoundingClientRect(); return {x:box.x,y:box.y,width:box.width,height:box.height,scale:1};})())'));
       const tableImage = await send('Page.captureScreenshot', { format: 'png', clip: bounds }, sessionId);
-      await writeFile(resolve(tmpdir(), 'copy-as-context-filters-table.png'), Buffer.from(tableImage.data, 'base64'));
+      await writeFile(resolve(tmpdir(), 'page-as-context-filters-table.png'), Buffer.from(tableImage.data, 'base64'));
       const image = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }, sessionId);
-      await writeFile(resolve(tmpdir(), 'copy-as-context-filters.png'), Buffer.from(image.data, 'base64'));
+      await writeFile(resolve(tmpdir(), 'page-as-context-filters.png'), Buffer.from(image.data, 'base64'));
       await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, sessionId);
       assert.equal(await evaluate(settings.id, 'document.documentElement.scrollWidth > innerWidth'), false);
       const mobile = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }, sessionId);
-      await writeFile(resolve(tmpdir(), 'copy-as-context-filters-mobile.png'), Buffer.from(mobile.data, 'base64'));
+      await writeFile(resolve(tmpdir(), 'page-as-context-filters-mobile.png'), Buffer.from(mobile.data, 'base64'));
       await send('Emulation.setDeviceMetricsOverride', { width: 1180, height: 1100, deviceScaleFactor: 1, mobile: false }, sessionId);
       await evaluate(settings.id, `(()=>{
         document.querySelector('#test-panel').open=true;
@@ -265,12 +265,12 @@ try {
       })()`);
       const testerBounds = JSON.parse(await evaluate(settings.id, 'JSON.stringify((()=>{const box=document.querySelector("#test-panel").getBoundingClientRect();return{x:box.x,y:box.y+scrollY,width:box.width,height:box.height,scale:1};})())'));
       const testerImage = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: testerBounds }, sessionId);
-      await writeFile(resolve(tmpdir(), 'copy-as-context-filter-tester.png'), Buffer.from(testerImage.data, 'base64'));
+      await writeFile(resolve(tmpdir(), 'page-as-context-filter-tester.png'), Buffer.from(testerImage.data, 'base64'));
       await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, sessionId);
       assert.equal(await evaluate(settings.id, 'document.documentElement.scrollWidth > innerWidth'), false);
       const narrowBounds = JSON.parse(await evaluate(settings.id, 'JSON.stringify((()=>{const box=document.querySelector("#test-panel").getBoundingClientRect();return{x:box.x,y:box.y+scrollY,width:box.width,height:box.height,scale:1};})())'));
       const narrowTester = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: narrowBounds }, sessionId);
-      await writeFile(resolve(tmpdir(), 'copy-as-context-filter-tester-mobile.png'), Buffer.from(narrowTester.data, 'base64'));
+      await writeFile(resolve(tmpdir(), 'page-as-context-filter-tester-mobile.png'), Buffer.from(narrowTester.data, 'base64'));
 
       await send('Target.closeTarget', { targetId: settings.id });
     }
@@ -396,13 +396,13 @@ try {
   if (!firefox) {
     const sessionId = (await send('Target.attachToTarget', { targetId: preview.id, flatten: true })).sessionId;
     const screenshot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }, sessionId);
-    await writeFile(resolve(tmpdir(), 'copy-as-context-preview.png'), Buffer.from(screenshot.data, 'base64'));
+    await writeFile(resolve(tmpdir(), 'page-as-context-preview.png'), Buffer.from(screenshot.data, 'base64'));
     await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, sessionId);
     await checkSearchScrolling();
     await evaluate(preview.id, `document.querySelector('#context').value=${JSON.stringify(original)}; document.querySelector('#context').dispatchEvent(new Event('input')); 'clean'`);
     assert.equal(await evaluate(preview.id, 'document.documentElement.scrollWidth > innerWidth'), false);
     const mobile = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }, sessionId);
-    await writeFile(resolve(tmpdir(), 'copy-as-context-preview-mobile.png'), Buffer.from(mobile.data, 'base64'));
+    await writeFile(resolve(tmpdir(), 'page-as-context-preview-mobile.png'), Buffer.from(mobile.data, 'base64'));
     await send('Page.reload', {}, sessionId);
   } else {
     await send('browsingContext.reload', { context: preview.id, wait: 'complete' });

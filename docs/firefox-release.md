@@ -13,7 +13,7 @@ Use the filenames generated for the version in `package.json`.
 
 | Field | Value |
 | --- | --- |
-| Name | Copy as Context |
+| Name | Page as Context |
 | Add-on ID | `{e97aa566-cac0-4e2c-81f7-0ab664bf86ce}` |
 | Desktop minimum | Firefox 140.0 |
 | Android minimum | Firefox Android 142.0 |

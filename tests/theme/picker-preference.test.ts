@@ -4,7 +4,7 @@ import { watchPickerTheme } from '@/src/element-picker-theme';
 
 const storage = vi.hoisted(() => ({ get: vi.fn(), addListener: vi.fn(), removeListener: vi.fn() }));
 vi.mock('wxt/browser', () => ({ browser: { storage: { local: { get: storage.get }, onChanged: storage } } }));
-const key = 'copy-as-context:theme';
+const key = 'page-as-context:theme';
 beforeEach(() => vi.resetAllMocks());
 
 describe('picker theme storage', () => {

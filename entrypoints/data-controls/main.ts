@@ -64,13 +64,13 @@ get('save').addEventListener('click', () => void act(async () => {
   if (!text) return;
   if (import.meta.env.BROWSER === 'firefox' && !await browser.permissions.request({ permissions: ['downloads'] })) throw new Error();
   await checkPolicy('diagnostics-save');
-  await downloadBlob(new Blob([text], { type: 'application/json;charset=utf-8' }), 'copy-as-context-diagnostics.json'); status.textContent = 'Diagnostic JSON report saved.';
+  await downloadBlob(new Blob([text], { type: 'application/json;charset=utf-8' }), 'page-as-context-diagnostics.json'); status.textContent = 'Diagnostic JSON report saved.';
 }));
 get('journal-save').addEventListener('click', () => void act(async () => {
   if (import.meta.env.BROWSER === 'firefox' && !await browser.permissions.request({ permissions: ['downloads'] })) throw new Error();
   const result = await request('journal-export');
   await checkPolicy('diagnostics-save');
-  await downloadBlob(new Blob([result.json], { type: 'application/json;charset=utf-8' }), 'copy-as-context-journal.json');
+  await downloadBlob(new Blob([result.json], { type: 'application/json;charset=utf-8' }), 'page-as-context-journal.json');
   status.textContent = 'Technical journal JSON saved.';
 }));
 const stop = watchPolicy(() => { get<HTMLButtonElement>('journal-save').disabled = true; get<HTMLButtonElement>('clear').disabled = true; text = ''; get('report').textContent = ''; void refresh(); });
@@ -111,7 +111,7 @@ get('history-copy').addEventListener('click', () => void act(async () => { const
 get('history-save').addEventListener('click', () => void act(async () => {
   if (import.meta.env.BROWSER === 'firefox' && !await browser.permissions.request({ permissions: ['downloads'] })) throw new Error();
   const r = await request('history-export', { destination: 'save' }); await checkPolicy('diagnostics-save');
-  await downloadBlob(new Blob([r.json], { type: 'application/json;charset=utf-8' }), 'copy-as-context-capture-history.json'); get('history-status').textContent = 'Capture history JSON saved.';
+  await downloadBlob(new Blob([r.json], { type: 'application/json;charset=utf-8' }), 'page-as-context-capture-history.json'); get('history-status').textContent = 'Capture history JSON saved.';
 }));
 const stopHistory = watchPolicy(() => { get<HTMLButtonElement>('history-clear').disabled = true; get('history-entries').replaceChildren(); void refreshHistory(); });
 window.addEventListener('pagehide', () => { historyGeneration++; stopHistory(); get('history-entries').replaceChildren(); });

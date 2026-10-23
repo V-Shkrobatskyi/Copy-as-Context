@@ -27,13 +27,13 @@ export function installKeyboardShortcuts(journal: ReturnType<typeof installDiagn
     await Promise.allSettled([
       browser.action.setBadgeText({ tabId, text: success ? '✓' : '!' }),
       browser.action.setBadgeBackgroundColor({ tabId, color: success ? '#18794e' : '#b42318' }),
-      browser.action.setTitle({ tabId, title: `Copy as Context — ${message}` }),
+      browser.action.setTitle({ tabId, title: `Page as Context — ${message}` }),
     ]);
     feedbackTimers.set(tabId, setTimeout(() => {
       feedbackTimers.delete(tabId);
       void Promise.allSettled([
         browser.action.setBadgeText({ tabId, text: '' }),
-        browser.action.setTitle({ tabId, title: 'Copy as Context' }),
+        browser.action.setTitle({ tabId, title: 'Page as Context' }),
       ]);
     }, 8000));
   }

@@ -1,6 +1,6 @@
 # Enterprise deployment
 
-Copy as Context can read administrator settings from `storage.managed`. This feature is part of the current development changes; do not assume an older store release supports these policies. Use a build that includes `managed-schema.json` and the policy enforcement code.
+Page as Context can read administrator settings from `storage.managed`. This feature is part of the current development changes; do not assume an older store release supports these policies. Use a build that includes `managed-schema.json` and the policy enforcement code.
 
 No application server, extension account, or company-specific build is required. Browser management delivers policy values; the extension enforces them. Personal preferences remain in `storage.local`. Never edit Chrome's internal profile files or import an ordinary filter file to establish administrator authority.
 
@@ -175,7 +175,7 @@ Policy revisions are SHA-256 fingerprints of the normalized configuration; captu
 
 ## Security boundaries
 
-This controls Copy as Context in the managed browser. It does not stop manual page copying, another browser, a modified extension, an administrator of the operating system, or pasting allowed clipboard content into a text editor and saving it. It does not restrict where copied data is pasted. Redaction is heuristic and cannot guarantee discovery of every secret or personal value. Use browser/device management and organizational DLP for broader requirements.
+This controls Page as Context in the managed browser. It does not stop manual page copying, another browser, a modified extension, an administrator of the operating system, or pasting allowed clipboard content into a text editor and saving it. It does not restrict where copied data is pasted. Redaction is heuristic and cannot guarantee discovery of every secret or personal value. Use browser/device management and organizational DLP for broader requirements.
 
 ## Source, data and diagnostic policies
 

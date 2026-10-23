@@ -9,7 +9,7 @@ identify third-party material. The full terms are in [LICENSE](LICENSE).
 Individual SPDX headers identify the same license; their absence does not
 exclude an original project file from this statement.
 
-Copy as Context is free software: you can redistribute it and/or modify it
+Page as Context is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License version 3 as published by
 the Free Software Foundation. It is distributed in the hope that it will be
 useful, but WITHOUT ANY WARRANTY; without even the implied warranty of

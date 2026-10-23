@@ -188,7 +188,7 @@ const historicalBuiltin = (id: (typeof BUILTIN_FILTERS)[number]['id']) => {
 };
 
 function historicalFile(settings: RedactionSettings, version: number): { format: string; version: number; filters: Record<string, any>[] } {
-  return { format: 'copy-as-context-filters', version, filters: [
+  return { format: 'page-as-context-filters', version, filters: [
     ...LEGACY_BUILTIN_FILTERS.map(builtin => ({
       type: 'builtin', id: builtin.id, name: builtin.name, description: builtin.description,
       matchingRule: version === 2 && builtin.id === 'sensitive-fields' ? 'Field labels: password, passcode, secret, token, api key, authorization' : version < 6 ? builtin.matchingRule : historicalBuiltin(builtin.id).text,
@@ -285,7 +285,7 @@ describe('filter configuration import and validation', () => {
   it('includes every built-in definition and state, and accepts earlier configuration files', () => {
     const settings = config('Acme'); settings.disabledBuiltins = ['github'];
     const file = JSON.parse(exportRedactionSettings(settings));
-    expect(file.format).toBe('copy-as-context-filters'); expect(file.version).toBe(13);
+    expect(file.format).toBe('page-as-context-filters'); expect(file.version).toBe(13);
     expect(file.filters.filter((filter: { source: string }) => filter.source === 'builtin')).toHaveLength(BUILTIN_FILTERS.length);
     expect(file.filters.find((filter: { id: string }) => filter.id === 'github')).toMatchObject({ enabled: false, matchingRule: expect.stringContaining('ghp_') });
     expect(file.filters.find((filter: { source: string }) => filter.source === 'custom').matchingRule).toBe('Acme');

@@ -21,7 +21,7 @@ describe('single block boundaries', () => {
       other.setAttribute(selectionAttribute('opaque'), '');
       doc.querySelectorAll = (() => [other]) as any;
       vi.stubGlobal('document', doc);
-      vi.stubGlobal('__copyAsContextPicker', { token: 'opaque', root: () => chosen });
+      vi.stubGlobal('__pageAsContextPicker', { token: 'opaque', root: () => chosen });
       expect(selectedElementReference('opaque')).toBe(chosen);
       expect(selectedElementReference('wrong')).toBeNull();
       chosen.removeAttribute(selectionAttribute('opaque'));
@@ -32,7 +32,7 @@ describe('single block boundaries', () => {
     const dom = new JSDOM('<div style="visibility:hidden"><p id="pick" style="visibility:visible">Visible selection</p></div>');
     try {
       const selected = dom.window.document.querySelector('#pick')!;
-      vi.stubGlobal('__copyAsContextPicker', { token: 'opaque', root: () => selected });
+      vi.stubGlobal('__pageAsContextPicker', { token: 'opaque', root: () => selected });
       expect(selectedElementInfo('opaque')).toBeUndefined();
       selected.setAttribute(selectionAttribute('opaque'), '');
       expect(selectedElementInfo('opaque')).toEqual({ tagName: selected.localName });

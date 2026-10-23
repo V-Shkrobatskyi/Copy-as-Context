@@ -85,8 +85,8 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <header class="popup-header">
       <img class="brand-mark" src="/icon/32.png" alt="" aria-hidden="true" />
       <div>
-        <h1 id="popup-title">Copy as Context</h1>
-        <p class="intro">Private page context for your next prompt.</p>
+        <h1 id="popup-title">Page as Context</h1>
+        <p class="intro">Structured browser context for AI.</p>
       </div>
     </header>
     <p id="organization-policy" class="field-note" role="status" hidden></p>

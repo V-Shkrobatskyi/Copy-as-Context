@@ -5,7 +5,7 @@ import { PICKER_TTL, selectionAttribute, type PickerHandle, type PickerAction } 
 import { copySelectedContext } from './element-picker-clipboard';
 import { isPreviewToken, MAX_PREVIEW_CHARACTERS } from './preview-message';
 import { ELEMENT_PICKER_STYLE } from './element-picker-style';
-import brandIcon from '../public/icon/copy-as-context.svg?raw';
+import brandIcon from '../public/icon/page-as-context.svg?raw';
 
 export interface PickerChannel {
   watchTheme?(listener: (preference: unknown) => void): () => void;
@@ -98,7 +98,7 @@ export function installElementPicker(doc: Document, token: string, channel: Pick
   const schedule = () => { if (!closed && !frame) frame = win.requestAnimationFrame(draw); };
   const refresh = () => {
     panel.dataset.mode = selected ? 'selected' : 'picking';
-    shadow.querySelector('#picker-title')!.textContent = selected ? 'Copy as Context' : 'Select element';
+    shadow.querySelector('#picker-title')!.textContent = selected ? 'Page as Context' : 'Select element';
     shadow.querySelector('#picker-intro')!.textContent = selected ? 'Selected element' : 'Click a block · Esc cancels';
     status.hidden = !selected;
     shadow.querySelector<HTMLElement>('#buttons')!.hidden = !selected;

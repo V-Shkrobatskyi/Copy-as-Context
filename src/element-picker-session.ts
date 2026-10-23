@@ -218,8 +218,8 @@ export function createPickerCoordinator() {
           session.documentId = injected[0].documentId;
           await run(browser.scripting.executeScript({ target: { tabId, frameIds: [0] }, world: 'ISOLATED',
             func: (value: string) => {
-              const scope = globalThis as { __copyAsContextStartPicker?: (token: string) => void };
-              scope.__copyAsContextStartPicker?.(value);
+              const scope = globalThis as { __pageAsContextStartPicker?: (token: string) => void };
+              scope.__pageAsContextStartPicker?.(value);
             }, args: [token],
           }));
           await started; ensure();

@@ -11,6 +11,6 @@ export default defineUnlistedScript({
   main() {
     const scope = globalThis as FrameGlobal;
     const runtime = browser.runtime as typeof browser.runtime & { getFrameId(target: Element | Window): number };
-    scope.__copyAsContextFrames ??= createFrameHandler(document, target => runtime.getFrameId(target));
+    scope.__pageAsContextFrames ??= createFrameHandler(document, target => runtime.getFrameId(target));
   },
 });
