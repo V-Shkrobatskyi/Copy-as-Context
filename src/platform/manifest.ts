@@ -6,8 +6,8 @@ import type { UserManifest } from 'wxt';
 /** Keep browser capabilities separate with optional site access in Firefox. */
 export function browserManifest(target: string): UserManifest {
   return {
-    name: 'Copy as Context',
-    description: 'Copy a compact semantic representation of the current page for LLM chats.',
+    name: 'Page as Context',
+    description: 'Structured browser context for AI.',
     commands: {
       'preview-context': { description: 'Preview and edit page context', suggested_key: { default: 'Alt+Shift+P', mac: 'Alt+Shift+P' } },
       'copy-page-context': { description: 'Copy page context', suggested_key: { default: 'Alt+Shift+C', mac: 'Alt+Shift+C' } },

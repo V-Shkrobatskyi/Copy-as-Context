@@ -46,7 +46,7 @@ Native Chrome verification on the reported [W3Schools Tryit page](https://www.w3
 
 ## Panel appearance and minimal picking state
 
-While pointing, only a compact bar with the extension icon, a click/Esc hint and a labelled close button is visible. Clicking a block expands the panel with the Copy as Context header, selection information and actions. Pick again returns to the compact bar. Esc and the close button cancel in either state.
+While pointing, only a compact bar with the extension icon, a click/Esc hint and a labelled close button is visible. Clicking a block expands the panel with the Page as Context header, selection information and actions. Pick again returns to the compact bar. Esc and the close button cancel in either state.
 
 The isolated panel reuses the popup's shared light/dark palette and packaged SVG icon, including button, focus, border and surface colors. It does not fetch icons or styles from the visited site or add web-accessible resources. Check both system themes and narrow viewports; hover must not expand the panel or reveal the action group. Native visual checks on the W3Schools fixture confirm a compact height below 80 pixels, a rendered icon and the popup's dark background color.
 

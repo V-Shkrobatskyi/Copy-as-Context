@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi; SPDX-License-Identifier: GPL-3.0-only
 (() => {
-  const storageKey = 'copy-as-context:theme';
+  const storageKey = 'page-as-context:theme';
   const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
   const normalize = value => value === 'light' || value === 'dark' ? value : 'system';
   let preference = 'system';

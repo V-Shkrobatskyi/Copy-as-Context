@@ -36,7 +36,7 @@ export interface FrameVerification {
   owners: { frameId: number; visibility: FrameVisibility; changed: boolean; pending: boolean }[];
 }
 export type FrameHandler = (command: FrameCommand) => unknown;
-export interface FrameGlobal { __copyAsContextFrames?: FrameHandler }
+export interface FrameGlobal { __pageAsContextFrames?: FrameHandler }
 
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const keys = (value: Record<string, unknown>, allowed: string[]): boolean => Object.keys(value).every(key => allowed.includes(key));
@@ -94,5 +94,5 @@ export function dispatchFrameCommand(command: FrameCommand): unknown {
       if (origin === 'null' || origin !== command.allowedOrigin) return undefined;
     } catch { return undefined; }
   }
-  return (globalThis as FrameGlobal).__copyAsContextFrames?.(command);
+  return (globalThis as FrameGlobal).__pageAsContextFrames?.(command);
 }

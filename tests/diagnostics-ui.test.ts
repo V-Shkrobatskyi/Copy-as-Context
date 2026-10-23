@@ -90,7 +90,7 @@ it('saves the standalone journal and stops downloading when file policy changes'
   button.click(); await settle();
   expect(mocks.api.runtime.sendMessage).toHaveBeenCalledWith({ type: 'diagnostics', action: 'journal-export' });
   expect(mocks.check).toHaveBeenCalledWith('diagnostics-save');
-  expect(mocks.download).toHaveBeenCalledWith(expect.any(Blob), 'copy-as-context-journal.json');
+  expect(mocks.download).toHaveBeenCalledWith(expect.any(Blob), 'page-as-context-journal.json');
   expect(await mocks.download.mock.calls[0]![0].text()).toBe(json);
   mocks.download.mockClear(); mocks.check.mockRejectedValueOnce(new Error('Blocked'));
   mocks.api.runtime.sendMessage.mockResolvedValueOnce({ ok: true, json });

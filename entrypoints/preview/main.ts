@@ -103,7 +103,7 @@ function accept(payload: PreviewPayload): void {
   policyContext = { operationId: payload.operationId, format: payload.format, compression: payload.compression, redactSensitiveData: payload.redactSensitiveData, policyRevision: payload.policyRevision };
   if (payload.scope === 'selection') {
     document.querySelector('h1')!.textContent = 'Selected element context';
-    document.title = 'Selected element context — Copy as Context';
+    document.title = 'Selected element context — Page as Context';
   }
   original = payload.content;
   compression = payload.compression;

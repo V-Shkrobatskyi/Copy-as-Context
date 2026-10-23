@@ -588,7 +588,7 @@ describe('Customize filter settings', () => {
     let downloaded: HTMLAnchorElement | undefined;
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { downloaded = this; });
     click('export-filters'); await settle();
-    expect(downloaded?.download).toBe('copy-as-context-filters.json');
+    expect(downloaded?.download).toBe('page-as-context-filters.json');
     expect(downloaded?.href).toBe('blob:filters');
     const exported = JSON.parse(await createObjectURL.mock.calls[0]![0].text());
     expect(exported.version).toBe(13);

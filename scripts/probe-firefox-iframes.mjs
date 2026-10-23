@@ -214,7 +214,7 @@ try {
   const flat=[];const visit=n=>{if(n.role==='embedded-document')flat.push({name:n.name,status:n.value});for(const c of n.children)visit(c);};visit(result.tree.root);
   summaries.push({frames:flat,warnings:result.warnings,frameAccess:result.frameAccess});
  }
- const cleaned=await browser.scripting.executeScript({target:{tabId:tab.id,frameIds:[0]},func:()=>globalThis.__copyAsContextFrames?.({mode:'verify',operation:'expired-probe',generation:'none'})===undefined});
+ const cleaned=await browser.scripting.executeScript({target:{tabId:tab.id,frameIds:[0]},func:()=>globalThis.__pageAsContextFrames?.({mode:'verify',operation:'expired-probe',generation:'none'})===undefined});
  return JSON.stringify({summaries,dispatcherAvailable:cleaned[0].result});
  })()`));
  assert.equal(captures.error,undefined,JSON.stringify(captures));

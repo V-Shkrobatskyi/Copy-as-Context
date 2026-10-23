@@ -54,7 +54,7 @@ try {
       const [tab] = await chrome.tabs.query({ url: ${JSON.stringify(pageUrl)} });
       await chrome.scripting.executeScript({ target: {tabId: tab.id}, world: 'ISOLATED', func: token => {
         const root = document.getElementById('chosen');
-        globalThis.__copyAsContextPicker = { token, root: () => root };
+        globalThis.__pageAsContextPicker = { token, root: () => root };
         root.setAttribute('data-cac-selection-' + token, '');
       }, args: [${JSON.stringify(token)}] });
       return captureChromeAccessibilityTree(tab.id, ${JSON.stringify(token)});

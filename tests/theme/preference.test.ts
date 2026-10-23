@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const script = readFileSync('public/theme.js', 'utf8');
-const key = 'copy-as-context:theme';
+const key = 'page-as-context:theme';
 const pages: JSDOM[] = [];
 function page(saved?: string, unavailable = false, storage?: { local: { set: ReturnType<typeof vi.fn> } }) {
   const dom = new JSDOM('<select data-theme-picker><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select>', { url: 'https://extension.test', runScripts: 'outside-only' });

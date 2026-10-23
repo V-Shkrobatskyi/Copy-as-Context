@@ -76,7 +76,7 @@ for (const target of ['chrome', 'firefox']) {
   const diagnosticsDocument = new JSDOM(await readFile(new URL('data-controls.html', directory), 'utf8'));
   try {
     assert.equal(diagnosticsDocument.window.document.documentElement.lang, 'en');
-    assert.equal(diagnosticsDocument.window.document.title, 'Data controls — Copy as Context');
+    assert.equal(diagnosticsDocument.window.document.title, 'Data controls — Page as Context');
     assert.equal(diagnosticsDocument.window.document.querySelector('h1')?.textContent, 'Data controls');
     for (const id of ['data-form', 'include-title', 'include-values', 'level', 'clear', 'journal-save', 'include-log', 'report', 'copy', 'save', 'sources-form', 'sources-allowlist', 'sources-allowed', 'sources-blocked', 'save-sources', 'history-form', 'history-enabled', 'history-days', 'history-size', 'history-entries', 'history-copy', 'history-save']) assert.ok(diagnosticsDocument.window.document.getElementById(id), `Missing diagnostics control: ${id}`);
     assert.equal(diagnosticsDocument.window.document.querySelector('#include-log').checked, false);
@@ -94,7 +94,7 @@ for (const target of ['chrome', 'firefox']) {
     assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 'clipboardWrite', 'storage'].sort());
     assert.deepEqual(manifest.optional_permissions, ['downloads']);
     assert.deepEqual(manifest.optional_host_permissions, ['http://*/*', 'https://*/*']);
-    assert.ok((await readFile(new URL('frame-capture.js', directory), 'utf8')).includes('__copyAsContextFrames'), 'Missing isolated frame helper');
+    assert.ok((await readFile(new URL('frame-capture.js', directory), 'utf8')).includes('__pageAsContextFrames'), 'Missing isolated frame helper');
     assert.ok(manifest.background.scripts?.length);
     assert.equal(manifest.background.service_worker, undefined);
     assert.ok(manifest.browser_specific_settings.gecko.id);

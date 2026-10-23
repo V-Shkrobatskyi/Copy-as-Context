@@ -24,7 +24,7 @@ project so IDE duplicate-code inspections do not index a second source tree.
 The project uses ignored `dev_notes/` for reports only:
 
 ```sh
-performance_baseline_dir=$(mktemp -d /tmp/copy-as-context-baseline.XXXXXX)
+performance_baseline_dir=$(mktemp -d /tmp/page-as-context-baseline.XXXXXX)
 performance_baseline_ref=main
 git archive "$performance_baseline_ref" src | tar -x -C "$performance_baseline_dir"
 PERFORMANCE_BASELINE_ROOT="$performance_baseline_dir" PERFORMANCE_REPORT=/tmp/performance-before.json npx vitest run --config tests/performance/vitest.config.ts

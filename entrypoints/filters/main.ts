@@ -425,10 +425,10 @@ get('export-filters').addEventListener('click', async () => {
   try {
     revokeDownload();
     downloadUrl = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
-    const link = document.createElement('a'); link.href = downloadUrl; link.download = 'copy-as-context-filters.json';
+    const link = document.createElement('a'); link.href = downloadUrl; link.download = 'page-as-context-filters.json';
     document.body.append(link); link.click(); link.remove();
     revokeTimer = setTimeout(revokeDownload, 60_000);
-    feedback('Download started: copy-as-context-filters.json. Includes built-in and custom filters from this table.');
+    feedback('Download started: page-as-context-filters.json. Includes built-in and custom filters from this table.');
   } catch { revokeDownload(); feedback('Unable to download filters. Try again or check your browser download settings.'); }
 });
 get('close-filters').addEventListener('click', () => {

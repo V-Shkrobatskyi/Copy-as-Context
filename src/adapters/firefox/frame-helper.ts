@@ -53,7 +53,7 @@ export function createFrameHandler(doc: Document, frameId: (target: Element | Wi
     if (!limits || Object.keys(limits).some(key => !(key in LIMITS)) ||
       Object.entries(limits).some(([key, value]) => !Number.isFinite(value) || value < 0 || value > LIMITS[key as keyof typeof LIMITS]) ||
       !Number.isInteger(command.maxOwners) || command.maxOwners < 0 || command.maxOwners > LIMITS.owners) return undefined;
-    const picker = (globalThis as PickerGlobal).__copyAsContextPicker;
+    const picker = (globalThis as PickerGlobal).__pageAsContextPicker;
     const selected = command.selection ? picker?.token === command.selection ? picker.root() : undefined : undefined;
     if (command.selection && (!selected || selected.ownerDocument !== doc || !selected.isConnected)) return undefined;
     const generation = crypto.randomUUID();

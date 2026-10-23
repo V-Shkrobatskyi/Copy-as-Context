@@ -34,7 +34,7 @@ try {
   await new Promise((done, reject) => { http.once('error', reject); http.listen(0, '0.0.0.0', done); });
   sameOrigin = `http://127.0.0.1:${http.address().port}`;
   crossOrigin = `http://localhost:${http.address().port}`;
-  profile = await mkdtemp(resolve(tmpdir(), 'copy-as-context-iframe-'));
+  profile = await mkdtemp(resolve(tmpdir(), 'page-as-context-iframe-'));
   processHandle = spawn(binary, ['--headless=new', `--user-data-dir=${profile}`, '--remote-debugging-port=0', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--site-per-process', ...(values.extension ? ['--enable-unsafe-extension-debugging'] : []), 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
   const endpoint = await new Promise((done, reject) => {
     const timer = setTimeout(() => reject(new Error('Chrome startup timed out')), 20_000);

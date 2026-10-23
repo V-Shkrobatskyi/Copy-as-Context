@@ -133,7 +133,7 @@ export function createFrameCapturer(client: ChromeDebuggerClient) {
     const setup = new Set<Promise<void>>();
     const changed = new Set<string>();
     const frames = new Map<string, Frame>();
-    const objectGroup = `copy-as-context-${tabId}`;
+    const objectGroup = `page-as-context-${tabId}`;
     let attached = false;
     let attachPending = false;
     let releaseGuard = true;

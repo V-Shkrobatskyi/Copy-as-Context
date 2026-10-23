@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Vitalii Shkrobatskyi; SPDX-License-Identifier: GPL-3.0-only
 import { browser } from 'wxt/browser';
 
-const key = 'copy-as-context:theme';
+const key = 'page-as-context:theme';
 
 /** Read extension-owned preferences and release the listener with the picker. */
 export function watchPickerTheme(listener: (preference: unknown) => void): () => void {

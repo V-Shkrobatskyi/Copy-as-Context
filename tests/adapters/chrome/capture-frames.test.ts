@@ -89,7 +89,7 @@ describe('Chrome embedded document coordinator', () => {
     expect(evaluations).toHaveLength(2);
     for (const call of evaluations) {
       expect(call.params?.uniqueContextId).toBe('picker-world');
-      expect(call.params?.expression).toContain('__copyAsContextPicker');
+      expect(call.params?.expression).toContain('__pageAsContextPicker');
       expect(call.params?.expression).not.toContain('querySelector');
     }
     expect(h.calls.find(call => call.method === 'Runtime.callFunctionOn')?.params?.arguments).toEqual([{ objectId: 'selected' }]);

@@ -74,7 +74,7 @@ class Protocol {
 }
 
 async function launch(target) {
-  const profile = await mkdtemp(resolve(tmpdir(), `copy-as-context-${target}-`));
+  const profile = await mkdtemp(resolve(tmpdir(), `page-as-context-${target}-`));
   const downloadsDirectory = resolve(profile, 'downloads');
   await mkdir(downloadsDirectory);
   const binary = options[`${target}-binary`] ?? process.env[`${target.toUpperCase()}_BINARY`] ?? platforms[target];
@@ -331,7 +331,7 @@ try {
           return { temporaryInstall: true, popupDocument: true, diagnostics, missingActiveTabGrant: 'injection-rejected', tabDocumentSenderRejected: true, reloadAndStorage: true, popupLayout: options['popup-layout'], viewports, optionalDownloadsGranted: downloadsGranted, downloadsProbe: 'save-document-blob-in-isolated-downloads-fixture', expiredBlobRejected: blobRejected, savedDownloads };
         };
         evaluate = async (expression) => {
-          const response = await protocol.send('script.evaluate', { expression, target: { context, sandbox: 'copy-as-context-quality' }, awaitPromise: true });
+          const response = await protocol.send('script.evaluate', { expression, target: { context, sandbox: 'page-as-context-quality' }, awaitPromise: true });
           assert.equal(response.type, 'success', 'Gecko script failed');
           return response.result.value;
         };

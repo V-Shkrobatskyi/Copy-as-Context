@@ -27,7 +27,7 @@ afterEach(() => { windows.splice(0).forEach(dom => dom.window.close()); vi.useRe
 describe('isolated Firefox frame helper', () => {
   it('captures an iframe selected as the root and retains its document boundary', () => {
     const fixture = setup('<p>Outside marker</p><iframe title="Selected frame"></iframe>');
-    vi.stubGlobal('__copyAsContextPicker', { token: 'frame-token', root: () => fixture.doc.querySelector('iframe') });
+    vi.stubGlobal('__pageAsContextPicker', { token: 'frame-token', root: () => fixture.doc.querySelector('iframe') });
     const snapshot = fixture.handler({ mode: 'capture', operation: 'frame-root', selection: 'frame-token', limits: { ...DOM_CAPTURE_LIMITS }, maxOwners: 128 }) as FrameSnapshot;
     expect(isFrameSnapshot(snapshot, 'frame-root', false)).toBe(true);
     expect(snapshot.owners).toHaveLength(1);
@@ -38,7 +38,7 @@ describe('isolated Firefox frame helper', () => {
   it('leases only the selected root and its frames, rejecting replaced or stale selection', () => {
     const fixture = setup('<aside>Outside marker<iframe title="Outside frame"></iframe></aside><article><h2>Selected marker</h2><iframe title="Selected frame"></iframe></article>');
     const selected = fixture.doc.querySelector('article')!;
-    vi.stubGlobal('__copyAsContextPicker', { token: 'selection-token', root: () => selected });
+    vi.stubGlobal('__pageAsContextPicker', { token: 'selection-token', root: () => selected });
     const command = { mode: 'capture' as const, operation: 'selected', selection: 'selection-token', limits: { ...DOM_CAPTURE_LIMITS }, maxOwners: 128 };
     const snapshot = fixture.handler(command) as FrameSnapshot;
     expect(isFrameSnapshot(snapshot, 'selected', false)).toBe(true);
@@ -113,7 +113,7 @@ describe('origin restriction before DOM capture', () => {
   it('rejects other origins even with an earlier individual site grant', async () => {
     const { dispatchFrameCommand } = await import('@/src/adapters/firefox/frame-contract');
     const handler = vi.fn(() => 'captured');
-    vi.stubGlobal('__copyAsContextFrames', handler);
+    vi.stubGlobal('__pageAsContextFrames', handler);
     vi.stubGlobal('window', { location: { origin: 'https://other.test', href: 'https://other.test/' } });
     const command = { mode: 'capture' as const, operation: 'restricted', limits: { ...DOM_CAPTURE_LIMITS }, maxOwners: 128, allowedOrigin: 'https://root.test' };
     expect(dispatchFrameCommand(command)).toBeUndefined(); expect(handler).not.toHaveBeenCalled();
@@ -122,7 +122,7 @@ describe('origin restriction before DOM capture', () => {
   });
   it('allows inherited blank/srcdoc documents and rejects inaccessible parents', async () => {
     const { dispatchFrameCommand } = await import('@/src/adapters/firefox/frame-contract');
-    const handler = vi.fn(() => 'captured'); vi.stubGlobal('__copyAsContextFrames', handler);
+    const handler = vi.fn(() => 'captured'); vi.stubGlobal('__pageAsContextFrames', handler);
     const command = { mode: 'capture' as const, operation: 'restricted', limits: { ...DOM_CAPTURE_LIMITS }, maxOwners: 128, allowedOrigin: 'https://root.test' };
     for (const href of ['about:blank', 'about:srcdoc']) {
       vi.stubGlobal('window', { location: { origin: 'null', href }, parent: { location: { origin: 'https://root.test', href: 'https://root.test/' } } });
