@@ -36,5 +36,5 @@ ${popupTheme.replace("@import './page-theme.css';", '').replaceAll(':root', ':ho
     button:hover:not(:disabled) { background: var(--selected); border-color: var(--accent); }
     #copy:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
   }
-  @media (prefers-color-scheme: dark) { #copy { color: var(--background); box-shadow: none; } }
+  :host([data-theme="dark"]) #copy { color: var(--background); box-shadow: none; }
 `;

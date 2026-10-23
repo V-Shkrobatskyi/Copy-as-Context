@@ -8,6 +8,7 @@ import { ELEMENT_PICKER_STYLE } from './element-picker-style';
 import brandIcon from '../public/icon/copy-as-context.svg?raw';
 
 export interface PickerChannel {
+  watchTheme?(listener: (preference: unknown) => void): () => void;
   send(type: 'ready' | 'capture' | 'copy' | 'save' | 'copied' | 'copy-failed' | 'cancel' | 'ping', details?: { operation: string }): void;
   beforeSave?(): Promise<boolean>;
   listen(listener: (message: unknown) => void): () => void;
@@ -52,6 +53,19 @@ export function installElementPicker(doc: Document, token: string, channel: Pick
   let frame = 0;
   const attribute = selectionAttribute(token);
   const stops: (() => void)[] = [];
+  const systemTheme = win.matchMedia?.('(prefers-color-scheme: dark)');
+  let themePreference: unknown = 'system';
+  const applyTheme = () => {
+    const theme = themePreference === 'light' || themePreference === 'dark'
+      ? themePreference : systemTheme?.matches ? 'dark' : 'light';
+    host.dataset.theme = theme;
+    // Override the defensive all:initial reset on the host itself.
+    host.style.setProperty('color-scheme', theme, 'important');
+  };
+  applyTheme();
+  systemTheme?.addEventListener('change', applyTheme);
+  stops.push(() => systemTheme?.removeEventListener('change', applyTheme));
+  if (channel.watchTheme) stops.push(channel.watchTheme(preference => { themePreference = preference; applyTheme(); }));
   const originalFocus = doc.activeElement;
   let previousFocus: Element | undefined;
   let pointerDown: { x: number; y: number } | undefined;

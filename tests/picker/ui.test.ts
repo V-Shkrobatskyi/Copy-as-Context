@@ -9,10 +9,15 @@ import { selectionAttribute } from '@/src/element-picker-protocol';
 const token = '11111111-2222-4333-8444-555555555555';
 const windows: JSDOM[] = [];
 afterEach(() => { windows.splice(0).forEach(window => window.window.close()); vi.restoreAllMocks(); vi.useRealTimers(); });
-function setup(beforeSave?: () => Promise<boolean>) {
+function setup(beforeSave?: () => Promise<boolean>, theme?: { dark: boolean; preference?: unknown }) {
   const dom = new JSDOM('<main><article><a href="/next">Selected link</a></article><p>Outside</p></main>', { url: 'https://example.test/', pretendToBeVisual: true });
   windows.push(dom);
   const { document: doc } = dom.window;
+  const systemTheme = new dom.window.EventTarget() as EventTarget & { matches: boolean };
+  systemTheme.matches = theme?.dark ?? false;
+  Object.defineProperty(dom.window, 'matchMedia', { value: () => systemTheme });
+  let updateTheme!: (value: unknown) => void;
+  const stopTheme = vi.fn();
   doc.elementFromPoint = () => doc.querySelector('a');
   vi.spyOn(dom.window.Element.prototype, 'getClientRects').mockReturnValue([{ x: 0, y: 0, width: 100, height: 20 }] as any);
   let shadow!: ShadowRoot;
@@ -21,7 +26,7 @@ function setup(beforeSave?: () => Promise<boolean>) {
   let incoming!: (message: unknown) => void;
   let disconnect!: () => void;
   const stopMessage = vi.fn(); const stopDisconnect = vi.fn();
-  const channel = { beforeSave, send: vi.fn(), listen: (listener: typeof incoming) => { incoming = listener; return stopMessage; },
+  const channel = { beforeSave, watchTheme: (listener: typeof updateTheme) => { updateTheme = listener; listener(theme?.preference); return stopTheme; }, send: vi.fn(), listen: (listener: typeof incoming) => { incoming = listener; return stopMessage; },
     disconnected: (listener: typeof disconnect) => { disconnect = listener; return stopDisconnect; }, close: vi.fn() };
   const picker = installElementPicker(doc, token, channel);
   incoming({ type: 'active' });
@@ -30,10 +35,35 @@ function setup(beforeSave?: () => Promise<boolean>) {
     (doc.querySelector('a') as HTMLElement).focus();
     dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'F2', bubbles: true, cancelable: true }));
   };
-  return { dom, doc, picker, channel, incoming, disconnect, button, focusedPick, stopMessage, stopDisconnect, shadow };
+  return { dom, doc, picker, channel, incoming, disconnect, button, focusedPick, stopMessage, stopDisconnect, shadow, systemTheme, updateTheme, stopTheme };
 }
 
 describe('element picker interaction', () => {
+  it('follows system changes, honors explicit themes and releases theme subscriptions', () => {
+    const h = setup(undefined, { dark: true });
+    const host = h.shadow.host as HTMLElement;
+    const expectTheme = (value: string) => {
+      expect(host.dataset.theme).toBe(value);
+      expect(host.style.getPropertyValue('color-scheme')).toBe(value);
+      expect(host.style.getPropertyPriority('color-scheme')).toBe('important');
+    };
+    expectTheme('dark');
+    h.systemTheme.matches = false;
+    h.systemTheme.dispatchEvent(new h.dom.window.Event('change'));
+    expectTheme('light');
+    h.updateTheme('dark'); expectTheme('dark');
+    h.systemTheme.dispatchEvent(new h.dom.window.Event('change')); expectTheme('dark');
+    h.systemTheme.matches = true;
+    h.updateTheme('light'); expectTheme('light');
+    h.systemTheme.dispatchEvent(new h.dom.window.Event('change')); expectTheme('light');
+    h.updateTheme('system'); expectTheme('dark');
+    h.updateTheme('invalid'); expectTheme('dark');
+    h.picker.close();
+    expect(h.stopTheme).toHaveBeenCalledOnce();
+    h.systemTheme.matches = false;
+    h.systemTheme.dispatchEvent(new h.dom.window.Event('change'));
+    expectTheme('dark');
+  });
   it('copies the prepared reply and closes the picker after confirmed success', async () => {
     const h = setup(); h.focusedPick();
     const writeText = vi.fn().mockResolvedValue(undefined);

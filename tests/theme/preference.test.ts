@@ -6,10 +6,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const script = readFileSync('public/theme.js', 'utf8');
 const key = 'copy-as-context:theme';
 const pages: JSDOM[] = [];
-function page(saved?: string, unavailable = false) {
+function page(saved?: string, unavailable = false, storage?: { local: { set: ReturnType<typeof vi.fn> } }) {
   const dom = new JSDOM('<select data-theme-picker><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select>', { url: 'https://extension.test', runScripts: 'outside-only' });
   pages.push(dom);
   const { window } = dom;
+  if (storage) Object.assign(window, { chrome: { storage } });
   const listeners = new Set<() => void>();
   const system = { matches: true, addEventListener: (_type: string, listener: () => void) => listeners.add(listener) };
   Object.defineProperty(window, 'matchMedia', { value: () => system });
@@ -29,6 +30,15 @@ function page(saved?: string, unavailable = false) {
 afterEach(() => { pages.splice(0).forEach(page => page.window.close()); vi.restoreAllMocks(); });
 
 describe('extension theme preference', () => {
+  it('shares the preference with the isolated picker, including existing saved choices', () => {
+    const set = vi.fn().mockResolvedValue(undefined);
+    const view = page('light', false, { local: { set } });
+    expect(set).toHaveBeenLastCalledWith({ [key]: 'light' });
+    view.choose('dark');
+    expect(set).toHaveBeenLastCalledWith({ [key]: 'dark' });
+    view.choose('system');
+    expect(set).toHaveBeenLastCalledWith({ [key]: 'system' });
+  });
   it('uses the system theme for a missing or invalid preference and follows system changes', () => {
     for (const value of [undefined, 'invalid']) {
       const view = page(value);
