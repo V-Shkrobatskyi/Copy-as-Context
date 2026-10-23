@@ -190,7 +190,8 @@ export function normalizeChromeAxTree(response: ChromeAxTreeResponse, options: {
     };
     if (properties.get('editable')?.value) normalized.editable = true;
     const name = stringValue(node.name);
-    const value = stringValue(node.value);
+    const numericValue = numberValue(node.value);
+    const value = stringValue(node.value) ?? (numericValue === undefined ? undefined : String(numericValue));
     const level = numberValue(properties.get('level'));
     const href = stringValue(properties.get('url'));
     const states = statesFrom(properties);
