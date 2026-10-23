@@ -10,6 +10,11 @@
     document.documentElement.dataset.theme = preference === 'system'
       ? (systemTheme.matches ? 'dark' : 'light') : preference;
     document.querySelectorAll('[data-theme-picker]').forEach(picker => { picker.value = preference; });
+    // Share the preference with the isolated picker without reading visited-site storage.
+    try {
+      const storage = (globalThis.browser ?? globalThis.chrome)?.storage;
+      if (storage) void Promise.resolve(storage.local.set({ [storageKey]: preference })).catch(() => {});
+    } catch { /* Extension storage is optional for standalone pages. */ }
   }
   apply();
   systemTheme.addEventListener('change', apply);

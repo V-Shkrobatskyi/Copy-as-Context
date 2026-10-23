@@ -4,6 +4,7 @@
 import { browser } from 'wxt/browser';
 import { installElementPicker } from '../src/element-picker';
 import { PICKER_PORT, PICKER_SAVE_PERMISSION, type PickerGlobal } from '../src/element-picker-protocol';
+import { watchPickerTheme } from '../src/element-picker-theme';
 
 /** Installed on demand in the main document's isolated world. */
 export default defineUnlistedScript({
@@ -13,6 +14,7 @@ export default defineUnlistedScript({
       scope.__copyAsContextPicker?.close();
       const port = browser.runtime.connect({ name: `${PICKER_PORT}${token}` });
       scope.__copyAsContextPicker = installElementPicker(document, token, {
+        watchTheme: watchPickerTheme,
         send: (type, details) => port.postMessage({ type, ...details }),
         beforeSave: () => import.meta.env.BROWSER === 'firefox'
           ? browser.runtime.sendMessage({ type: PICKER_SAVE_PERMISSION, token }).then(reply => reply?.granted === true)
